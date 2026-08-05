@@ -1,0 +1,1891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Phase 1 Wedge — POS Vision Brainstorm · 2026-08-04</title>
+<style>
+  :root {
+    --bg: #0a0c10;
+    --bg-elev: #12151c;
+    --paper: #f4f0e6;
+    --paper-dim: #e8e2d4;
+    --ink: #1a1c22;
+    --neon: #39ffb6;
+    --neon-dim: rgba(57, 255, 182, 0.15);
+    --amber: #ffb347;
+    --amber-dim: rgba(255, 179, 71, 0.18);
+    --hot: #ff4d6d;
+    --hot-dim: rgba(255, 77, 109, 0.16);
+    --violet: #a78bfa;
+    --violet-dim: rgba(167, 139, 250, 0.16);
+    --blue: #5b9dff;
+    --mute: #8b92a5;
+    --line: rgba(255, 255, 255, 0.08);
+    --receipt-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+    --font-display: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --font-body: Georgia, "Times New Roman", serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: #e8ecf4;
+    font-family: var(--font-display);
+    line-height: 1.55;
+    overflow-x: hidden;
+  }
+
+  /* Ambient cashier glow */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 10% 0%, rgba(57, 255, 182, 0.07), transparent 55%),
+      radial-gradient(ellipse 60% 40% at 90% 20%, rgba(255, 179, 71, 0.06), transparent 50%),
+      radial-gradient(ellipse 50% 60% at 50% 100%, rgba(167, 139, 250, 0.05), transparent 55%),
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(255, 255, 255, 0.012) 2px,
+        rgba(255, 255, 255, 0.012) 3px
+      );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 1.25rem 6rem; }
+
+  /* ── Barcode motif ── */
+  .barcode {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 36px;
+  }
+  .barcode span {
+    display: block;
+    background: var(--neon);
+    width: 2px;
+    height: 100%;
+    opacity: 0.85;
+  }
+  .barcode span:nth-child(odd) { width: 1px; height: 70%; }
+  .barcode span:nth-child(3n) { width: 3px; height: 100%; }
+  .barcode span:nth-child(5n) { width: 1px; height: 55%; }
+  .barcode span:nth-child(7n) { width: 4px; }
+
+  /* ── Hero ── */
+  .hero {
+    padding: 4.5rem 0 3rem;
+    display: grid;
+    gap: 2rem;
+  }
+  @media (min-width: 800px) {
+    .hero { grid-template-columns: 1.2fr 0.8fr; align-items: end; }
+  }
+
+  .meta {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--neon);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+  .meta .dot { opacity: 0.4; }
+
+  h1 {
+    font-size: clamp(2.1rem, 5vw, 3.4rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.08;
+    margin-bottom: 1rem;
+  }
+  h1 em {
+    font-style: normal;
+    color: var(--neon);
+    text-shadow: 0 0 40px rgba(57, 255, 182, 0.35);
+  }
+
+  .lede {
+    font-family: var(--font-body);
+    font-size: 1.15rem;
+    color: var(--mute);
+    max-width: 36rem;
+  }
+
+  /* Receipt ticket hero */
+  .ticket {
+    background: var(--paper);
+    color: var(--ink);
+    padding: 1.5rem 1.35rem 1.75rem;
+    border-radius: 2px;
+    box-shadow: var(--receipt-shadow);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    position: relative;
+    transform: rotate(2deg);
+    animation: ticket-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .ticket::before,
+  .ticket::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0;
+    height: 10px;
+    background:
+      radial-gradient(circle at 8px 0, transparent 7px, var(--paper) 7.5px) repeat-x;
+    background-size: 16px 10px;
+  }
+  .ticket::before { top: -10px; transform: rotate(180deg); }
+  .ticket::after { bottom: -10px; }
+  .ticket .store {
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0.35rem;
+  }
+  .ticket .sub {
+    text-align: center;
+    color: #555;
+    margin-bottom: 0.9rem;
+    font-size: 0.68rem;
+  }
+  .ticket .row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.2rem 0;
+    border-bottom: 1px dashed #c9c2b0;
+  }
+  .ticket .row.total {
+    border-bottom: none;
+    border-top: 2px solid var(--ink);
+    margin-top: 0.5rem;
+    padding-top: 0.55rem;
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+  .ticket .signal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    margin: 1rem 0 0.6rem;
+    color: #2a7a5a;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+  }
+  .wifi {
+    width: 18px; height: 14px; position: relative;
+  }
+  .wifi i {
+    position: absolute;
+    border: 2px solid currentColor;
+    border-bottom: none;
+    border-radius: 50% 50% 0 0;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .wifi i:nth-child(1) { width: 6px; height: 3px; bottom: 0; border: none; background: currentColor; border-radius: 1px; }
+  .wifi i:nth-child(2) { width: 10px; height: 5px; bottom: 1px; opacity: 0.7; }
+  .wifi i:nth-child(3) { width: 14px; height: 8px; bottom: 1px; opacity: 0.45; }
+  .ticket .bc-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.35rem; margin-top: 0.75rem; }
+  .ticket .bc-wrap .barcode span { background: var(--ink); }
+  .ticket .bc-num { letter-spacing: 0.2em; font-size: 0.65rem; }
+
+  @keyframes ticket-in {
+    from { opacity: 0; transform: translateY(30px) rotate(6deg); }
+    to { opacity: 1; transform: translateY(0) rotate(2deg); }
+  }
+
+  /* Nav pills */
+  .nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.5rem 0 2.5rem;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 3rem;
+    position: sticky;
+    top: 0;
+    background: rgba(10, 12, 16, 0.88);
+    backdrop-filter: blur(12px);
+    z-index: 20;
+  }
+  .nav a {
+    color: var(--mute);
+    text-decoration: none;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.45rem 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+  }
+  .nav a:hover { color: var(--neon); border-color: var(--neon); background: var(--neon-dim); }
+
+  /* Section shells */
+  section { margin-bottom: 5rem; scroll-margin-top: 4rem; }
+  .sec-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.75rem 1.25rem;
+    margin-bottom: 0.75rem;
+  }
+  .sec-num {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    color: var(--neon);
+  }
+  h2 {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    letter-spacing: -0.02em;
+    font-weight: 700;
+  }
+  .sec-blurb {
+    color: var(--mute);
+    font-family: var(--font-body);
+    font-size: 1.05rem;
+    max-width: 40rem;
+    margin-bottom: 1.75rem;
+  }
+  .insight-strip {
+    border-left: 3px solid var(--amber);
+    background: var(--amber-dim);
+    padding: 0.9rem 1.1rem;
+    margin: 2rem 0 0;
+    font-family: var(--font-body);
+    font-size: 1.02rem;
+    color: #f5e6c8;
+  }
+  .insight-strip strong {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 0.35rem;
+    font-weight: 600;
+  }
+
+  /* ═══ 1. ASSUMPTION REVERSAL — flip cards ═══ */
+  .flip-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 640px) {
+    .flip-grid { grid-template-columns: 1fr 1fr; }
+  }
+  .flip-card {
+    perspective: 1200px;
+    height: 168px;
+    cursor: pointer;
+  }
+  .flip-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.65s cubic-bezier(0.4, 0.2, 0.2, 1);
+    transform-style: preserve-3d;
+  }
+  .flip-card:hover .flip-inner,
+  .flip-card.is-flipped .flip-inner { transform: rotateY(180deg); }
+  .flip-face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: 4px;
+    padding: 1rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border: 1px solid var(--line);
+  }
+  .flip-front {
+    background: var(--bg-elev);
+  }
+  .flip-back {
+    background: linear-gradient(145deg, #0f2a22, #12151c 60%);
+    border-color: rgba(57, 255, 182, 0.35);
+    transform: rotateY(180deg);
+  }
+  .flip-label {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .flip-front .flip-label { color: var(--hot); }
+  .flip-back .flip-label { color: var(--neon); }
+  .flip-text {
+    font-size: 0.88rem;
+    line-height: 1.4;
+    flex: 1;
+    display: flex;
+    align-items: center;
+  }
+  .flip-hint {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    color: var(--mute);
+    letter-spacing: 0.08em;
+  }
+
+  .rebuild {
+    margin-top: 2rem;
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 700px) {
+    .rebuild { grid-template-columns: 1fr 1fr; }
+  }
+  .rebuild-box {
+    padding: 1.25rem;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+  }
+  .rebuild-box.in {
+    background: var(--neon-dim);
+    border-color: rgba(57, 255, 182, 0.3);
+  }
+  .rebuild-box.later {
+    background: rgba(255, 255, 255, 0.03);
+  }
+  .rebuild-box h3 {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 0.65rem;
+  }
+  .rebuild-box.in h3 { color: var(--neon); }
+  .rebuild-box.later h3 { color: var(--mute); }
+  .rebuild-box p { font-size: 0.92rem; color: #c8cede; }
+
+  /* ═══ 2. JTBD — role rails ═══ */
+  .jtbd-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  .role-block {
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--bg-elev);
+  }
+  .role-head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: rgba(0, 0, 0, 0.35);
+    border-bottom: 1px solid var(--line);
+  }
+  .role-badge {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.25rem 0.5rem;
+    border-radius: 2px;
+    background: var(--violet-dim);
+    color: var(--violet);
+    border: 1px solid rgba(167, 139, 250, 0.35);
+  }
+  .role-name { font-weight: 600; font-size: 0.95rem; }
+  .job-list {
+    display: grid;
+    gap: 0;
+  }
+  @media (min-width: 700px) {
+    .job-list { grid-template-columns: 1fr 1fr; }
+  }
+  .job-card {
+    padding: 1rem 1.1rem;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.9rem;
+    position: relative;
+    padding-left: 2.4rem;
+  }
+  @media (min-width: 700px) {
+    .job-card:nth-child(odd) { border-right: 1px solid var(--line); }
+    .job-card:nth-last-child(-n+2) { border-bottom: none; }
+  }
+  .job-card::before {
+    content: "▸";
+    position: absolute;
+    left: 1rem;
+    color: var(--amber);
+    font-family: var(--font-mono);
+  }
+
+  .hire-grid {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1.75rem;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 640px) {
+    .hire-grid { grid-template-columns: 1fr 1fr; }
+  }
+  .hire-card {
+    padding: 1rem 1.1rem;
+    border-radius: 4px;
+    border: 1px solid rgba(91, 157, 255, 0.3);
+    background: rgba(91, 157, 255, 0.08);
+  }
+  .hire-card h4 {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 0.4rem;
+  }
+  .hire-card p { font-size: 0.88rem; color: #c8cede; }
+
+  .missing-panel {
+    margin-top: 1.75rem;
+    padding: 1.25rem;
+    border: 1px dashed rgba(255, 77, 109, 0.4);
+    border-radius: 4px;
+    background: var(--hot-dim);
+  }
+  .missing-panel h3 {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--hot);
+    margin-bottom: 0.85rem;
+  }
+  .missing-list {
+    display: grid;
+    gap: 0.45rem;
+    list-style: none;
+  }
+  @media (min-width: 700px) {
+    .missing-list { grid-template-columns: 1fr 1fr; }
+  }
+  .missing-list li {
+    font-size: 0.86rem;
+    padding: 0.4rem 0.55rem;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 2px;
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+  }
+  .missing-list li::before {
+    content: "∅";
+    color: var(--hot);
+    font-family: var(--font-mono);
+    flex-shrink: 0;
+  }
+
+  .phase1-pack {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+  .chip {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    padding: 0.4rem 0.7rem;
+    border-radius: 2px;
+    background: var(--neon-dim);
+    border: 1px solid rgba(57, 255, 182, 0.35);
+    color: var(--neon);
+  }
+
+  /* ═══ 3. ONE FEATURE — crown jewel ═══ */
+  .crown-stage {
+    position: relative;
+    padding: 2rem 1.25rem 2.5rem;
+    border-radius: 6px;
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(255, 179, 71, 0.2), transparent 55%),
+      var(--bg-elev);
+    border: 1px solid rgba(255, 179, 71, 0.35);
+    text-align: center;
+    margin-bottom: 2rem;
+    overflow: hidden;
+  }
+  .crown-stage::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 12px,
+      rgba(255, 179, 71, 0.03) 12px,
+      rgba(255, 179, 71, 0.03) 13px
+    );
+    pointer-events: none;
+  }
+  .crown-icon {
+    font-size: 2.5rem;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+    filter: drop-shadow(0 0 20px rgba(255, 179, 71, 0.5));
+    animation: pulse-glow 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse-glow {
+    0%, 100% { filter: drop-shadow(0 0 12px rgba(255, 179, 71, 0.4)); transform: translateY(0); }
+    50% { filter: drop-shadow(0 0 28px rgba(255, 179, 71, 0.7)); transform: translateY(-3px); }
+  }
+  .crown-label {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 0.5rem;
+  }
+  .crown-title {
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.5rem;
+  }
+  .crown-sub {
+    font-family: var(--font-body);
+    color: var(--mute);
+    max-width: 28rem;
+    margin: 0 auto 1.25rem;
+  }
+  .crown-rule {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    padding: 0.55rem 1rem;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 179, 71, 0.4);
+    border-radius: 2px;
+    color: #f5e6c8;
+  }
+
+  .contenders {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: 1fr;
+    margin-bottom: 2rem;
+  }
+  @media (min-width: 700px) {
+    .contenders { grid-template-columns: repeat(3, 1fr); }
+  }
+  .contender {
+    padding: 1rem;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.02);
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .contender:hover { border-color: var(--mute); transform: translateY(-2px); }
+  .contender.winner {
+    border-color: rgba(255, 179, 71, 0.5);
+    background: var(--amber-dim);
+  }
+  .contender .tag {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--mute);
+    margin-bottom: 0.35rem;
+  }
+  .contender.winner .tag { color: var(--amber); }
+  .contender h4 { font-size: 0.95rem; margin-bottom: 0.35rem; }
+  .contender p { font-size: 0.8rem; color: var(--mute); }
+
+  .polish-list {
+    display: grid;
+    gap: 0.55rem;
+  }
+  @media (min-width: 700px) {
+    .polish-list { grid-template-columns: 1fr 1fr; }
+  }
+  .polish-item {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    padding: 0.75rem 0.9rem;
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    font-size: 0.88rem;
+  }
+  .polish-item .n {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--amber);
+    min-width: 1.4rem;
+    padding-top: 0.15rem;
+  }
+
+  .scope-trim {
+    margin-top: 1.75rem;
+    display: grid;
+    gap: 0.5rem;
+  }
+  .scope-row {
+    display: grid;
+    grid-template-columns: 7rem 1fr;
+    gap: 0.75rem;
+    align-items: baseline;
+    padding: 0.55rem 0.75rem;
+    border-left: 2px solid var(--line);
+    background: rgba(255, 255, 255, 0.02);
+    font-size: 0.86rem;
+  }
+  .scope-row .mod {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--violet);
+  }
+
+  /* ═══ 4. WORST → FLIP pairs ═══ */
+  .worst-pairs {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+  .pair {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  @media (min-width: 760px) {
+    .pair {
+      grid-template-columns: 1fr auto 1fr;
+      align-items: stretch;
+      gap: 0;
+    }
+  }
+  .pair-worst, .pair-flip {
+    padding: 0.9rem 1rem;
+    font-size: 0.86rem;
+    line-height: 1.4;
+  }
+  .pair-worst {
+    background: linear-gradient(90deg, rgba(255, 77, 109, 0.12), rgba(255, 77, 109, 0.04));
+    border: 1px solid rgba(255, 77, 109, 0.25);
+    border-radius: 4px;
+  }
+  .pair-flip {
+    background: linear-gradient(90deg, rgba(57, 255, 182, 0.04), rgba(57, 255, 182, 0.12));
+    border: 1px solid rgba(57, 255, 182, 0.25);
+    border-radius: 4px;
+  }
+  @media (min-width: 760px) {
+    .pair-worst { border-radius: 4px 0 0 4px; border-right: none; }
+    .pair-flip { border-radius: 0 4px 4px 0; border-left: none; }
+  }
+  .pair-arrow {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    background: var(--bg);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    color: var(--amber);
+    font-family: var(--font-mono);
+    font-size: 1.1rem;
+  }
+  @media (min-width: 760px) {
+    .pair-arrow { display: flex; }
+  }
+  .pair-tag {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 0.3rem;
+  }
+  .pair-worst .pair-tag { color: var(--hot); }
+  .pair-flip .pair-tag { color: var(--neon); }
+
+  .flip-synth {
+    margin-top: 2rem;
+    display: grid;
+    gap: 0.75rem;
+  }
+  .synth-card {
+    padding: 1rem 1.15rem;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+    background: var(--bg-elev);
+  }
+  .synth-card h4 {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--violet);
+    margin-bottom: 0.4rem;
+  }
+  .synth-card p { font-size: 0.9rem; color: #c8cede; }
+
+  /* ═══ SYNTHESIS CLIMAX ═══ */
+  .climax {
+    position: relative;
+    margin-top: 1rem;
+    padding: 2.5rem 1.5rem 2.75rem;
+    border-radius: 6px;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(57, 255, 182, 0.12), transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(167, 139, 250, 0.1), transparent 45%),
+      #0e1118;
+    border: 1px solid rgba(57, 255, 182, 0.35);
+    box-shadow: 0 0 0 1px rgba(57, 255, 182, 0.08), 0 40px 100px rgba(0, 0, 0, 0.5);
+  }
+  .climax .q {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--mute);
+    margin-bottom: 0.75rem;
+  }
+  .climax .answer {
+    font-size: clamp(1.35rem, 3.2vw, 1.85rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+    margin-bottom: 1rem;
+  }
+  .climax .answer .yes { color: var(--neon); }
+  .climax .answer .no { color: var(--hot); }
+  .climax .verdict {
+    font-family: var(--font-body);
+    font-size: 1.08rem;
+    color: #b8c0d4;
+    max-width: 40rem;
+    margin-bottom: 2rem;
+  }
+
+  .inout {
+    display: grid;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  @media (min-width: 700px) {
+    .inout { grid-template-columns: 1fr 1fr; }
+  }
+  .inout-col {
+    padding: 1.25rem;
+    border-radius: 4px;
+  }
+  .inout-col.in {
+    background: var(--neon-dim);
+    border: 1px solid rgba(57, 255, 182, 0.35);
+  }
+  .inout-col.out {
+    background: var(--hot-dim);
+    border: 1px solid rgba(255, 77, 109, 0.3);
+  }
+  .inout-col h3 {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: 0.85rem;
+  }
+  .inout-col.in h3 { color: var(--neon); }
+  .inout-col.out h3 { color: var(--hot); }
+  .inout-col ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .inout-col li {
+    font-size: 0.88rem;
+    padding: 0.35rem 0;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+    display: flex;
+    gap: 0.5rem;
+  }
+  .inout-col.in li::before { content: "+"; color: var(--neon); font-family: var(--font-mono); }
+  .inout-col.out li::before { content: "−"; color: var(--hot); font-family: var(--font-mono); }
+
+  .wedge-banner {
+    text-align: center;
+    padding: 1.5rem 1rem;
+    margin-bottom: 1.75rem;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px dashed rgba(255, 179, 71, 0.45);
+    border-radius: 4px;
+  }
+  .wedge-banner .lbl {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 0.4rem;
+  }
+  .wedge-banner .name {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+  }
+  .wedge-banner .detail {
+    font-size: 0.88rem;
+    color: var(--mute);
+  }
+
+  .metrics {
+    display: grid;
+    gap: 0.65rem;
+    grid-template-columns: 1fr;
+    margin-bottom: 1.75rem;
+  }
+  @media (min-width: 640px) {
+    .metrics { grid-template-columns: repeat(4, 1fr); }
+  }
+  .metric {
+    text-align: center;
+    padding: 0.9rem 0.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+  }
+  .metric .v {
+    font-family: var(--font-mono);
+    font-size: 1.1rem;
+    color: var(--neon);
+    margin-bottom: 0.25rem;
+  }
+  .metric .l {
+    font-size: 0.68rem;
+    color: var(--mute);
+    letter-spacing: 0.04em;
+  }
+
+  .decision {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    line-height: 1.6;
+    padding: 1rem 1.15rem;
+    background: rgba(167, 139, 250, 0.1);
+    border-left: 3px solid var(--violet);
+    color: #d4c8f5;
+  }
+
+  /* Footer */
+  footer {
+    margin-top: 4rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--mute);
+    letter-spacing: 0.06em;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  /* Reveal animation */
+  .reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Counter LED strip */
+  .led {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+  }
+  .led i {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--neon);
+    box-shadow: 0 0 8px var(--neon);
+    animation: blink 1.8s infinite;
+  }
+  .led i:nth-child(2) { animation-delay: 0.3s; opacity: 0.7; }
+  .led i:nth-child(3) { animation-delay: 0.6s; opacity: 0.45; }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.25; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HERO -->
+  <header class="hero">
+    <div>
+      <div class="meta">
+        <span class="led"><i></i><i></i><i></i></span>
+        <span>BMAD Brainstorm</span>
+        <span class="dot">·</span>
+        <span>2026-08-04</span>
+        <span class="dot">·</span>
+        <span>Autonomous · Complete</span>
+      </div>
+      <h1>Is <em>vision.md</em> enough for a modern POS first phase?</h1>
+      <p class="lede">
+        Four techniques stress-tested the platform thesis against the brutal reality of a cashier counter.
+        What survived: Instant Checkout as the wedge. What didn't: building the whole monorepo map before the first sale.
+      </p>
+    </div>
+    <aside class="ticket" aria-label="Session receipt">
+      <div class="store">★ Phase 1 Wedge ★</div>
+      <div class="sub">Cashier Counter · Session Receipt</div>
+      <div class="row"><span>TOPIC</span><span>POS Vision</span></div>
+      <div class="row"><span>TECHNIQUES</span><span>04</span></div>
+      <div class="row"><span>MODE</span><span>AUTONOMOUS</span></div>
+      <div class="row"><span>STATUS</span><span>COMPLETE</span></div>
+      <div class="row total"><span>VERDICT</span><span>NORTH STAR ≠ SCOPE</span></div>
+      <div class="signal">
+        <div class="wifi" aria-hidden="true"><i></i><i></i><i></i></div>
+        OFFLINE QUEUE: PENDING 0 — NEVER LOSE A SALE
+      </div>
+      <div class="bc-wrap">
+        <div class="barcode" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <div class="bc-num">BRNST-20260804-P1</div>
+      </div>
+    </aside>
+  </header>
+
+  <nav class="nav" aria-label="Techniques">
+    <a href="#assumption">01 Assumption Reversal</a>
+    <a href="#jtbd">02 Job to Be Done</a>
+    <a href="#one-feature">03 One Feature Only</a>
+    <a href="#worst">04 Worst Possible Idea</a>
+    <a href="#synthesis">★ Synthesis</a>
+  </nav>
+
+  <!-- ════════ 1. ASSUMPTION REVERSAL ════════ -->
+  <section id="assumption" class="reveal">
+    <div class="sec-head">
+      <span class="sec-num">TECHNIQUE 01</span>
+      <h2>Assumption Reversal</h2>
+    </div>
+    <p class="sec-blurb">
+      Flip every sacred assumption in vision.md. Hover or tap a card — assumption on the front, phase-1 flip on the back.
+      The rebuild that emerges is a single-store cashier machine, not a platform cathedral.
+    </p>
+
+    <div class="flip-grid" id="flip-grid">
+      <!-- cards injected / static -->
+      <div class="flip-card" tabindex="0" role="button" aria-label="Flip assumption card">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <span class="flip-label">Assumption</span>
+            <p class="flip-text">Offline-first is non-negotiable from day 1</p>
+            <span class="flip-hint">tap / hover to flip →</span>
+          </div>
+          <div class="flip-face flip-back">
+            <span class="flip-label">Flip</span>
+            <p class="flip-text">Ship online-only MVP first; add offline as a phase 2 module</p>
+            <span class="flip-hint">← reverse</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-card" tabindex="0" role="button">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <span class="flip-label">Assumption</span>
+            <p class="flip-text">Monorepo from day 1</p>
+            <span class="flip-hint">tap / hover to flip →</span>
+          </div>
+          <div class="flip-face flip-back">
+            <span class="flip-label">Flip</span>
+            <p class="flip-text">Start with a single Cashier+API repo; extract packages when duplication hurts</p>
+            <span class="flip-hint">← reverse</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-card" tabindex="0" role="button">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <span class="flip-label">Assumption</span>
+            <p class="flip-text">Must serve SMB to multi-branch enterprises</p>
+            <span class="flip-hint">tap / hover to flip →</span>
+          </div>
+          <div class="flip-face flip-back">
+            <span class="flip-label">Flip</span>
+            <p class="flip-text">Phase 1 is single-store only; multi-branch later</p>
+            <span class="flip-hint">← reverse</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-card" tabindex="0" role="button">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <span class="flip-label">Assumption</span>
+            <p class="flip-text">PWA is the right cashier surface</p>
+            <span class="flip-hint">tap / hover to flip →</span>
+          </div>
+          <div class="flip-face flip-back">
+            <span class="flip-label">Flip</span>
+            <p class="flip-text">Native Electron/Capacitor for printers/scanners; PWA later</p>
+            <span class="flip-hint">← reverse</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-card" tabindex="0" role="button">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <span class="flip-label">Assumption</span>
+            <p class="flip-text">Shared business logic package is phase 1</p>
+            <span class="flip-hint">tap / hover to flip →</span>
+          </div>
+          <div class="flip-face flip-back">
+            <span class="flip-label">Flip</span>
+            <p class="flip-text">Duplicate rules briefly; extract when the second client appears</p>
+            <span class="flip-hint">← reverse</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-card" tabindex="0" role="button">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <span class="flip-label">Assumption</span>
+            <p class="flip-text">Admin Dashboard ships in the same release as Cashier</p>
+            <span class="flip-hint">tap / hover to flip →</span>
+          </div>
+          <div class="flip-face flip-back">
+            <span class="flip-label">Flip</span>
+            <p class="flip-text">Cashier+API only; admin via simple backoffice later</p>
+            <span class="flip-hint">← reverse</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-card" tabindex="0" role="button">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <span class="flip-label">Assumption</span>
+            <p class="flip-text">Worker is required early</p>
+            <span class="flip-hint">tap / hover to flip →</span>
+          </div>
+          <div class="flip-face flip-back">
+            <span class="flip-label">Flip</span>
+            <p class="flip-text">Background jobs in the API process until queue pain appears</p>
+            <span class="flip-hint">← reverse</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-card" tabindex="0" role="button">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <span class="flip-label">Assumption</span>
+            <p class="flip-text">Type-safety end-to-end is a launch gate</p>
+            <span class="flip-hint">tap / hover to flip →</span>
+          </div>
+          <div class="flip-face flip-back">
+            <span class="flip-label">Flip</span>
+            <p class="flip-text">Tighten contracts after the first store is live</p>
+            <span class="flip-hint">← reverse</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-card" tabindex="0" role="button">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <span class="flip-label">Assumption</span>
+            <p class="flip-text">Multiple currencies / tax rules needed for SaaS</p>
+            <span class="flip-hint">tap / hover to flip →</span>
+          </div>
+          <div class="flip-face flip-back">
+            <span class="flip-label">Flip</span>
+            <p class="flip-text">One currency, one tax profile per tenant in v1</p>
+            <span class="flip-hint">← reverse</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-card" tabindex="0" role="button">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <span class="flip-label">Assumption</span>
+            <p class="flip-text">Returns must ship with checkout</p>
+            <span class="flip-hint">tap / hover to flip →</span>
+          </div>
+          <div class="flip-face flip-back">
+            <span class="flip-label">Flip</span>
+            <p class="flip-text">Void-same-day only; full returns later</p>
+            <span class="flip-hint">← reverse</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-card" tabindex="0" role="button">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <span class="flip-label">Assumption</span>
+            <p class="flip-text">Customer management is core POS</p>
+            <span class="flip-hint">tap / hover to flip →</span>
+          </div>
+          <div class="flip-face flip-back">
+            <span class="flip-label">Flip</span>
+            <p class="flip-text">Optional customer name on receipt; CRM is phase 2</p>
+            <span class="flip-hint">← reverse</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-card" tabindex="0" role="button">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <span class="flip-label">Assumption</span>
+            <p class="flip-text">Promotions / rewards in shared logic early</p>
+            <span class="flip-hint">tap / hover to flip →</span>
+          </div>
+          <div class="flip-face flip-back">
+            <span class="flip-label">Flip</span>
+            <p class="flip-text">Manual discount % only; engine later</p>
+            <span class="flip-hint">← reverse</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-card" tabindex="0" role="button">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <span class="flip-label">Assumption</span>
+            <p class="flip-text">Barcode scanning is table-stakes</p>
+            <span class="flip-hint">tap / hover to flip →</span>
+          </div>
+          <div class="flip-face flip-back">
+            <span class="flip-label">Flip</span>
+            <p class="flip-text">Search + favorites first; scanner as keyboard wedge only</p>
+            <span class="flip-hint">← reverse</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-card" tabindex="0" role="button">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <span class="flip-label">Assumption</span>
+            <p class="flip-text">Receipt printing is phase 1</p>
+            <span class="flip-hint">tap / hover to flip →</span>
+          </div>
+          <div class="flip-face flip-back">
+            <span class="flip-label">Flip</span>
+            <p class="flip-text">Digital receipt URL / SMS; hardware printer later</p>
+            <span class="flip-hint">← reverse</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-card" tabindex="0" role="button">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <span class="flip-label">Assumption</span>
+            <p class="flip-text">Shift management is required</p>
+            <span class="flip-hint">tap / hover to flip →</span>
+          </div>
+          <div class="flip-face flip-back">
+            <span class="flip-label">Flip</span>
+            <p class="flip-text">Open/close day report without formal shifts</p>
+            <span class="flip-hint">← reverse</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-card" tabindex="0" role="button">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <span class="flip-label">Assumption</span>
+            <p class="flip-text">Unlimited branches is a success metric</p>
+            <span class="flip-hint">tap / hover to flip →</span>
+          </div>
+          <div class="flip-face flip-back">
+            <span class="flip-label">Flip</span>
+            <p class="flip-text">Success = 1 store sells all day reliably</p>
+            <span class="flip-hint">← reverse</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-card" tabindex="0" role="button">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <span class="flip-label">Assumption</span>
+            <p class="flip-text">Future apps (KDS, warehouse) shape architecture now</p>
+            <span class="flip-hint">tap / hover to flip →</span>
+          </div>
+          <div class="flip-face flip-back">
+            <span class="flip-label">Flip</span>
+            <p class="flip-text">Design only for Cashier + Admin seams</p>
+            <span class="flip-hint">← reverse</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-card" tabindex="0" role="button">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <span class="flip-label">Assumption</span>
+            <p class="flip-text">SaaS multi-tenant from day 1</p>
+            <span class="flip-hint">tap / hover to flip →</span>
+          </div>
+          <div class="flip-face flip-back">
+            <span class="flip-label">Flip</span>
+            <p class="flip-text">Single-tenant deploy first; tenancy when second customer arrives</p>
+            <span class="flip-hint">← reverse</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-card" tabindex="0" role="button">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <span class="flip-label">Assumption</span>
+            <p class="flip-text">Lighthouse 95+ is a product metric</p>
+            <span class="flip-hint">tap / hover to flip →</span>
+          </div>
+          <div class="flip-face flip-back">
+            <span class="flip-label">Flip</span>
+            <p class="flip-text">Measure cart / checkout latency on real devices</p>
+            <span class="flip-hint">← reverse</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-card" tabindex="0" role="button">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <span class="flip-label">Assumption</span>
+            <p class="flip-text">Non-goals (not ERP) are enough boundary</p>
+            <span class="flip-hint">tap / hover to flip →</span>
+          </div>
+          <div class="flip-face flip-back">
+            <span class="flip-label">Flip</span>
+            <p class="flip-text">Write an explicit phase-1 OUT list</p>
+            <span class="flip-hint">← reverse</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-card" tabindex="0" role="button">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <span class="flip-label">Assumption</span>
+            <p class="flip-text">Inventory module is independent early</p>
+            <span class="flip-hint">tap / hover to flip →</span>
+          </div>
+          <div class="flip-face flip-back">
+            <span class="flip-label">Flip</span>
+            <p class="flip-text">Stock qty on product row; true inventory later</p>
+            <span class="flip-hint">← reverse</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-card" tabindex="0" role="button">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <span class="flip-label">Assumption</span>
+            <p class="flip-text">Payments = multiple methods</p>
+            <span class="flip-hint">tap / hover to flip →</span>
+          </div>
+          <div class="flip-face flip-back">
+            <span class="flip-label">Flip</span>
+            <p class="flip-text">Cash + one card terminal; reconcile manually</p>
+            <span class="flip-hint">← reverse</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-card" tabindex="0" role="button">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <span class="flip-label">Assumption</span>
+            <p class="flip-text">Sync must be automatic and perfect</p>
+            <span class="flip-hint">tap / hover to flip →</span>
+          </div>
+          <div class="flip-face flip-back">
+            <span class="flip-label">Flip</span>
+            <p class="flip-text">Manual Sync Now + conflict UI acceptable in v1</p>
+            <span class="flip-hint">← reverse</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-card" tabindex="0" role="button">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <span class="flip-label">Assumption</span>
+            <p class="flip-text">Keyboard + touch + barcode all on day 1</p>
+            <span class="flip-hint">tap / hover to flip →</span>
+          </div>
+          <div class="flip-face flip-back">
+            <span class="flip-label">Flip</span>
+            <p class="flip-text">Optimize one input mode deeply first</p>
+            <span class="flip-hint">← reverse</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-card" tabindex="0" role="button">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <span class="flip-label">Assumption</span>
+            <p class="flip-text">Shared UI package needed</p>
+            <span class="flip-hint">tap / hover to flip →</span>
+          </div>
+          <div class="flip-face flip-back">
+            <span class="flip-label">Flip</span>
+            <p class="flip-text">Share design tokens + domain types only</p>
+            <span class="flip-hint">← reverse</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rebuild">
+      <div class="rebuild-box in">
+        <h3>Rebuild on flips — Phase 1</h3>
+        <p>Single-store cashier + catalog + cart/checkout + cash + basic stock.</p>
+      </div>
+      <div class="rebuild-box later">
+        <h3>Later phases</h3>
+        <p>Offline, multi-branch, promotions, returns, worker, advanced admin.</p>
+      </div>
+    </div>
+
+    <div class="insight-strip">
+      <strong>Insight</strong>
+      Vision reads like a platform thesis; first phase needs a brutal cut list, not more ambition.
+    </div>
+  </section>
+
+  <!-- ════════ 2. JTBD ════════ -->
+  <section id="jtbd" class="reveal">
+    <div class="sec-head">
+      <span class="sec-num">TECHNIQUE 02</span>
+      <h2>Job to Be Done</h2>
+    </div>
+    <p class="sec-blurb">
+      Vision lists users but not jobs. Phase 1 should be a JTBD matrix, not an app list.
+      Modern POS wins if the cashier job is 10× better than Excel + calculator — not if the monorepo is elegant.
+    </p>
+
+    <div class="jtbd-rail">
+      <div class="role-block">
+        <div class="role-head">
+          <span class="role-badge">Cashier</span>
+          <span class="role-name">Close the sale. Survive the rush.</span>
+        </div>
+        <div class="job-list">
+          <div class="job-card">Close the sale fast without thinking — not browse dashboards</div>
+          <div class="job-card">Recover from mistakes (wrong item / qty) without manager shame</div>
+          <div class="job-card">Keep selling when Wi‑Fi dies during lunch rush</div>
+          <div class="job-card">Prove cash drawer matches sales at end of day</div>
+        </div>
+      </div>
+
+      <div class="role-block">
+        <div class="role-head">
+          <span class="role-badge">Store Manager</span>
+          <span class="role-name">Trust the floor. Restock with eyes open.</span>
+        </div>
+        <div class="job-list">
+          <div class="job-card">Know what sold / what is low before the restocking trip</div>
+          <div class="job-card">Trust that cashiers cannot silently void everything</div>
+        </div>
+      </div>
+
+      <div class="role-block">
+        <div class="role-head">
+          <span class="role-badge">Owner</span>
+          <span class="role-name">Money in. Money out. Then grow.</span>
+        </div>
+        <div class="job-list">
+          <div class="job-card">See money in / money out without opening an ERP</div>
+          <div class="job-card">Open a second branch without rewriting the system</div>
+        </div>
+      </div>
+
+      <div class="role-block">
+        <div class="role-head">
+          <span class="role-badge">Others</span>
+          <span class="role-name">Accountant · Admin · Customer · Warehouse</span>
+        </div>
+        <div class="job-list">
+          <div class="job-card">Accountant: export clean daily sales for tax / bookkeeping</div>
+          <div class="job-card">Admin: onboard a new cashier in minutes, not a training week</div>
+          <div class="job-card">Customer (indirect): get out of line quickly with correct price</div>
+          <div class="job-card">Warehouse (later): pick / receive without touching cashier UI</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hire-grid">
+      <div class="hire-card">
+        <h4>Hire for speed-to-sale</h4>
+        <p>Big search, recent items, barcode, hotkeys — not pretty animations.</p>
+      </div>
+      <div class="hire-card">
+        <h4>Hire for trust</h4>
+        <p>Immutable sale log + supervised voids beats fancy analytics.</p>
+      </div>
+      <div class="hire-card">
+        <h4>Hire for resilience</h4>
+        <p>Offline queue of sales &gt; cloud-only perfect inventory.</p>
+      </div>
+      <div class="hire-card">
+        <h4>Hire for clarity</h4>
+        <p>One tax rule that is always correct &gt; many half-broken tax engines.</p>
+      </div>
+    </div>
+
+    <p style="margin-top:1.5rem;font-size:0.9rem;color:var(--mute);">
+      Phase 1 JTBD pack — the jobs that must clear the bar:
+    </p>
+    <div class="phase1-pack">
+      <span class="chip">Sell</span>
+      <span class="chip">Take payment</span>
+      <span class="chip">Print / show receipt</span>
+      <span class="chip">Adjust stock by 1</span>
+      <span class="chip">Day close</span>
+    </div>
+
+    <div class="missing-panel">
+      <h3>Missing JTBD in vision.md</h3>
+      <ul class="missing-list">
+        <li>Hardware reality (printers, drawers, scanners, tablets) as first-class</li>
+        <li>Training / onboarding path for non-technical cashiers</li>
+        <li>Dispute / refund trust model (who can reverse what)</li>
+        <li>End-of-day cash reconciliation ritual</li>
+        <li>Price changes mid-day without breaking open carts</li>
+        <li>Barcode conflicts / PLU / weighed items (retail vs F&amp;B)</li>
+        <li>Multi-payment split tender (cash + card) in one sale</li>
+        <li>Park / hold sale when customer forgets wallet</li>
+      </ul>
+    </div>
+
+    <p style="margin-top:1.5rem;font-size:0.92rem;color:#c8cede;">
+      If owner JTBD is SaaS multi-branch, phase 1 should prove one store first with a migration path.
+      If F&amp;B modifiers / KDS are in future apps, decide now whether retail-only phase 1 is intentional.
+    </p>
+
+    <div class="insight-strip">
+      <strong>Insight</strong>
+      Vision is strong on architecture jobs; thin on cashier / manager daily jobs that define MVP.
+    </div>
+  </section>
+
+  <!-- ════════ 3. ONE FEATURE ONLY ════════ -->
+  <section id="one-feature" class="reveal">
+    <div class="sec-head">
+      <span class="sec-num">TECHNIQUE 03</span>
+      <h2>One Feature Only</h2>
+    </div>
+    <p class="sec-blurb">
+      If everything else is spreadsheet until this works — what is the one thing?
+      Vision's modular list tempts building modules, not a product. Modern POS first phase is a sharp wedge.
+    </p>
+
+    <div class="crown-stage">
+      <div class="crown-icon" aria-hidden="true">♛</div>
+      <div class="crown-label">Crown Jewel</div>
+      <div class="crown-title">Instant Checkout</div>
+      <p class="crown-sub">Catalog + cart + pay — with &lt;300ms feel. Offline is an enhancer, not the identity.</p>
+      <div class="crown-rule">If it does not make Instant Checkout better, it is not phase 1.</div>
+    </div>
+
+    <div class="contenders">
+      <div class="contender winner">
+        <div class="tag">Forced pick · Product</div>
+        <h4>Instant Checkout</h4>
+        <p>Catalog + cart + cash. No admin. No reports. Just sell.</p>
+      </div>
+      <div class="contender">
+        <div class="tag">Forced pick · Differentiation</div>
+        <h4>Offline Sales Capture</h4>
+        <p>Everything else is spreadsheet until sync works. Modern POS claim needs proof.</p>
+      </div>
+      <div class="contender">
+        <div class="tag">Forced pick · SaaS</div>
+        <h4>Product Truth</h4>
+        <p>One SKU master with price / stock that never lies — but delays selling.</p>
+      </div>
+      <div class="contender">
+        <div class="tag">Contender</div>
+        <h4>Only Day Close</h4>
+        <p>If end-of-day cash matches, the POS is good enough.</p>
+      </div>
+      <div class="contender">
+        <div class="tag">Contender</div>
+        <h4>Barcode Sell Loop</h4>
+        <p>Scan → price → pay → receipt as unbeatable muscle memory.</p>
+      </div>
+      <div class="contender">
+        <div class="tag">Contender</div>
+        <h4>Receipt Integrity</h4>
+        <p>Every sale produces an immutable receipt number.</p>
+      </div>
+      <div class="contender">
+        <div class="tag">Contender</div>
+        <h4>Cashier Speed Pack</h4>
+        <p>Search + hotkeys + favorites that beat Square on local retail.</p>
+      </div>
+    </div>
+
+    <h3 style="font-size:1rem;margin-bottom:0.85rem;letter-spacing:-0.01em;">Make Instant Checkout unbelievably good</h3>
+    <div class="polish-list">
+      <div class="polish-item"><span class="n">01</span><span>Zero-latency local cache of catalog</span></div>
+      <div class="polish-item"><span class="n">02</span><span>Numeric keypad qty, +/−, void line, hold sale</span></div>
+      <div class="polish-item"><span class="n">03</span><span>Keyboard-first; mouse optional</span></div>
+      <div class="polish-item"><span class="n">04</span><span>Offline queue that never drops a sale</span></div>
+      <div class="polish-item"><span class="n">05</span><span>Receipt reprint by sale id</span></div>
+      <div class="polish-item"><span class="n">06</span><span>Wrong price? Manager PIN override logged</span></div>
+      <div class="polish-item"><span class="n">07</span><span>Stock decrement optimistic with conflict report later</span></div>
+    </div>
+
+    <div class="scope-trim">
+      <div class="scope-row"><span class="mod">Admin</span><span>Exists only to feed Instant Checkout (CRUD products / prices)</span></div>
+      <div class="scope-row"><span class="mod">Reports</span><span>One sales list + totals — not an analytics suite</span></div>
+      <div class="scope-row"><span class="mod">Payments</span><span>Record method + amount; deep gateway later</span></div>
+      <div class="scope-row"><span class="mod">Employees</span><span>Login roles: cashier / manager only</span></div>
+      <div class="scope-row"><span class="mod">Customers</span><span>Optional phone on receipt</span></div>
+      <div class="scope-row"><span class="mod">Promotions</span><span>None — or single % off sale</span></div>
+      <div class="scope-row"><span class="mod">Suppliers</span><span>Out (non-goal adjacent)</span></div>
+    </div>
+
+    <div class="insight-strip">
+      <strong>Insight</strong>
+      Pick Instant Checkout as the crown jewel; defer platform completeness.
+    </div>
+  </section>
+
+  <!-- ════════ 4. WORST POSSIBLE IDEA ════════ -->
+  <section id="worst" class="reveal">
+    <div class="sec-head">
+      <span class="sec-num">TECHNIQUE 04</span>
+      <h2>Worst Possible Idea</h2>
+    </div>
+    <p class="sec-blurb">
+      Invent disasters on purpose — then flip each into a phase-1 guardrail.
+      Left: the trap. Right: the escape.
+    </p>
+
+    <div class="worst-pairs">
+      <div class="pair">
+        <div class="pair-worst"><span class="pair-tag">Worst</span>Build all 5 apps + future KDS before first sale</div>
+        <div class="pair-arrow">→</div>
+        <div class="pair-flip"><span class="pair-tag">Flip</span>Cashier + API only until first real store</div>
+      </div>
+      <div class="pair">
+        <div class="pair-worst"><span class="pair-tag">Worst</span>Perfect offline CRDT sync before UI</div>
+        <div class="pair-arrow">→</div>
+        <div class="pair-flip"><span class="pair-tag">Flip</span>Sell online; add offline with simple outbox</div>
+      </div>
+      <div class="pair">
+        <div class="pair-worst"><span class="pair-tag">Worst</span>Support every tax jurisdiction on day 1</div>
+        <div class="pair-arrow">→</div>
+        <div class="pair-flip"><span class="pair-tag">Flip</span>Configurable single tax rate + inclusive / exclusive flag</div>
+      </div>
+      <div class="pair">
+        <div class="pair-worst"><span class="pair-tag">Worst</span>Custom everything; ignore Square / iZettle patterns</div>
+        <div class="pair-arrow">→</div>
+        <div class="pair-flip"><span class="pair-tag">Flip</span>Copy proven cashier layouts; innovate on offline</div>
+      </div>
+      <div class="pair">
+        <div class="pair-worst"><span class="pair-tag">Worst</span>No hardware plan; assume browser print works</div>
+        <div class="pair-arrow">→</div>
+        <div class="pair-flip"><span class="pair-tag">Flip</span>Phase 1 hardware matrix (ESC/POS, drawer kick)</div>
+      </div>
+      <div class="pair">
+        <div class="pair-worst"><span class="pair-tag">Worst</span>Treat vision success metrics (Lighthouse, 100% TS) as launch criteria</div>
+        <div class="pair-arrow">→</div>
+        <div class="pair-flip"><span class="pair-tag">Flip</span>Store-day metrics</div>
+      </div>
+      <div class="pair">
+        <div class="pair-worst"><span class="pair-tag">Worst</span>Multi-currency SaaS marketing before local PMF</div>
+        <div class="pair-arrow">→</div>
+        <div class="pair-flip"><span class="pair-tag">Flip</span>One market, one currency, one language</div>
+      </div>
+      <div class="pair">
+        <div class="pair-worst"><span class="pair-tag">Worst</span>Deep RBAC / employees / suppliers in admin v1</div>
+        <div class="pair-arrow">→</div>
+        <div class="pair-flip"><span class="pair-tag">Flip</span>2 roles, product CRUD, sales list</div>
+      </div>
+      <div class="pair">
+        <div class="pair-worst"><span class="pair-tag">Worst</span>Feature parity with enterprise POS</div>
+        <div class="pair-arrow">→</div>
+        <div class="pair-flip"><span class="pair-tag">Flip</span>Win one niche (small retail / warung / boutique)</div>
+      </div>
+      <div class="pair">
+        <div class="pair-worst"><span class="pair-tag">Worst</span>Monorepo tooling week with zero product</div>
+        <div class="pair-arrow">→</div>
+        <div class="pair-flip"><span class="pair-tag">Flip</span>Vertical slice sale end-to-end in week 1</div>
+      </div>
+      <div class="pair">
+        <div class="pair-worst"><span class="pair-tag">Worst</span>Shared packages before two consumers</div>
+        <div class="pair-arrow">→</div>
+        <div class="pair-flip"><span class="pair-tag">Flip</span>Extract after second app exists</div>
+      </div>
+      <div class="pair">
+        <div class="pair-worst"><span class="pair-tag">Worst</span>Analytics / dashboard vanity charts</div>
+        <div class="pair-arrow">→</div>
+        <div class="pair-flip"><span class="pair-tag">Flip</span>CSV export + daily total</div>
+      </div>
+      <div class="pair">
+        <div class="pair-worst"><span class="pair-tag">Worst</span>Customer loyalty / points in shared logic early</div>
+        <div class="pair-arrow">→</div>
+        <div class="pair-flip"><span class="pair-tag">Flip</span>No loyalty until retention hurts</div>
+      </div>
+      <div class="pair">
+        <div class="pair-worst"><span class="pair-tag">Worst</span>Public API / marketplace in architecture spine</div>
+        <div class="pair-arrow">→</div>
+        <div class="pair-flip"><span class="pair-tag">Flip</span>Private API only; public later</div>
+      </div>
+      <div class="pair">
+        <div class="pair-worst"><span class="pair-tag">Worst</span>Kitchen display mentioned as future without deciding retail vs F&amp;B</div>
+        <div class="pair-arrow">→</div>
+        <div class="pair-flip"><span class="pair-tag">Flip</span>Declare retail-first boundary</div>
+      </div>
+      <div class="pair">
+        <div class="pair-worst"><span class="pair-tag">Worst</span>Offline that loses sales silently</div>
+        <div class="pair-arrow">→</div>
+        <div class="pair-flip"><span class="pair-tag">Flip</span>Never lose; show pending sync count always</div>
+      </div>
+      <div class="pair">
+        <div class="pair-worst"><span class="pair-tag">Worst</span>Checkout that blocks on network</div>
+        <div class="pair-arrow">→</div>
+        <div class="pair-flip"><span class="pair-tag">Flip</span>Local commit first, sync second</div>
+      </div>
+      <div class="pair">
+        <div class="pair-worst"><span class="pair-tag">Worst</span>Vague “great UX” without cashier journey map</div>
+        <div class="pair-arrow">→</div>
+        <div class="pair-flip"><span class="pair-tag">Flip</span>Write 5 happy-path scripts for phase 1</div>
+      </div>
+      <div class="pair">
+        <div class="pair-worst"><span class="pair-tag">Worst</span>Unlimited branches as metric with no tenancy model</div>
+        <div class="pair-arrow">→</div>
+        <div class="pair-flip"><span class="pair-tag">Flip</span>Define store entity early; limit count</div>
+      </div>
+      <div class="pair">
+        <div class="pair-worst"><span class="pair-tag">Worst</span>Returns without inventory truth</div>
+        <div class="pair-arrow">→</div>
+        <div class="pair-flip"><span class="pair-tag">Flip</span>Voids only until stock ledger exists</div>
+      </div>
+      <div class="pair">
+        <div class="pair-worst"><span class="pair-tag">Worst</span>Build worker for email before sales work</div>
+        <div class="pair-arrow">→</div>
+        <div class="pair-flip"><span class="pair-tag">Flip</span>No notifications until sell works</div>
+      </div>
+      <div class="pair">
+        <div class="pair-worst"><span class="pair-tag">Worst</span>Type-safe generated clients before domain model stabilizes</div>
+        <div class="pair-arrow">→</div>
+        <div class="pair-flip"><span class="pair-tag">Flip</span>Hand DTOs; generate later</div>
+      </div>
+      <div class="pair">
+        <div class="pair-worst"><span class="pair-tag">Worst</span>Assume PWA install equals native reliability</div>
+        <div class="pair-arrow">→</div>
+        <div class="pair-flip"><span class="pair-tag">Flip</span>Prove printer / scanner on target devices early</div>
+      </div>
+      <div class="pair">
+        <div class="pair-worst"><span class="pair-tag">Worst</span>Document platform forever without phase plan</div>
+        <div class="pair-arrow">→</div>
+        <div class="pair-flip"><span class="pair-tag">Flip</span>Phase 0 / 1 / 2 roadmap attached to vision</div>
+      </div>
+    </div>
+
+    <div class="flip-synth">
+      <div class="synth-card">
+        <h4>Phase 1 IN</h4>
+        <p>Auth, products, cart, checkout, payments record, receipt, basic stock, day close.</p>
+      </div>
+      <div class="synth-card">
+        <h4>Phase 1 OUT</h4>
+        <p>Multi-branch, promotions engine, returns, suppliers, analytics, KDS, public API.</p>
+      </div>
+      <div class="synth-card">
+        <h4>Phase 1 ARCH</h4>
+        <p>Allow monorepo but only ship Cashier + API packages initially.</p>
+      </div>
+      <div class="synth-card">
+        <h4>Phase 1 RISK SPIKE</h4>
+        <p>Hardware print + offline outbox before expanding features.</p>
+      </div>
+      <div class="synth-card">
+        <h4>Phase 1 SUCCESS</h4>
+        <p>1 store, 1 week, zero lost sales, cashier prefers it to notebook.</p>
+      </div>
+    </div>
+
+    <div class="insight-strip">
+      <strong>Insight</strong>
+      Vision is enough as north star; not enough as phase-1 scope — needs IN/OUT + JTBD + hardware spike.
+    </div>
+  </section>
+
+  <!-- ════════ SYNTHESIS CLIMAX ════════ -->
+  <section id="synthesis" class="reveal">
+    <div class="sec-head">
+      <span class="sec-num">CLIMAX</span>
+      <h2>Synthesis</h2>
+    </div>
+
+    <div class="climax">
+      <div class="q">Is vision.md enough for modern POS first phase?</div>
+      <div class="answer">
+        <span class="yes">Enough as north star.</span><br />
+        <span class="no">Not enough as phase-1 scope.</span>
+      </div>
+      <p class="verdict">
+        Vision is a strong destination — offline, performance, modular monorepo, non-ERP.
+        The phase 1 gap: no IN/OUT cut, thin JTBD for cashier / manager, no hardware spike,
+        and platform breadth before the wedge.
+      </p>
+
+      <div class="wedge-banner">
+        <div class="lbl">Chosen direction</div>
+        <div class="name">Instant Checkout wedge</div>
+        <div class="detail">catalog + cart + pay + receipt + basic stock + day close · Offline/outbox + ESC/POS as risk spikes</div>
+      </div>
+
+      <div class="inout">
+        <div class="inout-col in">
+          <h3>Phase 1 IN</h3>
+          <ul>
+            <li>Auth</li>
+            <li>Products</li>
+            <li>Cart</li>
+            <li>Checkout</li>
+            <li>Payments record</li>
+            <li>Receipt</li>
+            <li>Basic stock</li>
+            <li>Day close</li>
+          </ul>
+        </div>
+        <div class="inout-col out">
+          <h3>Phase 1 OUT</h3>
+          <ul>
+            <li>Multi-branch</li>
+            <li>Promotions engine</li>
+            <li>Returns</li>
+            <li>Suppliers</li>
+            <li>Analytics</li>
+            <li>Worker</li>
+            <li>KDS</li>
+            <li>Public API</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="metrics">
+        <div class="metric"><div class="v">1</div><div class="l">store</div></div>
+        <div class="metric"><div class="v">1</div><div class="l">week reliable</div></div>
+        <div class="metric"><div class="v">0</div><div class="l">lost sales</div></div>
+        <div class="metric"><div class="v">&gt; notebook</div><div class="l">cashier preference</div></div>
+      </div>
+
+      <div class="decision">
+        DECISION — Amend vision with Phase 1 IN/OUT + JTBD before PRD.
+        Platform aspirations stay in vision as later. Modern POS phase 1 = Instant Checkout wedge + integrity.
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>BMAD · Brainstorm keepsake · 2026-08-04</span>
+    <span>Source: .memlog.md · Self-contained · No CDN</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  // Flip cards: click/keyboard toggle for touch devices
+  document.querySelectorAll('.flip-card').forEach(function (card) {
+    card.addEventListener('click', function () {
+      card.classList.toggle('is-flipped');
+    });
+    card.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        card.classList.toggle('is-flipped');
+      }
+    });
+  });
+
+  // Scroll reveal
+  var reveals = document.querySelectorAll('.reveal');
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+    reveals.forEach(function (el) { io.observe(el); });
+  } else {
+    reveals.forEach(function (el) { el.classList.add('visible'); });
+  }
+
+  // Hero ticket slight parallax on mouse
+  var ticket = document.querySelector('.ticket');
+  if (ticket && window.matchMedia('(pointer:fine)').matches) {
+    document.addEventListener('mousemove', function (e) {
+      var x = (e.clientX / window.innerWidth - 0.5) * 4;
+      var y = (e.clientY / window.innerHeight - 0.5) * 4;
+      ticket.style.transform = 'rotate(' + (2 + x * 0.3) + 'deg) translate(' + x + 'px,' + y + 'px)';
+    });
+  }
+})();
+</script>
+</body>
+</html>
