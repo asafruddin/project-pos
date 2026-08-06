@@ -4,7 +4,7 @@ baseline_commit: 7f156f5c9a0f213a0588ee2cfa4e4144682737f7
 
 # Story 1.1: Scaffold the POS monorepo
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -85,6 +85,20 @@ so that catalog and sell work can ship on the Architecture stack without re-scaf
   - [x] Commands: install, build, `dev` for cashier/dashboard/api with ports
   - [x] Note Serwist/PWA build caveats (webpack vs turbopack)
   - [x] Explicit: planning artifacts under `_bmad-output/` are source of truth for PRD/Arch/UX — do not relocate
+
+### Review Findings
+
+- [x] [Review][Patch] Turbo `dev` missing `dependsOn: ["^build"]` — clean `pnpm install && pnpm dev` can fail resolving `@pos-apps/*` dist [turbo.json:8]
+- [x] [Review][Patch] README documents pnpm 9.x while `packageManager` pins 11.20.0 [README.md:18]
+- [x] [Review][Patch] Nest `build` emits `*.spec.js` into `dist` (no build tsconfig exclude) [apps/api/dist/health.controller.spec.js]
+- [x] [Review][Patch] Turbo `build` outputs omit Serwist `public/sw.js` (cache restore can drop SW) [turbo.json:6]
+- [x] [Review][Patch] Serwist `revision` uses `crypto.randomUUID()` — non-deterministic SW / cache [apps/cashier/next.config.ts:4]
+- [x] [Review][Patch] API depends on `@pos-apps/types` but never smoke-imports it (Task 7) [apps/api/src/app.module.ts]
+- [x] [Review][Patch] API bootstrap has no rejection handler (`void bootstrap()`) [apps/api/src/main.ts:11]
+- [x] [Review][Patch] Serwist `disable` only when `NODE_ENV === "development"` — enable for other non-prod [apps/cashier/next.config.ts:10]
+- [x] [Review][Patch] Placeholder primary buttons are focusable with no action — mark `disabled` [apps/cashier/src/app/page.tsx] [apps/dashboard/src/app/page.tsx]
+- [x] [Review][Patch] Remove unused Create Next App leftover SVGs from both Next apps [apps/*/public/*.svg]
+- [x] [Review][Patch] Tighten root `public/sw*` ignore; add `!.env.example` under app `.gitignore` files [.gitignore] [apps/cashier/.gitignore] [apps/dashboard/.gitignore]
 
 ## Dev Notes
 
@@ -219,6 +233,7 @@ Cursor Grok 4.5
 - Cashier Serwist PWA: `src/app/sw.ts` → `public/sw.js` on `next build --webpack`; manifest stub + `/~offline`
 - `pnpm install` + `pnpm build` succeed; planning dirs preserved
 - Root README documents ports, filters, Serwist webpack note, and `_bmad-output` immutability
+- Code review patches applied (2026-08-06): turbo `dev`/`^build` + SW outputs, README pnpm 11, Nest `tsconfig.build.json`, deterministic Serwist revision, types smoke import, bootstrap error handling, disabled placeholders, cleaned SVGs/ignores
 
 ### File List
 
@@ -233,6 +248,7 @@ Cursor Grok 4.5
 - `apps/api/tsconfig.json`
 - `apps/api/nest-cli.json`
 - `apps/api/jest.config.json`
+- `apps/api/tsconfig.build.json`
 - `apps/api/src/main.ts`
 - `apps/api/src/app.module.ts`
 - `apps/api/src/health.controller.ts`
@@ -281,7 +297,8 @@ Cursor Grok 4.5
 ## Change Log
 
 - 2026-08-06: Scaffolded POS monorepo (Turborepo + Next cashier/dashboard + Nest API + shared packages + Serwist); story → review
+- 2026-08-06: Applied code-review patches (11); story → done
 
 ---
 
-**Story completion status:** review
+**Story completion status:** done

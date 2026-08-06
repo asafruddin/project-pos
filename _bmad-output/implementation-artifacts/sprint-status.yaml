@@ -1,5 +1,5 @@
 # generated: 2026-08-06T09:45:27+07:00
-# last_updated: 2026-08-06T10:00:00+07:00
+# last_updated: 2026-08-06T20:25:00+07:00
 # project: POS Apps
 # project_key: NOKEY
 # tracking_system: file-system
@@ -41,7 +41,7 @@
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
 
 generated: 2026-08-06T09:45:27+07:00
-last_updated: 2026-08-06T10:00:00+07:00
+last_updated: 2026-08-06T20:25:00+07:00
 project: POS Apps
 project_key: NOKEY
 tracking_system: file-system
@@ -49,7 +49,7 @@ story_location: "{project-root}/_bmad-output/implementation-artifacts"
 
 development_status:
   epic-1: in-progress
-  1-1-scaffold-the-pos-monorepo: review
+  1-1-scaffold-the-pos-monorepo: done
   1-2-account-login-with-roles: backlog
   1-3-create-and-edit-products: backlog
   1-4-enforce-catalog-role-on-api: backlog

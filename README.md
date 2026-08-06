@@ -15,7 +15,7 @@ Shared packages: `@pos-apps/domain`, `@pos-apps/types`, `@pos-apps/local-db`.
 ## Prerequisites
 
 - Node.js 20+
-- [pnpm](https://pnpm.io) 9.x (`packageManager` field pins the version)
+- [pnpm](https://pnpm.io) 11.x (`packageManager` field pins the version)
 
 ## Install & build
 

@@ -15,7 +15,8 @@ export default function HomePage() {
       </p>
       <button
         type="button"
-        className="inline-flex h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground"
+        disabled
+        className="inline-flex h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-60"
       >
         Primary action (placeholder)
       </button>
