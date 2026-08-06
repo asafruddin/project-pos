@@ -11,6 +11,9 @@ const withSerwist = withSerwistInit({
 });
 
 const nextConfig: NextConfig = {
+  // Serwist injects a webpack plugin; Next 16 Turbopack `dev` needs an explicit
+  // turbopack key (empty is fine — SW is disabled in development).
+  turbopack: {},
   transpilePackages: ["@pos-apps/types", "@pos-apps/local-db"],
 };
 
