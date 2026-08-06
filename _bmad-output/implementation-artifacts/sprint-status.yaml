@@ -1,0 +1,76 @@
+# generated: 2026-08-06T09:45:27+07:00
+# last_updated: 2026-08-06T10:00:00+07:00
+# project: POS Apps
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: {project-root}/_bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; sprint-status surfaces open ones
+
+generated: 2026-08-06T09:45:27+07:00
+last_updated: 2026-08-06T10:00:00+07:00
+project: POS Apps
+project_key: NOKEY
+tracking_system: file-system
+story_location: "{project-root}/_bmad-output/implementation-artifacts"
+
+development_status:
+  epic-1: in-progress
+  1-1-scaffold-the-pos-monorepo: review
+  1-2-account-login-with-roles: backlog
+  1-3-create-and-edit-products: backlog
+  1-4-enforce-catalog-role-on-api: backlog
+  1-5-view-stock-and-sales-list-shell: backlog
+  epic-1-retrospective: optional
+
+  epic-2: backlog
+  2-1-cashier-account-login: backlog
+  2-2-pos-pin-unlock-online-and-offline-material: backlog
+  2-3-catalog-pull-into-local-database-and-cashier-menu: backlog
+  2-4-cart-panel-select-and-edit-quantities: backlog
+  2-5-checkout-and-payment: backlog
+  2-6-receipt-gate-completes-sale-in-local-database: backlog
+  2-7-offline-sell-and-durable-persistence: backlog
+  2-8-sync-outbox-and-acceptcompletesale-updates-stock: backlog
+  2-9-offline-acceptance-drill: backlog
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  3-1-start-day-close-with-checks: backlog
+  3-2-block-finish-if-unsynced-sales-remain: backlog
+  3-3-todays-sales-report-and-confirm: backlog
+  3-4-end-session-and-return-to-account-login: backlog
+  epic-3-retrospective: optional

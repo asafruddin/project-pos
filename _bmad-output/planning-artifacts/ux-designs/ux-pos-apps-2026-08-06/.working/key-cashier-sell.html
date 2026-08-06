@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>POS Apps — Kasir Menu + Keranjang</title>
+<style>
+/* Spine: DESIGN Layout Cashier md+; EXPERIENCE IA Cashier Menu + Cart Panel; Component Patterns product tile / cart line; Flow 1 UJ-1 steps 3–4 */
+:root {
+  --primary: #1D4ED8; --primary-fg: #fff; --accent: #D97706; --accent-fg: #1A1208;
+  --bg: #fafafa; --card: #fff; --ink: #1c1917; --muted: #78716c; --border: #e7e5e4;
+  --radius: 12px; --tap: 56px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, sans-serif; background: #e7e5e4; color: var(--ink); }
+.frame { max-width: 1100px; margin: 24px auto; background: var(--bg); border-radius: 16px; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,.08); }
+.chrome { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: var(--card); border-bottom: 1px solid var(--border); }
+.chip { font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: 8px; background: #dcfce7; color: #14532d; }
+.layout { display: grid; grid-template-columns: 1fr 340px; min-height: 520px; }
+.menu { padding: 20px; }
+.menu h1 { font-size: 22px; margin: 0 0 16px; font-family: Georgia, serif; }
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.tile { min-height: var(--tap); background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; justify-content: center; cursor: default; }
+.tile .name { font-weight: 600; }
+.tile .price { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 6px; }
+.cart { background: var(--card); border-left: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; }
+.cart h2 { margin: 0 0 12px; font-size: 16px; }
+.line { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); min-height: 48px; }
+.stepper { display: flex; gap: 8px; align-items: center; }
+.stepper button { width: 48px; height: 48px; border-radius: 8px; border: 1px solid var(--border); background: #fff; font-size: 18px; }
+.total { margin-top: auto; padding-top: 16px; }
+.total .amt { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pay { margin-top: 12px; width: 100%; height: var(--tap); border: none; border-radius: var(--radius); background: var(--primary); color: var(--primary-fg); font-size: 16px; font-weight: 600; }
+.caption { max-width: 1100px; margin: 0 auto 24px; font-size: 13px; color: #57534e; padding: 0 8px; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="chrome">
+    <strong>POS Apps — Kasir</strong>
+    <span class="chip">Tersinkron</span>
+  </div>
+  <div class="layout">
+    <section class="menu" aria-label="Menu kasir">
+      <h1>Menu</h1>
+      <div class="grid">
+        <div class="tile"><span class="name">Espresso</span><span class="price">Rp 25.000</span></div>
+        <div class="tile"><span class="name">Americano</span><span class="price">Rp 28.000</span></div>
+        <div class="tile"><span class="name">Latte</span><span class="price">Rp 35.000</span></div>
+        <div class="tile"><span class="name">Cappuccino</span><span class="price">Rp 35.000</span></div>
+        <div class="tile"><span class="name">Croissant</span><span class="price">Rp 22.000</span></div>
+        <div class="tile"><span class="name">Air mineral</span><span class="price">Rp 10.000</span></div>
+      </div>
+    </section>
+    <aside class="cart" aria-label="Keranjang">
+      <h2>Keranjang</h2>
+      <div class="line"><div><div>Latte</div><div class="stepper"><button type="button" aria-label="Kurangi">−</button><span>2</span><button type="button" aria-label="Tambah">+</button></div></div><strong>Rp 70.000</strong></div>
+      <div class="line"><div><div>Croissant</div><div class="stepper"><button type="button" aria-label="Kurangi">−</button><span>1</span><button type="button" aria-label="Tambah">+</button></div></div><strong>Rp 22.000</strong></div>
+      <div class="total"><div class="muted" style="color:var(--muted);font-size:13px">Total</div><div class="amt">Rp 92.000</div>
+      <button class="pay" type="button">Bayar</button></div>
+    </aside>
+  </div>
+</div>
+<p class="caption">Canonical sell composition (md+): Menu + right Cart Panel. Strings ID-primary. Spine wins on conflict.</p>
+</body>
+</html>

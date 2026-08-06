@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>POS Apps — Tutup Hari</title>
+<style>
+/* Spine: Day Close blocker + Today’s Sales Report; Flow 3; FR-24 acknowledge */
+:root { --primary:#1D4ED8; --primary-fg:#fff; --danger:#dc2626; --bg:#fafafa; --card:#fff; --ink:#1c1917; --border:#e7e5e4; --radius:12px; --tap:48px; }
+* { box-sizing:border-box; }
+body { margin:0; font-family:system-ui,sans-serif; background:#e7e5e4; color:var(--ink); }
+.frame { max-width:640px; margin:32px auto; background:var(--card); border-radius:16px; padding:28px; box-shadow:0 8px 30px rgba(0,0,0,.08); }
+h1 { font-family:Georgia,serif; font-size:24px; margin:0 0 8px; }
+.sub { color:#78716c; margin-bottom:20px; }
+.stats { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:20px; }
+.stat { background:var(--bg); border-radius:var(--radius); padding:14px; }
+.stat .l { font-size:12px; color:#78716c; } .stat .v { font-size:18px; font-weight:600; font-variant-numeric:tabular-nums; }
+.warn { border:1px solid #fecaca; background:#fef2f2; border-radius:var(--radius); padding:14px; margin-bottom:16px; }
+.warn strong { color:var(--danger); }
+label.ack { display:flex; gap:12px; align-items:flex-start; margin:16px 0; font-size:14px; }
+label.ack input { width:20px; height:20px; margin-top:2px; }
+.report { border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:16px; }
+.report row, .report .row { display:flex; justify-content:space-between; padding:12px 14px; border-bottom:1px solid var(--border); font-size:14px; }
+.report .row:last-child { border-bottom:none; }
+.badge { font-size:11px; font-weight:600; padding:2px 8px; border-radius:6px; background:#ffedd5; color:#1A1208; }
+.actions { display:flex; gap:12px; }
+button { height:var(--tap); padding:0 18px; border-radius:var(--radius); font-weight:600; font-size:14px; }
+.ghost { background:#fff; border:1px solid var(--border); }
+.primary { background:var(--primary); color:var(--primary-fg); border:none; flex:1; }
+.primary:disabled { opacity:.45; }
+.caption { max-width:640px; margin:0 auto 24px; font-size:13px; color:#57534e; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <h1>Tutup hari</h1>
+  <p class="sub">Ringkasan shift Dewi — sebelum konfirmasi laporan.</p>
+  <div class="stats">
+    <div class="stat"><div class="l">Total penjualan</div><div class="v">Rp 1.240.000</div></div>
+    <div class="stat"><div class="l">Ringkasan tunai</div><div class="v">Rp 980.000</div></div>
+    <div class="stat"><div class="l">Status Sync</div><div class="v" style="font-size:14px">2 menunggu unggah</div></div>
+  </div>
+  <div class="warn" role="alert">
+    <strong>Tidak bisa selesai.</strong> Masih ada penjualan selesai yang belum terunggah. Sinkronkan dulu, atau nyatakan secara eksplisit.
+  </div>
+  <label class="ack">
+    <input type="checkbox" id="ack" />
+    <span>Saya mengerti — tutup dengan penjualan belum terunggah (2). Data tetap di perangkat untuk unggah nanti.</span>
+  </label>
+  <div class="report" aria-label="Laporan penjualan hari ini">
+    <div class="row"><span>Latte ×2</span><span>Rp 70.000 <span class="badge">Menunggu unggah</span></span></div>
+    <div class="row"><span>Espresso ×1</span><span>Rp 25.000 · Selesai</span></div>
+    <div class="row"><span>Croissant ×1</span><span>Rp 22.000 <span class="badge">Menunggu unggah</span></span></div>
+  </div>
+  <div class="actions">
+    <button class="ghost" type="button">Kembali</button>
+    <button class="primary" type="button" disabled id="finish">Konfirmasi tutup hari</button>
+  </div>
+</div>
+<p class="caption">Hard-block + explicit acknowledge. Row status stays Selesai; chip is Sync only. Spine wins on conflict.</p>
+<script>
+document.getElementById('ack').addEventListener('change', e => {
+  document.getElementById('finish').disabled = !e.target.checked;
+});
+</script>
+</body>
+</html>

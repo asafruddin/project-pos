@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>POS Apps — PIN Kasir</title>
+<style>
+/* Spine: EXPERIENCE POS PIN surface; Component PIN pad; DESIGN tap-comfortable; Flow 1 step 2 */
+:root { --primary:#1D4ED8; --primary-fg:#fff; --bg:#fafafa; --card:#fff; --ink:#1c1917; --border:#e7e5e4; --danger:#dc2626; --tap:56px; --radius:12px; }
+* { box-sizing:border-box; }
+body { margin:0; font-family:system-ui,sans-serif; background:#e7e5e4; color:var(--ink); }
+.frame { max-width:420px; margin:40px auto; background:var(--bg); border-radius:16px; padding:28px; box-shadow:0 8px 30px rgba(0,0,0,.08); }
+h1 { font-family:Georgia,serif; font-size:22px; margin:0 0 8px; }
+.sub { color:#78716c; font-size:14px; margin-bottom:20px; }
+.dots { display:flex; gap:12px; justify-content:center; margin-bottom:20px; }
+.dot { width:14px; height:14px; border-radius:50%; border:2px solid var(--border); background:#fff; }
+.dot.on { background:var(--primary); border-color:var(--primary); }
+.err { color:var(--danger); text-align:center; font-size:14px; min-height:20px; margin-bottom:12px; }
+.pad { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.pad button { height:var(--tap); border-radius:var(--radius); border:1px solid var(--border); background:var(--card); font-size:20px; font-weight:600; }
+.pad .ok { grid-column:span 3; background:var(--primary); color:var(--primary-fg); border:none; }
+.fallback { margin-top:16px; font-size:13px; color:#78716c; }
+.fallback input { width:100%; height:48px; margin-top:8px; border-radius:8px; border:1px solid var(--border); padding:0 12px; letter-spacing:.4em; }
+.caption { max-width:420px; margin:0 auto 24px; font-size:13px; color:#57534e; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <h1>PIN kasir</h1>
+  <p class="sub">Masukkan 6 digit untuk membuka Menu.</p>
+  <div class="dots" aria-hidden="true">
+    <span class="dot on"></span><span class="dot on"></span><span class="dot on"></span>
+    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+  </div>
+  <p class="err" role="status">PIN salah. Coba lagi.</p>
+  <div class="pad" role="group" aria-label="Papan PIN">
+    <button type="button">1</button><button type="button">2</button><button type="button">3</button>
+    <button type="button">4</button><button type="button">5</button><button type="button">6</button>
+    <button type="button">7</button><button type="button">8</button><button type="button">9</button>
+    <button type="button" aria-label="Hapus">⌫</button><button type="button">0</button><button type="button" aria-label="Kosong"> </button>
+    <button class="ok" type="button">Lanjut</button>
+  </div>
+  <div class="fallback">
+    <label for="pin">Atau tempel / ketik PIN (aksesibel)</label>
+    <input id="pin" name="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+  </div>
+</div>
+<p class="caption">Error state + paste-capable field (validation gap 3.3.8 acknowledged in mock). Spine wins on conflict.</p>
+</body>
+</html>
