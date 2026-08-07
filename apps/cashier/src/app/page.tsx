@@ -2,8 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { hasPinMaterial } from "@pos-apps/local-db";
-import { getAccessToken } from "@/lib/auth-token";
+import { getAccessToken, isShiftAuthorized } from "@/lib/auth-token";
 import { isPinUnlocked } from "@/lib/pin-session";
 import { applyTheme, getLang } from "@/lib/preferences";
 
@@ -19,7 +18,8 @@ export default function HomePage() {
         router.replace("/menu");
         return;
       }
-      if (getAccessToken() || (await hasPinMaterial())) {
+      // PIN only after Account Login this shift (token or shift flag) — not bare PIN material (FR4).
+      if (getAccessToken() || isShiftAuthorized()) {
         router.replace("/pin");
         return;
       }

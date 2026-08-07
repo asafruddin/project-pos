@@ -41,7 +41,7 @@
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
 
 generated: 2026-08-06T09:45:27+07:00
-last_updated: 2026-08-07T10:00:00+07:00
+last_updated: 2026-08-07T11:00:00+07:00
 project: POS Apps
 project_key: NOKEY
 tracking_system: file-system
@@ -68,9 +68,9 @@ development_status:
   2-9-offline-acceptance-drill: done
   epic-2-retrospective: optional
 
-  epic-3: backlog
-  3-1-start-day-close-with-checks: backlog
-  3-2-block-finish-if-unsynced-sales-remain: backlog
-  3-3-todays-sales-report-and-confirm: backlog
-  3-4-end-session-and-return-to-account-login: backlog
+  epic-3: done
+  3-1-start-day-close-with-checks: done
+  3-2-block-finish-if-unsynced-sales-remain: done
+  3-3-todays-sales-report-and-confirm: done
+  3-4-end-session-and-return-to-account-login: done
   epic-3-retrospective: optional

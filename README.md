@@ -90,6 +90,7 @@ Env vars (see `.env.example`):
 - After unlock → `/menu`. Pull the catalog while online; the menu always reads its durable IndexedDB cache, so previously pulled products remain available offline.
 - Select a product to add it to **Keranjang**, adjust its quantity, then choose **Bayar**. Checkout creates an incomplete local sale; receipt confirmation marks it complete and clears the cart.
 - Completed sales are queued locally. When online, Cashier posts each queued sale to `POST /sales/sync`; failed sync remains **Menunggu unggah** and never blocks the next sale. The API accepts a `sale_id` only once and decrements stock transactionally.
+- **Tutup hari** (Day Close): summary of today’s local complete sales + cash + Sync status; finish is hard-blocked while unsynced sales remain unless the cashier explicitly acknowledges the count; confirm ends Account Login + POS PIN session and returns to `/login` without wiping the Sync outbox (AD-8).
 - Theme (system/light/dark) + language (id/en) via Settings
 - Demo: `cashier` / `Cashier123!` then choose any 6-digit PIN on first enroll (remember it for offline)
 - `CORS_ORIGIN` must include Cashier, e.g. `http://localhost:3002,http://localhost:3000`

@@ -29,9 +29,14 @@ export {
   completeSale,
   createIncompleteSale,
   discardIncompleteSale,
+  getDayCloseSummary,
   getDeviceId,
   getSale,
+  listCompleteSalesForLocalDay,
   listPendingSyncSales,
   markSaleSynced,
+  endOfLocalDay,
+  startOfLocalDay,
   toSyncSaleRequest,
 } from "./sales.js";
+export type { DayCloseSummary } from "./sales.js";

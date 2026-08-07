@@ -10,7 +10,7 @@ import {
 import { PinPad } from "@/components/pin-pad";
 import { Button } from "@/components/ui/button";
 import { SettingsMenu } from "@/components/settings-menu";
-import { clearSession, getAccessToken, getSession } from "@/lib/auth-token";
+import { clearSession, getAccessToken, getSession, isShiftAuthorized } from "@/lib/auth-token";
 import { clearPinUnlock, isPinUnlocked, setPinUnlocked } from "@/lib/pin-session";
 import { applyTheme, copy, getLang } from "@/lib/preferences";
 
@@ -45,7 +45,8 @@ export default function PinPage() {
         return;
       }
 
-      if (await hasPinMaterial()) {
+      // Offline mid-shift: prior Account Login (shift flag) + PIN material (FR5).
+      if (isShiftAuthorized() && (await hasPinMaterial())) {
         setOffline(true);
         setMode("unlock");
         return;

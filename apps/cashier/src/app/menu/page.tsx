@@ -256,9 +256,18 @@ export default function MenuPage() {
         <CartPanel lang={lang} onCompleted={handleCompleted} />
       </div>
 
-      <Button type="button" onClick={logout} className="self-start">
-        {t.logout}
-      </Button>
+      <div className="flex flex-wrap gap-3 self-start">
+        <Button
+          type="button"
+          className="min-h-12"
+          onClick={() => router.push("/day-close")}
+        >
+          {t.dayClose}
+        </Button>
+        <Button type="button" onClick={logout}>
+          {t.logout}
+        </Button>
+      </div>
     </main>
   );
 }

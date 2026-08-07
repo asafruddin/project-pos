@@ -99,6 +99,68 @@ export async function markSaleSynced(saleId: string): Promise<void> {
   await db.delete("syncOutbox", saleId);
 }
 
+export function startOfLocalDay(d: Date = new Date()): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+export function endOfLocalDay(d: Date = new Date()): Date {
+  const start = startOfLocalDay(d);
+  return new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
+}
+
+/** Complete Sales for the device-local calendar day (by completedAt). */
+export async function listCompleteSalesForLocalDay(
+  day: Date = new Date(),
+): Promise<LocalSaleRecord[]> {
+  const db = await openLocalDb();
+  const all = await db.getAll("sales");
+  const start = startOfLocalDay(day).getTime();
+  const end = endOfLocalDay(day).getTime();
+  return all
+    .filter(
+      (sale) =>
+        sale.status === "complete" &&
+        !!sale.completedAt &&
+        (() => {
+          const t = Date.parse(sale.completedAt!);
+          return Number.isFinite(t) && t >= start && t < end;
+        })(),
+    )
+    .sort((a, b) => (a.completedAt! < b.completedAt! ? 1 : -1));
+}
+
+export type DayCloseSummary = {
+  sales: LocalSaleRecord[];
+  totalMinor: number;
+  cashMinor: number;
+  transactionCount: number;
+  pendingSyncSaleIds: string[];
+  pendingSyncCount: number;
+};
+
+export async function getDayCloseSummary(
+  day: Date = new Date(),
+): Promise<DayCloseSummary> {
+  const sales = await listCompleteSalesForLocalDay(day);
+  const pending = await listPendingSyncSales();
+  const pendingIds = new Set(pending.map((s) => s.saleId));
+  const pendingSyncSaleIds = sales
+    .filter((s) => pendingIds.has(s.saleId))
+    .map((s) => s.saleId);
+  const totalMinor = sales.reduce(
+    (sum, sale) => sum + (sale.payment?.amountMinor ?? 0),
+    0,
+  );
+  return {
+    sales,
+    totalMinor,
+    cashMinor: totalMinor, // Phase 1: cash-only payments
+    transactionCount: sales.length,
+    pendingSyncSaleIds,
+    pendingSyncCount: pendingSyncSaleIds.length,
+  };
+}
+
 export function toSyncSaleRequest(sale: LocalSaleRecord): SyncSaleRequest {
   if (
     sale.status !== "complete" ||
