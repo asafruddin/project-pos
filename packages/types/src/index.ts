@@ -68,3 +68,25 @@ export type SalesListResponse = {
   sales: SalesListItem[];
   daily_total_minor: number;
 };
+
+/** Immutable local sale sent by Cashier after receipt confirmation. */
+export type SyncSaleRequest = {
+  sale_id: string;
+  device_id: string;
+  completed_at: string;
+  payment: {
+    method: "cash";
+    amount_minor: number;
+  };
+  lines: Array<{
+    product_id: string;
+    qty: number;
+    price_minor: number;
+  }>;
+};
+
+export type SyncSaleResponse = {
+  sale_id: string;
+  accepted: true;
+  already_accepted: boolean;
+};

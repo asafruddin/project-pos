@@ -2,6 +2,7 @@
   "name": "@pos-apps/local-db",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -14,12 +15,14 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch",
     "lint": "echo \"no lint configured\"",
-    "test": "echo \"no tests yet\""
+    "test": "tsx --test src/pin-hash.spec.ts"
   },
   "dependencies": {
-    "@pos-apps/types": "workspace:*"
+    "@pos-apps/types": "workspace:*",
+    "idb": "^8.0.3"
   },
   "devDependencies": {
+    "tsx": "^4.23.7",
     "typescript": "^5.8.2"
   }
 }

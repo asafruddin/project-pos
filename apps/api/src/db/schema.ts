@@ -1,5 +1,13 @@
 import { sql } from "drizzle-orm";
-import { check, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  check,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 /** Server users for Account Login — no POS PIN columns (AD-6 / Story 1.2). */
 export const users = pgTable(
@@ -50,6 +58,15 @@ export const sales = pgTable("sales", {
   saleId: uuid("sale_id").primaryKey().defaultRandom(),
   completedAt: timestamp("completed_at", { withTimezone: true }).notNull(),
   amountMinor: integer("amount_minor").notNull(),
+  deviceId: text("device_id").notNull().default("legacy"),
+  payment: jsonb("payment")
+    .$type<{ method: "cash"; amount_minor: number }>()
+    .notNull()
+    .default({ method: "cash", amount_minor: 0 }),
+  lines: jsonb("lines")
+    .$type<Array<{ product_id: string; qty: number; price_minor: number }>>()
+    .notNull()
+    .default([]),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

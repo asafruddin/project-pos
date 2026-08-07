@@ -1,5 +1,5 @@
 # generated: 2026-08-06T09:45:27+07:00
-# last_updated: 2026-08-07T11:00:00+07:00
+# last_updated: 2026-08-07T09:30:00+07:00
 # project: POS Apps
 # project_key: NOKEY
 # tracking_system: file-system
@@ -41,7 +41,7 @@
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
 
 generated: 2026-08-06T09:45:27+07:00
-last_updated: 2026-08-07T11:00:00+07:00
+last_updated: 2026-08-07T10:00:00+07:00
 project: POS Apps
 project_key: NOKEY
 tracking_system: file-system
@@ -56,16 +56,16 @@ development_status:
   1-5-view-stock-and-sales-list-shell: done
   epic-1-retrospective: optional
 
-  epic-2: backlog
-  2-1-cashier-account-login: backlog
-  2-2-pos-pin-unlock-online-and-offline-material: backlog
-  2-3-catalog-pull-into-local-database-and-cashier-menu: backlog
-  2-4-cart-panel-select-and-edit-quantities: backlog
-  2-5-checkout-and-payment: backlog
-  2-6-receipt-gate-completes-sale-in-local-database: backlog
-  2-7-offline-sell-and-durable-persistence: backlog
-  2-8-sync-outbox-and-acceptcompletesale-updates-stock: backlog
-  2-9-offline-acceptance-drill: backlog
+  epic-2: done
+  2-1-cashier-account-login: done
+  2-2-pos-pin-unlock-online-and-offline-material: done
+  2-3-catalog-pull-into-local-database-and-cashier-menu: done
+  2-4-cart-panel-select-and-edit-quantities: done
+  2-5-checkout-and-payment: done
+  2-6-receipt-gate-completes-sale-in-local-database: done
+  2-7-offline-sell-and-durable-persistence: done
+  2-8-sync-outbox-and-acceptcompletesale-updates-stock: done
+  2-9-offline-acceptance-drill: done
   epic-2-retrospective: optional
 
   epic-3: backlog

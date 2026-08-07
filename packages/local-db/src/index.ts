@@ -1,10 +1,37 @@
-import type { PlaceholderId } from "@pos-apps/types";
-
-/** IndexedDB / idb wiring starts in later cashier stories. */
-export const LOCAL_DB_NAME = "pos-apps-local";
-
-export function describeLocalDbStub(deviceId?: PlaceholderId): string {
-  return deviceId
-    ? `local-db stub ready for device ${deviceId}`
-    : "local-db stub ready";
-}
+export { LOCAL_DB_NAME, LOCAL_DB_VERSION, openLocalDb, resetLocalDbCache } from "./db.js";
+export type {
+  PinMaterialRecord,
+  CatalogProductRecord,
+  LocalSaleLine,
+  LocalSaleRecord,
+} from "./db.js";
+export {
+  createSalt,
+  hashPin,
+  isSixDigitPin,
+  timingSafeEqual,
+} from "./pin-hash.js";
+export {
+  clearPinMaterial,
+  enrollPin,
+  getAnyPinMaterial,
+  getPinMaterial,
+  hasPinMaterial,
+  verifyPin,
+} from "./pin-material.js";
+export {
+  getCatalogPulledAt,
+  isValidSellablePrice,
+  listCatalogProducts,
+  replaceCatalog,
+} from "./catalog.js";
+export {
+  completeSale,
+  createIncompleteSale,
+  discardIncompleteSale,
+  getDeviceId,
+  getSale,
+  listPendingSyncSales,
+  markSaleSynced,
+  toSyncSaleRequest,
+} from "./sales.js";

@@ -1,20 +1,37 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { hasPinMaterial } from "@pos-apps/local-db";
+import { getAccessToken } from "@/lib/auth-token";
+import { isPinUnlocked } from "@/lib/pin-session";
+import { applyTheme, getLang } from "@/lib/preferences";
+
 export default function HomePage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    applyTheme();
+    document.documentElement.lang = getLang();
+
+    async function route() {
+      if (isPinUnlocked()) {
+        router.replace("/menu");
+        return;
+      }
+      if (getAccessToken() || (await hasPinMaterial())) {
+        router.replace("/pin");
+        return;
+      }
+      router.replace("/login");
+    }
+
+    void route();
+  }, [router]);
+
   return (
-    <main className="flex flex-1 flex-col items-start justify-center gap-4 p-8">
-      <p className="text-sm font-medium text-accent">Cashier</p>
-      <h1 className="text-3xl font-semibold tracking-tight text-primary">
-        POS Apps
-      </h1>
-      <p className="max-w-md text-muted-foreground">
-        Scaffold ready. Instant Checkout and Offline Mode land in later stories.
-      </p>
-      <button
-        type="button"
-        disabled
-        className="inline-flex h-12 min-h-12 items-center justify-center rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground disabled:opacity-60"
-      >
-        Primary action (placeholder)
-      </button>
+    <main className="flex flex-1 items-center p-8 text-muted-foreground">
+      Memuat…
     </main>
   );
 }

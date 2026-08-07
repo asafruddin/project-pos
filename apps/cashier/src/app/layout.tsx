@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { describeLocalDbStub } from "@pos-apps/local-db";
+import { PrefBootstrap } from "@/components/pref-bootstrap";
+import { CartProvider } from "@/components/cart-context";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -41,16 +42,15 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
-  // Smoke-import local-db workspace package (AD-5 / AD-7 wiring).
-  void describeLocalDbStub("cashier-scaffold");
-
   return (
     <html
       lang="id"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        {children}
+        <PrefBootstrap>
+          <CartProvider>{children}</CartProvider>
+        </PrefBootstrap>
       </body>
     </html>
   );
