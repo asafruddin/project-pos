@@ -4,11 +4,14 @@ import {
   ExceptionFilter,
   HttpException,
   HttpStatus,
+  Logger,
 } from "@nestjs/common";
 import type { Response } from "express";
 
 @Catch()
 export class ApiExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(ApiExceptionFilter.name);
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
@@ -24,7 +27,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
       ) {
         response.status(status).json({
           code: String((body as { code: unknown }).code),
-          message: String((body as { message: unknown }).message),
+          message: this.formatMessage((body as { message: unknown }).message),
         });
         return;
       }
@@ -34,7 +37,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
           : typeof body === "object" &&
               body !== null &&
               "message" in body
-            ? String((body as { message: unknown }).message)
+            ? this.formatMessage((body as { message: unknown }).message)
             : "Terjadi kesalahan.";
       response.status(status).json({
         code: `HTTP_${status}`,
@@ -43,9 +46,22 @@ export class ApiExceptionFilter implements ExceptionFilter {
       return;
     }
 
+    this.logger.error(
+      "Unhandled exception",
+      exception instanceof Error ? exception.stack : String(exception),
+    );
     response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       code: "INTERNAL_ERROR",
       message: "Terjadi kesalahan pada server.",
     });
+  }
+
+  private formatMessage(message: unknown): string {
+    if (typeof message === "string") return message;
+    if (Array.isArray(message)) {
+      return message.map((m) => String(m)).join("; ");
+    }
+    if (message == null) return "Terjadi kesalahan.";
+    return String(message);
   }
 }

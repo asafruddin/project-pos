@@ -52,18 +52,49 @@ describe("AuthController", () => {
 });
 
 describe("JwtAuthGuard", () => {
+  const guard = new JwtAuthGuard();
+
   it("is an AuthGuard subclass", () => {
-    const guard = new JwtAuthGuard();
     expect(guard).toBeInstanceOf(JwtAuthGuard);
   });
 
-  it("documents unauthorized shape for missing token callers", () => {
-    const err = new UnauthorizedException({
-      code: "AUTH_UNAUTHORIZED",
-      message: "Autentikasi diperlukan.",
-    });
-    expect(err.getResponse()).toMatchObject({
-      code: "AUTH_UNAUTHORIZED",
-    });
+  it("rejects missing Bearer with AUTH_UNAUTHORIZED", () => {
+    expect(() =>
+      guard.handleRequest(null, null as never, undefined),
+    ).toThrow(UnauthorizedException);
+
+    try {
+      guard.handleRequest(null, null as never, { message: "No auth token" });
+    } catch (err) {
+      expect((err as UnauthorizedException).getResponse()).toMatchObject({
+        code: "AUTH_UNAUTHORIZED",
+        message: expect.any(String),
+      });
+    }
+  });
+
+  it("rejects invalid/expired token with AUTH_INVALID_TOKEN", () => {
+    try {
+      guard.handleRequest(null, null as never, { name: "JsonWebTokenError" });
+      fail("expected throw");
+    } catch (err) {
+      expect((err as UnauthorizedException).getResponse()).toMatchObject({
+        code: "AUTH_INVALID_TOKEN",
+      });
+    }
+
+    try {
+      guard.handleRequest(null, null as never, { name: "TokenExpiredError" });
+      fail("expected throw");
+    } catch (err) {
+      expect((err as UnauthorizedException).getResponse()).toMatchObject({
+        code: "AUTH_INVALID_TOKEN",
+      });
+    }
+  });
+
+  it("returns user when authentication succeeds", () => {
+    const user = { userId: "u1", role: "cashier" as const };
+    expect(guard.handleRequest(null, user, undefined)).toEqual(user);
   });
 });

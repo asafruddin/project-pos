@@ -23,4 +23,12 @@ export function getDb() {
   return db;
 }
 
+export async function closePool(): Promise<void> {
+  if (pool) {
+    await pool.end();
+    pool = undefined;
+    db = undefined;
+  }
+}
+
 export type AppDb = ReturnType<typeof getDb>;

@@ -237,6 +237,9 @@ importers:
         specifier: workspace:*
         version: link:../types
     devDependencies:
+      tsx:
+        specifier: ^4.20.3
+        version: 4.23.7
       typescript:
         specifier: ^5.8.2
         version: 5.9.3

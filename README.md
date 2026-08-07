@@ -47,9 +47,31 @@ pnpm build
 | `admin` | `Admin123!` | `catalog_admin` |
 | `cashier` | `Cashier123!` | `cashier` |
 
-Phase 1 login identifier is the `username` column (may look like an email). Passwords are bcrypt-hashed; never logged in plaintext.
+Phase 1 login identifier is the `username` column (**case-sensitive** exact match after trim; may look like an email). Passwords are bcrypt-hashed; never logged in plaintext.
 
 Dashboard stores the Bearer token in **`localStorage`** (keys `pos_apps_*`) for later API calls — fine for local demo; treat XSS carefully before production.
+
+## Catalog (Story 1.3)
+
+| Method | Path | Notes |
+|--------|------|--------|
+| GET | `/catalog/products` | Bearer required |
+| POST | `/catalog/products` | `{ name, price_minor, stock_qty }` |
+| PATCH | `/catalog/products/:productId` | `{ name?, price_minor? }` |
+| PUT | `/catalog/products/:productId/stock` | `{ stock_qty }` via AdjustStock (AD-4) |
+
+- `price_minor` = **integer rupiah (Rp)** in Phase 1 (no fractional subunit). Dashboard formats with `id-ID` / IDR.
+- Stock qty changes use domain `adjustStock` — not Sale Sync.
+- Seed may insert demo products `Espresso` / `Latte` when the table is empty.
+- Cashier role **403** on mutate: `AUTH_FORBIDDEN` — only `catalog_admin` may POST/PATCH/PUT stock; GET list allowed for any authenticated role. Dashboard hides edit UI for `cashier`.
+
+## Sales list shell (Story 1.5)
+
+| Method | Path | Notes |
+|--------|------|--------|
+| GET | `/sales` | Bearer; today’s synced sales + `daily_total_minor` (empty until Epic 2 Sync) |
+
+Dashboard: **Stok / Produk** + **Penjualan** nav. Empty sales copy clarifies this is server synced sales, not Cashier Offline Mode.
 
 Env vars (see `.env.example`):
 

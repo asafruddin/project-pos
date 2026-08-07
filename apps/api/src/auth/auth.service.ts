@@ -9,11 +9,16 @@ import { eq } from "drizzle-orm";
 import type { LoginResponse, Role } from "@pos-apps/types";
 import { getDb } from "../db/client";
 import { users } from "../db/schema";
+import { isRole } from "./roles";
 
 export type JwtPayload = {
   sub: string;
   role: Role;
 };
+
+/** Precomputed bcrypt hash so unknown-user path still runs compare (timing). */
+const DUMMY_PASSWORD_HASH =
+  "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
 
 @Injectable()
 export class AuthService {
@@ -30,17 +35,17 @@ export class AuthService {
       .limit(1);
 
     const user = rows[0];
-    if (!user) {
-      this.logger.warn("login failed: unknown user");
-      throw new UnauthorizedException({
-        code: "AUTH_INVALID_CREDENTIALS",
-        message: "Username atau password salah.",
-      });
+    const hashToCompare = user?.passwordHash ?? DUMMY_PASSWORD_HASH;
+
+    let ok = false;
+    try {
+      ok = await compare(password, hashToCompare);
+    } catch {
+      ok = false;
     }
 
-    const ok = await compare(password, user.passwordHash);
-    if (!ok) {
-      this.logger.warn("login failed: bad password");
+    if (!user || !ok || !isRole(user.role)) {
+      this.logger.warn("login failed");
       throw new UnauthorizedException({
         code: "AUTH_INVALID_CREDENTIALS",
         message: "Username atau password salah.",
@@ -70,7 +75,7 @@ export class AuthService {
       .where(eq(users.userId, userId))
       .limit(1);
     const user = rows[0];
-    if (!user) {
+    if (!user || !isRole(user.role)) {
       throw new UnauthorizedException({
         code: "AUTH_INVALID_TOKEN",
         message: "Sesi tidak valid.",

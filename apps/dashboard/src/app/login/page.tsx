@@ -1,6 +1,19 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { getAccessToken } from "@/lib/auth-token";
 import { LoginForm } from "./login-form";
 
 export default function LoginPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    if (getAccessToken()) {
+      router.replace("/");
+    }
+  }, [router]);
+
   return (
     <main className="flex flex-1 flex-col items-start justify-center gap-6 p-8">
       <div className="flex flex-col gap-2">

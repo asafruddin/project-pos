@@ -34,6 +34,16 @@ export function LoginForm() {
         return;
       }
       const ok = data as LoginResponse;
+      if (
+        typeof ok.access_token !== "string" ||
+        !ok.access_token ||
+        typeof ok.user_id !== "string" ||
+        !ok.user_id ||
+        (ok.role !== "cashier" && ok.role !== "catalog_admin")
+      ) {
+        setError("Respons login tidak valid. Coba lagi.");
+        return;
+      }
       saveSession({
         accessToken: ok.access_token,
         role: ok.role,

@@ -1,10 +1,11 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
-import { JwtModule } from "@nestjs/jwt";
+import { JwtModule, type JwtModuleOptions } from "@nestjs/jwt";
 import { PassportModule } from "@nestjs/passport";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { JwtStrategy } from "./jwt.strategy";
+import { RolesGuard } from "./roles.guard";
 
 @Module({
   imports: [
@@ -12,16 +13,20 @@ import { JwtStrategy } from "./jwt.strategy";
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        secret: config.getOrThrow<string>("JWT_SECRET"),
-        signOptions: {
-          expiresIn: (config.get<string>("JWT_EXPIRES_IN") ?? "8h") as `${number}h`,
-        },
-      }),
+      useFactory: (config: ConfigService): JwtModuleOptions => {
+        const expiresIn = config.get<string>("JWT_EXPIRES_IN") ?? "8h";
+        return {
+          secret: config.getOrThrow<string>("JWT_SECRET"),
+          signOptions: {
+            // jsonwebtoken accepts ms strings (8h, 7d, …) or seconds; env is free-form.
+            expiresIn: expiresIn as `${number}${"ms" | "s" | "m" | "h" | "d"}`,
+          },
+        };
+      },
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService, JwtModule, PassportModule],
+  providers: [AuthService, JwtStrategy, RolesGuard],
+  exports: [AuthService, JwtModule, PassportModule, RolesGuard],
 })
 export class AuthModule {}

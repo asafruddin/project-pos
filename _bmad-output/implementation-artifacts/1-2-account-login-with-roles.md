@@ -4,7 +4,7 @@ baseline_commit: 26d28d0cb686428f7acf265a321e085aab3421ff
 
 # Story 1.2: Account Login with roles
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -72,6 +72,27 @@ so that Dashboard (and later Cashier) can call protected APIs as the right role.
 - [x] Task 6: Docs + verify (AC: #5)
   - [x] README: Postgres prerequisite, migrate/seed commands, demo users, `JWT_SECRET` / `DATABASE_URL`
   - [x] Unit/integration tests: login success, login failure, password hash not equal to plaintext, JWT guard rejects missing/invalid token
+
+### Review Findings
+
+- [x] [Review][Decision] Username login case sensitivity — resolved: **exact match** (`admin` ≠ `Admin`)
+- [x] [Review][Patch] Document that Account Login usernames are case-sensitive (exact match after trim) [README.md]
+- [x] [Review][Patch] Add DB CHECK (or enum) so `users.role` is only `cashier` | `catalog_admin` [apps/api/drizzle/0000_users.sql:5 / new migration]
+- [x] [Review][Patch] Test real JwtAuthGuard rejection for missing/invalid Bearer (not override + hand-built exception) [apps/api/src/auth/auth.controller.spec.ts:54]
+- [x] [Review][Patch] JwtAuthGuard should emit `{ code: AUTH_UNAUTHORIZED|AUTH_INVALID_TOKEN, message }` instead of Passport default / `HTTP_401` [apps/api/src/auth/jwt-auth.guard.ts:5]
+- [x] [Review][Patch] Equalize login timing (dummy bcrypt on unknown user) and unify failure logs so they do not distinguish unknown user vs bad password [apps/api/src/auth/auth.service.ts:33]
+- [x] [Review][Patch] Runtime-validate JWT `sub` non-empty and `role` allowlist in `JwtStrategy.validate` [apps/api/src/auth/jwt.strategy.ts:23]
+- [x] [Review][Patch] Load `dotenv` in `drizzle.config.ts` so `db:migrate` sees `apps/api/.env` [apps/api/drizzle.config.ts:8]
+- [x] [Review][Patch] Dashboard home: `setReady(true)` before login redirect; on `/auth/me` network failure clear session and redirect (same as `!res.ok`) [apps/dashboard/src/app/page.tsx:19]
+- [x] [Review][Patch] `ApiExceptionFilter`: join ValidationPipe `message` arrays; `Logger.error` unexpected non-HTTP exceptions [apps/api/src/common/api-exception.filter.ts:31]
+- [x] [Review][Patch] Catch malformed `password_hash` / compare throws → `AUTH_INVALID_CREDENTIALS` (not 500) [apps/api/src/auth/auth.service.ts:41]
+- [x] [Review][Patch] Login form: assert `access_token` / `role` / `user_id` before `saveSession` [apps/dashboard/src/app/login/login-form.tsx:36]
+- [x] [Review][Patch] Trim login DTO so whitespace-only fails validation [apps/api/src/auth/dto/login.dto.ts:3]
+- [x] [Review][Patch] Stop lying `JWT_EXPIRES_IN` cast; pass string safely to `signOptions.expiresIn` [apps/api/src/auth/auth.module.ts:18]
+- [x] [Review][Patch] Close Postgres pool on Nest shutdown [apps/api/src/db/client.ts:5]
+- [x] [Review][Patch] Redirect already-authenticated users away from `/login` [apps/dashboard/src/app/login/page.tsx]
+- [x] [Review][Defer] JwtStrategy does not re-load user from DB on every request — deferred, Phase 1 only `/auth/me` re-queries; revisit when Catalog/other guards land
+- [x] [Review][Defer] No login rate limiting / lockout — deferred, out of Phase 1 demo scope (NFR hardening later)
 
 ## Dev Notes
 
@@ -237,6 +258,9 @@ Cursor Grok 4.5
 - `pnpm-lock.yaml`
 - `packages/types/src/index.ts`
 - `apps/api/package.json`
+- `apps/api/src/auth/roles.ts`
+- `apps/api/src/db/db-shutdown.service.ts`
+- `apps/api/drizzle/0001_users_role_check.sql`
 - `apps/api/drizzle.config.ts`
 - `apps/api/drizzle/0000_users.sql`
 - `apps/api/drizzle/meta/`
@@ -264,12 +288,14 @@ Cursor Grok 4.5
 - `apps/dashboard/src/components/ui/label.tsx`
 - `_bmad-output/implementation-artifacts/1-2-account-login-with-roles.md`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/implementation-artifacts/deferred-work.md`
 
 ## Change Log
 
 - 2026-08-06: Implemented Account Login (Drizzle users, Nest JWT Auth, Dashboard Masuk); story → review
+- 2026-08-07: Code review patches (role CHECK, JWT guard codes, timing-safe login, dashboard session edges); story → done
 
 ---
 
-**Story completion status:** review
+**Story completion status:** done
 
