@@ -174,123 +174,204 @@ export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
   }
 
   return (
-    <div className="flex w-full max-w-3xl flex-col gap-8">
-      <section className="flex flex-col gap-4">
-        <h2 className="text-xl font-semibold text-primary">
-          {canMutate
-            ? editingId
-              ? "Ubah produk"
-              : "Tambah produk"
-            : "Katalog (hanya lihat)"}
-        </h2>
-        {!canMutate ? (
-          <p className="max-w-md text-sm text-muted-foreground">
-            Akun kasir hanya dapat melihat produk. Perubahan katalog memerlukan
-            peran admin katalog.
-          </p>
-        ) : null}
-        {canMutate ? (
-        <form onSubmit={onSubmit} className="flex flex-col gap-3 sm:max-w-md">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="name">Nama produk</Label>
-            <Input
-              id="name"
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              required
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="price">Harga (Rp)</Label>
-            <Input
-              id="price"
-              inputMode="numeric"
-              value={form.price}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, price: e.target.value }))
-              }
-              required
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="stock">Stok</Label>
-            <Input
-              id="stock"
-              inputMode="numeric"
-              value={form.stock}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, stock: e.target.value }))
-              }
-              required
-            />
-          </div>
-          {error ? (
-            <p className="text-sm text-destructive" role="alert">
-              {error}
+    <div className="flex w-full flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:gap-6">
+      <section className="flex flex-col gap-4 rounded-xl border border-border bg-background/70 p-4 sm:p-5">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight text-foreground">
+            {canMutate
+              ? editingId
+                ? "Ubah produk"
+                : "Tambah produk"
+              : "Katalog (hanya lihat)"}
+          </h2>
+          {!canMutate ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              Akun kasir hanya dapat melihat produk. Perubahan katalog
+              memerlukan peran admin katalog.
             </p>
-          ) : null}
-          <div className="flex gap-2">
-            <Button type="submit" disabled={pending}>
-              {pending ? "Menyimpan…" : "Simpan"}
-            </Button>
-            {editingId ? (
-              <Button
-                type="button"
-                className="bg-transparent text-foreground ring-1 ring-border"
-                onClick={resetForm}
+          ) : (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {editingId
+                ? "Perbarui nama, harga, atau stok lalu simpan."
+                : "Isi form untuk menambah produk baru ke katalog."}
+            </p>
+          )}
+        </div>
+
+        {canMutate ? (
+          <form onSubmit={onSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="name">Nama produk</Label>
+              <Input
+                id="name"
+                placeholder="contoh: Espresso"
+                value={form.name}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, name: e.target.value }))
+                }
+                required
+                disabled={pending}
+                className="h-12 min-h-12"
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="price">Harga (Rp)</Label>
+                <Input
+                  id="price"
+                  inputMode="numeric"
+                  placeholder="15000"
+                  value={form.price}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, price: e.target.value }))
+                  }
+                  required
+                  disabled={pending}
+                  className="h-12 min-h-12"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="stock">Stok</Label>
+                <Input
+                  id="stock"
+                  inputMode="numeric"
+                  placeholder="10"
+                  value={form.stock}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, stock: e.target.value }))
+                  }
+                  required
+                  disabled={pending}
+                  className="h-12 min-h-12"
+                />
+              </div>
+            </div>
+            {error ? (
+              <div
+                className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+                role="alert"
               >
-                Batal
-              </Button>
+                {error}
+              </div>
             ) : null}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="submit"
+                disabled={pending}
+                className="h-12 min-h-12 min-w-28"
+              >
+                {pending ? "Menyimpan…" : "Simpan"}
+              </Button>
+              {editingId ? (
+                <Button
+                  type="button"
+                  className="h-12 min-h-12 bg-secondary text-secondary-foreground hover:opacity-90"
+                  onClick={resetForm}
+                  disabled={pending}
+                >
+                  Batal
+                </Button>
+              ) : null}
+            </div>
+          </form>
+        ) : error ? (
+          <div
+            className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+            role="alert"
+          >
+            {error}
           </div>
-        </form>
         ) : null}
       </section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-xl font-semibold text-primary">Daftar produk</h2>
+      <section className="flex min-w-0 flex-col gap-4">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight text-foreground">
+              Daftar produk
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {loading ? "Memuat…" : `${products.length} produk`}
+            </p>
+          </div>
+        </div>
+
         {loading ? (
-          <p className="text-muted-foreground">Memuat…</p>
+          <div className="rounded-xl border border-dashed border-border bg-secondary/40 px-4 py-8 text-sm text-muted-foreground">
+            Memuat katalog…
+          </div>
         ) : products.length === 0 ? (
-          <p className="text-muted-foreground">
+          <div className="rounded-xl border border-dashed border-border bg-secondary/40 px-4 py-8 text-sm text-muted-foreground">
             Belum ada produk. Tambahkan produk pertama untuk mulai mengisi
             katalog.
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[28rem] border-collapse text-left text-sm">
-              <thead>
-                <tr className="border-b border-border text-muted-foreground">
-                  <th className="py-2 pr-4 font-medium">Nama</th>
-                  <th className="py-2 pr-4 font-medium">Harga</th>
-                  <th className="py-2 pr-4 font-medium">Stok</th>
-                  <th className="py-2 font-medium">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((p) => (
-                  <tr key={p.product_id} className="border-b border-border/60">
-                    <td className="py-2 pr-4 font-medium">{p.name}</td>
-                    <td className="py-2 pr-4">{formatIdr(p.price_minor)}</td>
-                    <td className="py-2 pr-4">{p.stock_qty}</td>
-                    <td className="py-2">
-                      {canMutate ? (
-                      <Button
-                        type="button"
-                        className="h-8 bg-transparent px-3 text-foreground ring-1 ring-border"
-                        onClick={() => startEdit(p)}
-                      >
-                        Ubah
-                      </Button>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
+        ) : (
+          <>
+            <ul className="grid gap-3 sm:hidden">
+              {products.map((p) => (
+                <li
+                  key={p.product_id}
+                  className="rounded-xl border border-border bg-background/70 p-4"
+                >
+                  <p className="font-medium text-foreground">{p.name}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {formatIdr(p.price_minor)} · Stok {p.stock_qty}
+                  </p>
+                  {canMutate ? (
+                    <Button
+                      type="button"
+                      className="mt-3 h-10 bg-secondary px-3 text-secondary-foreground hover:opacity-90"
+                      onClick={() => startEdit(p)}
+                    >
+                      Ubah
+                    </Button>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+
+            <div className="hidden overflow-hidden rounded-xl border border-border bg-background/70 sm:block">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[28rem] border-collapse text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-muted-foreground">
+                      <th className="px-4 py-3 font-medium">Nama</th>
+                      <th className="px-4 py-3 font-medium">Harga</th>
+                      <th className="px-4 py-3 font-medium">Stok</th>
+                      <th className="px-4 py-3 font-medium">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {products.map((p) => (
+                      <tr
+                        key={p.product_id}
+                        className="border-b border-border/60 last:border-0"
+                      >
+                        <td className="px-4 py-3 font-medium">{p.name}</td>
+                        <td className="px-4 py-3">
+                          {formatIdr(p.price_minor)}
+                        </td>
+                        <td className="px-4 py-3">{p.stock_qty}</td>
+                        <td className="px-4 py-3">
+                          {canMutate ? (
+                            <Button
+                              type="button"
+                              className="h-9 bg-secondary px-3 text-secondary-foreground hover:opacity-90"
+                              onClick={() => startEdit(p)}
+                            >
+                              Ubah
+                            </Button>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         )}
       </section>
     </div>

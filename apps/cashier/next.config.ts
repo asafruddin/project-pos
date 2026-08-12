@@ -18,6 +18,9 @@ const nextConfig: NextConfig = {
   // turbopack key (empty is fine — SW is disabled outside production).
   turbopack: {},
   transpilePackages: ["@pos-apps/types", "@pos-apps/local-db"],
+  experimental: {
+    optimizePackageImports: ["@phosphor-icons/react"],
+  },
 };
 
 export default withSerwist(nextConfig);

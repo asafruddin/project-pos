@@ -7,6 +7,7 @@ import {
   hasPinMaterial,
   verifyPin,
 } from "@pos-apps/local-db";
+import { AuthLoadingShell, AuthSplitShell } from "@/components/auth-shell";
 import { PinPad } from "@/components/pin-pad";
 import { Button } from "@/components/ui/button";
 import { SettingsMenu } from "@/components/settings-menu";
@@ -45,7 +46,6 @@ export default function PinPage() {
         return;
       }
 
-      // Offline mid-shift: prior Account Login (shift flag) + PIN material (FR5).
       if (isShiftAuthorized() && (await hasPinMaterial())) {
         setOffline(true);
         setMode("unlock");
@@ -117,88 +117,97 @@ export default function PinPage() {
     router.replace("/login");
   }
 
+  const settings = (
+    <SettingsMenu onLangChange={() => setLang(getLang())} />
+  );
+
   if (mode === "loading") {
-    return (
-      <main className="flex flex-1 items-center p-8 text-muted-foreground">
-        {t.loading}
-      </main>
-    );
+    return <AuthLoadingShell message={t.loading} />;
   }
 
   if (mode === "blocked") {
     return (
-      <main className="flex flex-1 flex-col items-start justify-center gap-6 p-8">
-        <div className="flex w-full max-w-md items-start justify-between gap-4">
-          <div className="flex flex-col gap-2">
-            <p className="text-sm font-medium text-accent">{t.brand}</p>
-            <h1 className="text-3xl font-semibold tracking-tight text-primary">
-              {t.pinTitle}
-            </h1>
-            <p className="max-w-md text-muted-foreground" role="alert">
-              {t.pinOfflineNoMaterial}
-            </p>
-          </div>
-          <SettingsMenu onLangChange={() => setLang(getLang())} />
-        </div>
-        <Button type="button" onClick={() => router.replace("/login")}>
+      <AuthSplitShell
+        brandTitle="POS Apps"
+        brandSubtitle={t.brand}
+        heading={t.pinTitle}
+        description={t.pinOfflineNoMaterial}
+        quoteBy={t.brand}
+        topRight={settings}
+      >
+        <Button
+          type="button"
+          className="w-full rounded-2xl bg-accent text-accent-foreground hover:opacity-90"
+          onClick={() => router.replace("/login")}
+        >
           {t.title}
         </Button>
-      </main>
+      </AuthSplitShell>
     );
   }
 
+  const subtitle = `${mode === "enroll" ? t.pinEnrollHint : t.pinUnlockHint}${
+    offline ? ` ${t.pinOfflineBadge}` : ""
+  }`;
+
   return (
-    <main className="flex flex-1 flex-col items-start justify-center gap-6 p-8">
-      <div className="flex w-full max-w-md items-start justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium text-accent">{t.brand}</p>
-          <h1 className="text-3xl font-semibold tracking-tight text-primary">
-            {t.pinTitle}
-          </h1>
-          <p className="max-w-md text-muted-foreground">
-            {mode === "enroll" ? t.pinEnrollHint : t.pinUnlockHint}
-            {offline ? ` ${t.pinOfflineBadge}` : ""}
-          </p>
-        </div>
-        <SettingsMenu onLangChange={() => setLang(getLang())} />
-      </div>
+    <AuthSplitShell
+      brandTitle="POS Apps"
+      brandSubtitle={t.brand}
+      heading={t.pinTitle}
+      description={subtitle}
+      quoteBy={t.brand}
+      topRight={settings}
+    >
+      <div className="flex flex-col gap-6">
+        <PinPad
+          value={pin}
+          onChange={(next) => {
+            setError(null);
+            setPin(next);
+            if (next.length === 6) void submitPin(next);
+          }}
+          disabled={pending}
+          inputLabel={t.pinInputLabel}
+          pasteHint={t.pinPasteHint}
+        />
 
-      <PinPad
-        value={pin}
-        onChange={(next) => {
-          setError(null);
-          setPin(next);
-          if (next.length === 6) void submitPin(next);
-        }}
-        disabled={pending}
-        inputLabel={t.pinInputLabel}
-        pasteHint={t.pinPasteHint}
-      />
+        {error ? (
+          <div
+            className="rounded-2xl border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-center text-sm text-destructive"
+            role="alert"
+          >
+            {error}
+          </div>
+        ) : null}
 
-      {error ? (
-        <p className="text-sm text-destructive" role="alert">
-          {error}
-        </p>
-      ) : null}
-
-      <div className="flex gap-3">
         <Button
           type="button"
+          className="w-full rounded-2xl bg-accent text-base text-accent-foreground hover:opacity-90"
           disabled={pending || pin.length !== 6}
           onClick={() => void submitPin(pin)}
         >
           {pending ? t.pending : t.pinSubmit}
         </Button>
+
         {getAccessToken() ? (
-          <Button type="button" onClick={logout}>
+          <button
+            type="button"
+            className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+            onClick={logout}
+          >
             {t.logout}
-          </Button>
+          </button>
         ) : (
-          <Button type="button" onClick={() => router.replace("/login")}>
+          <button
+            type="button"
+            className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+            onClick={() => router.replace("/login")}
+          >
             {t.title}
-          </Button>
+          </button>
         )}
       </div>
-    </main>
+    </AuthSplitShell>
   );
 }

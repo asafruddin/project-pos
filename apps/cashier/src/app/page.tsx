@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { AuthLoadingShell } from "@/components/auth-shell";
 import { getAccessToken, isShiftAuthorized } from "@/lib/auth-token";
 import { isPinUnlocked } from "@/lib/pin-session";
 import { applyTheme, getLang } from "@/lib/preferences";
@@ -29,9 +30,5 @@ export default function HomePage() {
     void route();
   }, [router]);
 
-  return (
-    <main className="flex flex-1 items-center p-8 text-muted-foreground">
-      Memuat…
-    </main>
-  );
+  return <AuthLoadingShell message="Memuat…" />;
 }

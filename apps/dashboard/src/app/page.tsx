@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AuthMeResponse } from "@pos-apps/types";
-import { DashboardShell } from "@/components/dashboard-shell";
+import {
+  DashboardLoading,
+  DashboardShell,
+} from "@/components/dashboard-shell";
 import { clearSession, getAccessToken } from "@/lib/auth-token";
 import { ProductsPanel } from "./products-panel";
 
@@ -44,26 +47,19 @@ export default function HomePage() {
   }, [router]);
 
   if (!ready) {
-    return (
-      <main className="flex flex-1 items-center p-8 text-muted-foreground">
-        Memuat…
-      </main>
-    );
+    return <DashboardLoading />;
   }
 
   if (!me) {
-    return (
-      <main className="flex flex-1 items-center p-8 text-muted-foreground">
-        Mengalihkan ke masuk…
-      </main>
-    );
+    return <DashboardLoading message="Mengalihkan ke masuk…" />;
   }
 
   return (
-    <DashboardShell role={me.role}>
-      <h1 className="text-3xl font-semibold tracking-tight text-primary">
-        Stok / Produk
-      </h1>
+    <DashboardShell
+      role={me.role}
+      title="Stok / Produk"
+      subtitle="Kelola katalog toko. Harga dalam Rupiah penuh (mis. 15000 = Rp15.000)."
+    >
       <ProductsPanel canMutate={me.role === "catalog_admin"} />
     </DashboardShell>
   );

@@ -6,8 +6,9 @@ import {
   getDayCloseSummary,
   type DayCloseSummary,
 } from "@pos-apps/local-db";
+import { AppShell } from "@/components/app-shell";
+import { AuthLoadingShell } from "@/components/auth-shell";
 import { Button } from "@/components/ui/button";
-import { SettingsMenu } from "@/components/settings-menu";
 import { clearSession } from "@/lib/auth-token";
 import { formatIdr } from "@/lib/money";
 import { clearPinUnlock, isPinUnlocked } from "@/lib/pin-session";
@@ -66,50 +67,38 @@ export default function DayClosePage() {
   }
 
   if (!ready || !summary) {
-    return (
-      <main className="flex flex-1 items-center p-8 text-muted-foreground">
-        {t.loading}
-      </main>
-    );
+    return <AuthLoadingShell message={t.loading} />;
   }
 
   const pendingSet = new Set(summary.pendingSyncSaleIds);
 
   return (
-    <main className="flex flex-1 flex-col gap-6 p-6 md:p-8">
-      <div className="flex w-full items-start justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium text-accent">{t.brand}</p>
-          <h1 className="text-3xl font-semibold tracking-tight text-primary">
-            {t.dayClose}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {step === "summary" ? t.dayCloseSummary : t.dayCloseReport}
-          </p>
-        </div>
-        <SettingsMenu onLangChange={() => setLang(getLang())} />
-      </div>
-
+    <AppShell
+      title={t.dayClose}
+      lang={lang}
+      onLangChange={() => setLang(getLang())}
+      subtitle={step === "summary" ? t.dayCloseSummary : t.dayCloseReport}
+    >
       {step === "summary" ? (
         <section className="flex max-w-lg flex-col gap-4">
           <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="rounded-lg border border-border p-4">
+            <div className="rounded-2xl border border-border bg-background/70 p-4">
               <dt className="text-sm text-muted-foreground">{t.dayCloseSalesTotal}</dt>
               <dd className="mt-1 text-xl font-semibold">
                 {formatIdr(summary.totalMinor, lang)}
               </dd>
             </div>
-            <div className="rounded-lg border border-border p-4">
+            <div className="rounded-xl border border-border bg-background/70 p-4">
               <dt className="text-sm text-muted-foreground">{t.dayCloseCash}</dt>
               <dd className="mt-1 text-xl font-semibold">
                 {formatIdr(summary.cashMinor, lang)}
               </dd>
             </div>
-            <div className="rounded-lg border border-border p-4">
+            <div className="rounded-xl border border-border bg-background/70 p-4">
               <dt className="text-sm text-muted-foreground">{t.dayCloseTxCount}</dt>
               <dd className="mt-1 text-xl font-semibold">{summary.transactionCount}</dd>
             </div>
-            <div className="rounded-lg border border-border p-4">
+            <div className="rounded-xl border border-border bg-background/70 p-4">
               <dt className="text-sm text-muted-foreground">{t.waitingUpload}</dt>
               <dd className="mt-1 text-xl font-semibold">{pending}</dd>
             </div>
@@ -147,7 +136,7 @@ export default function DayClosePage() {
           <div className="flex flex-wrap gap-3">
             <Button
               type="button"
-              className="min-h-14"
+              className="min-h-14 rounded-2xl bg-accent text-accent-foreground hover:opacity-90"
               disabled={!canContinue}
               onClick={goToReport}
             >
@@ -155,7 +144,7 @@ export default function DayClosePage() {
             </Button>
             <Button
               type="button"
-              className="min-h-12"
+              className="min-h-12 bg-secondary text-secondary-foreground hover:opacity-90"
               onClick={() => router.replace("/menu")}
             >
               {t.dayCloseBack}
@@ -165,7 +154,10 @@ export default function DayClosePage() {
       ) : (
         <section className="flex max-w-2xl flex-col gap-4">
           {!canContinue ? (
-            <p className="text-sm text-destructive" role="alert">
+            <p
+              className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              role="alert"
+            >
               {t.dayCloseAckRequired}
             </p>
           ) : null}
@@ -173,7 +165,7 @@ export default function DayClosePage() {
           {summary.sales.length === 0 ? (
             <p className="text-muted-foreground">{t.dayCloseEmpty}</p>
           ) : (
-            <ul className="divide-y divide-border rounded-lg border border-border">
+            <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-background/70">
               {summary.sales.map((sale) => {
                 const amount = sale.payment?.amountMinor ?? 0;
                 const waiting = pendingSet.has(sale.saleId);
@@ -234,7 +226,7 @@ export default function DayClosePage() {
           <div className="flex flex-wrap gap-3">
             <Button
               type="button"
-              className="min-h-14"
+              className="min-h-14 rounded-2xl bg-accent text-accent-foreground hover:opacity-90"
               disabled={!canContinue || finishing}
               onClick={finishDayClose}
             >
@@ -242,7 +234,7 @@ export default function DayClosePage() {
             </Button>
             <Button
               type="button"
-              className="min-h-12"
+              className="min-h-12 bg-secondary text-secondary-foreground hover:opacity-90"
               disabled={finishing}
               onClick={() => setStep("summary")}
             >
@@ -251,6 +243,6 @@ export default function DayClosePage() {
           </div>
         </section>
       )}
-    </main>
+    </AppShell>
   );
 }

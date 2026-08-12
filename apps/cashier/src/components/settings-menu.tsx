@@ -1,5 +1,6 @@
 "use client";
 
+import { GearSixIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import {
   applyTheme,
@@ -40,16 +41,17 @@ export function SettingsMenu({ onLangChange }: { onLangChange?: () => void }) {
     <div className="relative">
       <button
         type="button"
-        className="inline-flex h-12 min-h-12 items-center justify-center rounded-lg px-3 text-sm font-medium ring-1 ring-border"
+        className="inline-flex h-12 min-h-12 items-center justify-center gap-2 rounded-2xl px-3 text-sm font-medium ring-1 ring-border"
         aria-expanded={open}
         aria-haspopup="true"
         onClick={() => setOpen((v) => !v)}
       >
-        {t.settings}
+        <GearSixIcon size={18} weight="duotone" />
+        <span className="hidden sm:inline">{t.settings}</span>
       </button>
       {open ? (
         <div
-          className="absolute right-0 z-20 mt-2 w-56 rounded-lg border border-border bg-card p-3 shadow-sm"
+          className="absolute right-0 z-20 mt-2 w-56 rounded-2xl border border-border bg-card p-3 shadow-sm"
           role="dialog"
           aria-label={t.settings}
         >
@@ -57,7 +59,7 @@ export function SettingsMenu({ onLangChange }: { onLangChange?: () => void }) {
             <div className="flex flex-col gap-1">
               <Label>{t.theme}</Label>
               <select
-                className="h-12 rounded-lg border border-border bg-background px-2 text-sm"
+                className="h-12 rounded-xl border border-border bg-background px-2 text-sm"
                 value={theme}
                 onChange={(e) => onTheme(e.target.value as ThemePref)}
               >
@@ -69,7 +71,7 @@ export function SettingsMenu({ onLangChange }: { onLangChange?: () => void }) {
             <div className="flex flex-col gap-1">
               <Label>{t.language}</Label>
               <select
-                className="h-12 rounded-lg border border-border bg-background px-2 text-sm"
+                className="h-12 rounded-xl border border-border bg-background px-2 text-sm"
                 value={lang}
                 onChange={(e) => onLanguage(e.target.value as LangPref)}
               >

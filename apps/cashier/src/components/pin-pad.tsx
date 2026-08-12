@@ -1,8 +1,12 @@
 "use client";
 
+import { BackspaceIcon, XIcon } from "@phosphor-icons/react";
 import { FormEvent, useCallback } from "react";
+import { cn } from "@/lib/utils";
 
-const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "⌫", "0", "C"] as const;
+type Key = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "back" | "0" | "clear";
+
+const KEYS: Key[] = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "back", "0", "clear"];
 
 type PinPadProps = {
   value: string;
@@ -10,6 +14,7 @@ type PinPadProps = {
   disabled?: boolean;
   inputLabel: string;
   pasteHint: string;
+  className?: string;
 };
 
 export function PinPad({
@@ -18,6 +23,7 @@ export function PinPad({
   disabled,
   inputLabel,
   pasteHint,
+  className,
 }: PinPadProps) {
   const setDigits = useCallback(
     (raw: string) => {
@@ -27,13 +33,13 @@ export function PinPad({
     [onChange],
   );
 
-  function press(key: (typeof KEYS)[number]) {
+  function press(key: Key) {
     if (disabled) return;
-    if (key === "⌫") {
+    if (key === "back") {
       onChange(value.slice(0, -1));
       return;
     }
-    if (key === "C") {
+    if (key === "clear") {
       onChange("");
       return;
     }
@@ -45,23 +51,32 @@ export function PinPad({
     setDigits(e.currentTarget.value);
   }
 
+  function labelFor(key: Key) {
+    if (key === "back") return <BackspaceIcon size={24} weight="bold" />;
+    if (key === "clear") return <XIcon size={22} weight="bold" />;
+    return key;
+  }
+
   return (
-    <div className="flex w-full max-w-xs flex-col gap-4">
+    <div className={cn("mx-auto flex w-full max-w-xs flex-col gap-5", className)}>
       <div className="flex justify-center gap-2" aria-hidden>
         {Array.from({ length: 6 }).map((_, i) => (
           <span
             key={i}
-            className={`h-3 w-3 rounded-full border border-border ${
-              i < value.length ? "bg-primary" : "bg-transparent"
-            }`}
-          />
+            className={cn(
+              "flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-secondary",
+              i < value.length && "border-accent/50",
+            )}
+          >
+            {i < value.length ? (
+              <span className="h-2.5 w-2.5 rounded-full bg-foreground" />
+            ) : null}
+          </span>
         ))}
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label htmlFor="pin-masked" className="text-sm text-muted-foreground">
-          {inputLabel}
-        </label>
+      <div className="sr-only flex flex-col gap-1">
+        <label htmlFor="pin-masked">{inputLabel}</label>
         <input
           id="pin-masked"
           type="password"
@@ -76,24 +91,24 @@ export function PinPad({
             e.preventDefault();
             setDigits(e.clipboardData.getData("text"));
           }}
-          className="h-12 w-full rounded-lg border border-border bg-background px-3 text-center text-lg tracking-[0.4em] text-foreground"
           aria-describedby="pin-paste-hint"
         />
-        <p id="pin-paste-hint" className="text-xs text-muted-foreground">
-          {pasteHint}
-        </p>
+        <p id="pin-paste-hint">{pasteHint}</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-3">
         {KEYS.map((key) => (
           <button
             key={key}
             type="button"
             disabled={disabled}
             onClick={() => press(key)}
-            className="inline-flex min-h-[56px] min-w-[56px] items-center justify-center rounded-lg border border-border bg-background text-xl font-medium text-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+            aria-label={
+              key === "back" ? "Backspace" : key === "clear" ? "Clear" : undefined
+            }
+            className="inline-flex min-h-[3.5rem] items-center justify-center rounded-2xl text-xl font-medium text-foreground transition-colors hover:bg-secondary disabled:opacity-50"
           >
-            {key}
+            {labelFor(key)}
           </button>
         ))}
       </div>

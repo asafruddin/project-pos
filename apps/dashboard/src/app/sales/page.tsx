@@ -1,9 +1,19 @@
 "use client";
 
+import {
+  ChartLineUpIcon,
+  CheckCircleIcon,
+  CurrencyCircleDollarIcon,
+  WarningCircleIcon,
+} from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AuthMeResponse, SalesListResponse } from "@pos-apps/types";
-import { DashboardShell } from "@/components/dashboard-shell";
+import {
+  DashboardLoading,
+  DashboardShell,
+} from "@/components/dashboard-shell";
+import { StatCard } from "@/components/ui/brand";
 import { clearSession, getAccessToken } from "@/lib/auth-token";
 import { formatIdr } from "@/lib/format-money";
 
@@ -61,56 +71,90 @@ export default function SalesPage() {
   }, [router]);
 
   if (!ready || !me) {
-    return (
-      <main className="flex flex-1 items-center p-8 text-muted-foreground">
-        Memuat…
-      </main>
-    );
+    return <DashboardLoading />;
   }
 
+  const salesCount = data?.sales.length ?? 0;
+
   return (
-    <DashboardShell role={me.role}>
-      <h1 className="text-3xl font-semibold tracking-tight text-primary">
-        Penjualan
-      </h1>
-      <p className="text-sm text-muted-foreground">
-        Total hari ini (UTC):{" "}
-        <span className="font-medium text-foreground">
-          {formatIdr(data?.daily_total_minor ?? 0)}
-        </span>
-      </p>
+    <DashboardShell
+      role={me.role}
+      title="Penjualan"
+      subtitle="Ringkasan penjualan yang sudah tersinkron dari kasir (bukan data offline lokal)."
+    >
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <StatCard
+          label="Total hari ini (UTC)"
+          value={formatIdr(data?.daily_total_minor ?? 0)}
+          tone="success"
+          icon={<CurrencyCircleDollarIcon size={22} weight="duotone" />}
+        />
+        <StatCard
+          label="Transaksi tersinkron"
+          value={salesCount}
+          tone="default"
+          icon={<ChartLineUpIcon size={22} weight="duotone" />}
+        />
+        <StatCard
+          label="Status"
+          value={error ? "Error" : salesCount ? "Aktif" : "Kosong"}
+          hint={error ?? "Data dari sync kasir"}
+          tone={error ? "danger" : salesCount ? "warning" : "default"}
+          icon={
+            error ? (
+              <WarningCircleIcon size={22} weight="duotone" />
+            ) : (
+              <CheckCircleIcon size={22} weight="duotone" />
+            )
+          }
+        />
+      </div>
+
       {error ? (
-        <p className="text-sm text-destructive" role="alert">
+        <div
+          className="rounded-2xl border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+          role="alert"
+        >
           {error}
-        </p>
+        </div>
       ) : null}
+
       {!data || data.sales.length === 0 ? (
-        <p className="max-w-lg text-muted-foreground">
+        <div className="rounded-2xl border border-dashed border-border bg-secondary/40 px-4 py-8 text-sm text-muted-foreground">
           Belum ada penjualan tersinkron. Daftar ini terisi setelah kasir
           mengunggah penjualan selesai — bukan mode offline kasir.
-        </p>
+        </div>
       ) : (
-        <table className="w-full max-w-2xl border-collapse text-left text-sm">
-          <thead>
-            <tr className="border-b border-border text-muted-foreground">
-              <th className="py-2 pr-4 font-medium">Waktu</th>
-              <th className="py-2 font-medium">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.sales.map((s) => (
-              <tr key={s.sale_id} className="border-b border-border/60">
-                <td className="py-2 pr-4">
-                  {new Intl.DateTimeFormat("id-ID", {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  }).format(new Date(s.completed_at))}
-                </td>
-                <td className="py-2">{formatIdr(s.amount_minor)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="overflow-hidden rounded-2xl border border-border bg-background/70">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[20rem] border-collapse text-left text-sm">
+              <thead>
+                <tr className="border-b border-border text-muted-foreground">
+                  <th className="px-4 py-3 font-medium">Waktu</th>
+                  <th className="px-4 py-3 font-medium">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.sales.map((s) => (
+                  <tr
+                    key={s.sale_id}
+                    className="border-b border-border/60 last:border-0"
+                  >
+                    <td className="px-4 py-3 text-foreground">
+                      {new Intl.DateTimeFormat("id-ID", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      }).format(new Date(s.completed_at))}
+                    </td>
+                    <td className="px-4 py-3 font-medium">
+                      {formatIdr(s.amount_minor)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
     </DashboardShell>
   );

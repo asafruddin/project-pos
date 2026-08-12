@@ -14,13 +14,14 @@ import {
   type CatalogProductRecord,
   type LocalSaleRecord,
 } from "@pos-apps/local-db";
+import { AppShell } from "@/components/app-shell";
+import { AuthLoadingShell } from "@/components/auth-shell";
 import { Button } from "@/components/ui/button";
 import { CartPanel } from "@/components/cart-panel";
 import { useCart } from "@/components/cart-context";
-import { SettingsMenu } from "@/components/settings-menu";
-import { clearSession, getAccessToken } from "@/lib/auth-token";
+import { getAccessToken } from "@/lib/auth-token";
 import { formatIdr } from "@/lib/money";
-import { clearPinUnlock, isPinUnlocked } from "@/lib/pin-session";
+import { isPinUnlocked } from "@/lib/pin-session";
 import { applyTheme, copy, getLang } from "@/lib/preferences";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
@@ -137,12 +138,6 @@ export default function MenuPage() {
     }
   }
 
-  function logout() {
-    clearSession();
-    clearPinUnlock();
-    router.replace("/login");
-  }
-
   async function handleCompleted(_sale: LocalSaleRecord) {
     await refreshLocal();
     if (navigator.onLine) await flushSync();
@@ -153,121 +148,103 @@ export default function MenuPage() {
   }
 
   if (!ready) {
-    return (
-      <main className="flex flex-1 items-center p-8 text-muted-foreground">
-        {t.loading}
-      </main>
-    );
+    return <AuthLoadingShell message={t.loading} />;
   }
 
   return (
-    <main className="flex flex-1 flex-col gap-6 pb-80 p-6 md:pb-8 md:p-8">
-      <div className="flex w-full items-start justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium text-accent">{t.brand}</p>
-          <h1 className="text-3xl font-semibold tracking-tight text-primary">
-            {t.menuTitle}
-          </h1>
-          <p className="max-w-lg text-sm text-muted-foreground">
-            {t.menuLocalOnly}
-            {pulledAt
-              ? ` · ${t.catalogPulled}: ${new Date(pulledAt).toLocaleString(lang === "en" ? "en-US" : "id-ID")}`
-              : ""}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            disabled={pulling || !online}
-            onClick={() => void pullCatalog()}
-            className="min-h-12"
-          >
-            {pulling ? t.catalogPulling : t.catalogPull}
-          </Button>
-          <SettingsMenu onLangChange={() => setLang(getLang())} />
-        </div>
-      </div>
-
+    <AppShell
+      title={t.menuTitle}
+      lang={lang}
+      onLangChange={() => setLang(getLang())}
+      subtitle={
+        <>
+          {t.menuLocalOnly}
+          {pulledAt
+            ? ` · ${t.catalogPulled}: ${new Date(pulledAt).toLocaleString(lang === "en" ? "en-US" : "id-ID")}`
+            : ""}
+        </>
+      }
+      headerActions={
+        <Button
+          type="button"
+          disabled={pulling || !online}
+          onClick={() => void pullCatalog()}
+          className="rounded-2xl bg-secondary text-secondary-foreground hover:opacity-90"
+        >
+          {pulling ? t.catalogPulling : t.catalogPull}
+        </Button>
+      }
+      aside={<CartPanel lang={lang} onCompleted={handleCompleted} />}
+    >
       {!online ? (
-        <p className="rounded-lg bg-secondary px-3 py-2 text-sm text-muted-foreground">
+        <p className="mb-4 rounded-2xl border border-border bg-secondary/70 px-3 py-2 text-sm text-muted-foreground">
           {t.offlineMode} — {t.offlineKeep}
         </p>
       ) : null}
       {pendingSyncCount ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="mb-2 text-sm text-muted-foreground">
           {t.waitingUpload}: {pendingSyncCount}
         </p>
       ) : null}
       {syncStatus === "synced" ? (
-        <p className="text-sm text-muted-foreground">{t.synced}</p>
+        <p className="mb-2 text-sm text-success">{t.synced}</p>
       ) : null}
       {syncError ? (
-        <p className="text-sm text-destructive" role="alert">
+        <p
+          className="mb-4 rounded-2xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          role="alert"
+        >
           {syncError}
         </p>
       ) : null}
-      <div className="grid flex-1 gap-6 md:grid-cols-[minmax(0,1fr)_22rem]">
-        <section>
-          {pullError ? (
-            <p className="mb-4 text-sm text-destructive" role="alert">
-              {pullError}
-            </p>
-          ) : null}
-          {products.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-border p-8 text-muted-foreground">
-              <p>{t.catalogEmpty}</p>
-              {!online ? <p className="mt-2 text-sm">{t.catalogEmptyOffline}</p> : null}
-            </div>
-          ) : (
-            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {products.map((p) => {
-                const sellable = isValidSellablePrice(p.priceMinor) && p.stockQty > 0;
-                return (
-                  <li key={p.productId}>
-                    <button
-                      type="button"
-                      disabled={!sellable}
-                      onClick={() => add(p)}
-                      className="flex min-h-[56px] w-full flex-col items-start justify-center gap-1 rounded-lg border border-border bg-background px-4 py-3 text-left transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                      title={
-                        sellable
-                          ? undefined
-                          : p.stockQty <= 0
-                            ? t.stockOut
-                            : t.catalogBlockedPrice
-                      }
-                    >
-                      <span className="font-medium text-foreground">{p.name}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {sellable
-                          ? formatIdr(p.priceMinor, lang)
-                          : p.stockQty <= 0
-                            ? t.stockOut
-                            : t.catalogBlockedPrice}
-                        {` · ${t.stock}: ${p.stockQty}`}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
-        <CartPanel lang={lang} onCompleted={handleCompleted} />
-      </div>
 
-      <div className="flex flex-wrap gap-3 self-start">
-        <Button
-          type="button"
-          className="min-h-12"
-          onClick={() => router.push("/day-close")}
+      {pullError ? (
+        <p
+          className="mb-4 rounded-2xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          role="alert"
         >
-          {t.dayClose}
-        </Button>
-        <Button type="button" onClick={logout}>
-          {t.logout}
-        </Button>
-      </div>
-    </main>
+          {pullError}
+        </p>
+      ) : null}
+      {products.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-border bg-secondary/40 p-8 text-muted-foreground">
+          <p>{t.catalogEmpty}</p>
+          {!online ? <p className="mt-2 text-sm">{t.catalogEmptyOffline}</p> : null}
+        </div>
+      ) : (
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {products.map((p) => {
+            const sellable = isValidSellablePrice(p.priceMinor) && p.stockQty > 0;
+            return (
+              <li key={p.productId}>
+                <button
+                  type="button"
+                  disabled={!sellable}
+                  onClick={() => add(p)}
+                  className="flex min-h-[4.5rem] w-full flex-col items-start justify-center gap-1 rounded-2xl border border-border bg-background/60 px-4 py-3 text-left transition-colors hover:bg-secondary/60 disabled:cursor-not-allowed disabled:opacity-50"
+                  title={
+                    sellable
+                      ? undefined
+                      : p.stockQty <= 0
+                        ? t.stockOut
+                        : t.catalogBlockedPrice
+                  }
+                >
+                  <span className="font-medium text-foreground">{p.name}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {sellable
+                      ? formatIdr(p.priceMinor, lang)
+                      : p.stockQty <= 0
+                        ? t.stockOut
+                        : t.catalogBlockedPrice}
+                    {` · ${t.stock}: ${p.stockQty}`}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </AppShell>
   );
 }

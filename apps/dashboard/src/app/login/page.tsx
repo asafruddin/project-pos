@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { AuthSplitShell } from "@/components/auth-shell";
 import { getAccessToken } from "@/lib/auth-token";
 import { LoginForm } from "./login-form";
 
@@ -15,17 +16,14 @@ export default function LoginPage() {
   }, [router]);
 
   return (
-    <main className="flex flex-1 flex-col items-start justify-center gap-6 p-8">
-      <div className="flex flex-col gap-2">
-        <p className="text-sm font-medium text-accent">Dashboard</p>
-        <h1 className="text-3xl font-semibold tracking-tight text-primary">
-          Masuk
-        </h1>
-        <p className="max-w-md text-muted-foreground">
-          Masuk dengan akun katalog atau kasir untuk mengelola toko.
-        </p>
-      </div>
+    <AuthSplitShell
+      brandTitle="POS Apps"
+      brandSubtitle="Dashboard"
+      heading="Masuk"
+      description="Masuk dengan akun katalog atau kasir untuk mengelola toko."
+      quoteBy="Dashboard"
+    >
       <LoginForm />
-    </main>
+    </AuthSplitShell>
   );
 }

@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  MinusIcon,
+  PlusIcon,
+  ShoppingCartIcon,
+  XIcon,
+} from "@phosphor-icons/react";
 import { useState } from "react";
 import {
   completeSale,
@@ -84,15 +90,24 @@ export function CartPanel({ lang, onCompleted }: Props) {
   }
 
   return (
-    <aside className="fixed inset-x-0 bottom-0 z-10 max-h-[75vh] overflow-y-auto rounded-t-xl border border-border bg-card p-4 shadow-xl md:static md:max-h-none md:rounded-xl md:shadow-none">
-      <h2 className="text-xl font-semibold">{t.cart}</h2>
+    <aside
+      id="cart-panel"
+      className="fixed inset-x-3 bottom-24 z-30 max-h-[55vh] overflow-y-auto rounded-3xl border border-border bg-card/95 p-4 shadow-xl backdrop-blur-sm md:static md:inset-auto md:bottom-auto md:z-auto md:h-full md:max-h-none md:shadow-sm md:backdrop-blur-none"
+    >
+      <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-foreground">
+        <ShoppingCartIcon size={22} weight="duotone" className="text-accent" />
+        {t.cart}
+      </h2>
       {receipt ? (
-        <p className="mt-3 rounded-lg bg-secondary p-3 text-sm" role="status">
+        <p className="mt-3 rounded-2xl border border-border bg-secondary/70 p-3 text-sm" role="status">
           {receipt}
         </p>
       ) : null}
       {error ? (
-        <p className="mt-3 text-sm text-destructive" role="alert">
+        <p
+          className="mt-3 rounded-2xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          role="alert"
+        >
           {error}
         </p>
       ) : null}
@@ -103,7 +118,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
           </p>
           <p className="text-sm text-muted-foreground">{t.receiptHint}</p>
           <Button
-            className="min-h-14 w-full"
+            className="min-h-14 w-full rounded-2xl bg-accent text-accent-foreground hover:opacity-90"
             disabled={busy}
             onClick={() => void confirmReceipt()}
           >
@@ -133,28 +148,28 @@ export function CartPanel({ lang, onCompleted }: Props) {
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
-                      className="min-h-12 min-w-12 rounded-lg border border-border"
+                      className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-2xl border border-border"
                       aria-label={`${t.qtyDown} ${line.name}`}
                       onClick={() => setQty(line.productId, line.qty - 1)}
                     >
-                      −
+                      <MinusIcon size={18} weight="bold" />
                     </button>
                     <span className="min-w-8 text-center">{line.qty}</span>
                     <button
                       type="button"
-                      className="min-h-12 min-w-12 rounded-lg border border-border"
+                      className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-2xl border border-border"
                       aria-label={`${t.qtyUp} ${line.name}`}
                       onClick={() => setQty(line.productId, line.qty + 1)}
                     >
-                      +
+                      <PlusIcon size={18} weight="bold" />
                     </button>
                     <button
                       type="button"
-                      className="min-h-12 min-w-12 rounded-lg text-destructive"
+                      className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-2xl text-destructive"
                       aria-label={`${t.removeLine} ${line.name}`}
                       onClick={() => setQty(line.productId, 0)}
                     >
-                      ×
+                      <XIcon size={18} weight="bold" />
                     </button>
                   </div>
                 </div>
@@ -166,7 +181,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
             <span>{formatIdr(total, lang)}</span>
           </p>
           <Button
-            className="mt-4 min-h-14 w-full"
+            className="mt-4 min-h-14 w-full rounded-2xl bg-accent text-accent-foreground hover:opacity-90"
             disabled={busy || !lines.length}
             onClick={() => void startCheckout()}
           >
