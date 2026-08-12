@@ -7,10 +7,13 @@ import {
   DashboardLoading,
   DashboardShell,
 } from "@/components/dashboard-shell";
-import { clearSession, getAccessToken } from "@/lib/auth-token";
+import { authorizedFetch } from "@/lib/api-client";
+import {
+  getAccessToken,
+  isAccessTokenExpired,
+  logoutToLogin,
+} from "@/lib/auth-token";
 import { ProductsPanel } from "./products-panel";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 export default function HomePage() {
   const router = useRouter();
@@ -19,27 +22,29 @@ export default function HomePage() {
 
   useEffect(() => {
     const token = getAccessToken();
-    if (!token) {
+    if (!token || isAccessTokenExpired(token)) {
       setReady(true);
-      router.replace("/login");
+      logoutToLogin();
       return;
     }
 
     void (async () => {
       try {
-        const res = await fetch(`${API_URL}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await authorizedFetch("/auth/me");
         if (!res.ok) {
-          clearSession();
-          setReady(true);
-          router.replace("/login");
+          logoutToLogin();
           return;
         }
         setMe((await res.json()) as AuthMeResponse);
         setReady(true);
-      } catch {
-        clearSession();
+      } catch (err) {
+        if (
+          err instanceof Error &&
+          (err.message === "AUTH_UNAUTHORIZED" ||
+            err.message === "AUTH_SESSION_EXPIRED")
+        ) {
+          return;
+        }
         setReady(true);
         router.replace("/login");
       }

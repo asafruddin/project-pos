@@ -14,10 +14,13 @@ import {
   DashboardShell,
 } from "@/components/dashboard-shell";
 import { StatCard } from "@/components/ui/brand";
-import { clearSession, getAccessToken } from "@/lib/auth-token";
+import { authorizedFetch } from "@/lib/api-client";
+import {
+  getAccessToken,
+  isAccessTokenExpired,
+  logoutToLogin,
+} from "@/lib/auth-token";
 import { formatIdr } from "@/lib/format-money";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 export default function SalesPage() {
   const router = useRouter();
@@ -28,33 +31,22 @@ export default function SalesPage() {
 
   useEffect(() => {
     const token = getAccessToken();
-    if (!token) {
+    if (!token || isAccessTokenExpired(token)) {
       setReady(true);
-      router.replace("/login");
+      logoutToLogin();
       return;
     }
 
     void (async () => {
       try {
-        const meRes = await fetch(`${API_URL}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const meRes = await authorizedFetch("/auth/me");
         if (!meRes.ok) {
-          clearSession();
-          setReady(true);
-          router.replace("/login");
+          logoutToLogin();
           return;
         }
         setMe((await meRes.json()) as AuthMeResponse);
 
-        const salesRes = await fetch(`${API_URL}/sales`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (salesRes.status === 401) {
-          clearSession();
-          router.replace("/login");
-          return;
-        }
+        const salesRes = await authorizedFetch("/sales");
         if (!salesRes.ok) {
           setError("Gagal memuat penjualan.");
           setReady(true);
@@ -62,8 +54,14 @@ export default function SalesPage() {
         }
         setData((await salesRes.json()) as SalesListResponse);
         setReady(true);
-      } catch {
-        clearSession();
+      } catch (err) {
+        if (
+          err instanceof Error &&
+          (err.message === "AUTH_UNAUTHORIZED" ||
+            err.message === "AUTH_SESSION_EXPIRED")
+        ) {
+          return;
+        }
         setReady(true);
         router.replace("/login");
       }

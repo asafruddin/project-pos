@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import type {
   ApiErrorBody,
   Product,
@@ -10,10 +9,9 @@ import type {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { clearSession, getAccessToken } from "@/lib/auth-token";
+import { authorizedFetch } from "@/lib/api-client";
+import { getAccessToken, isAccessTokenExpired, logoutToLogin } from "@/lib/auth-token";
 import { formatIdr } from "@/lib/format-money";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 type FormState = {
   name: string;
@@ -32,7 +30,6 @@ function parseNonNegInt(raw: string): number | null {
 }
 
 export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
-  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -40,49 +37,42 @@ export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
   const [pending, setPending] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const forceLogin = useCallback(() => {
-    clearSession();
-    router.replace("/login");
-  }, [router]);
-
   const api = useCallback(
     async <T,>(
       path: string,
       init?: RequestInit,
     ): Promise<{ ok: true; data: T } | { ok: false; message: string }> => {
       const token = getAccessToken();
-      if (!token) {
-        forceLogin();
-        return { ok: false, message: "Sesi tidak ditemukan. Masuk lagi." };
+      if (!token || isAccessTokenExpired(token)) {
+        logoutToLogin();
+        return { ok: false, message: "Sesi berakhir. Masuk lagi." };
       }
       try {
-        const res = await fetch(`${API_URL}${path}`, {
+        const res = await authorizedFetch(path, {
           ...init,
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
             ...(init?.headers ?? {}),
           },
         });
         const data = (await res.json()) as T | ApiErrorBody;
-        if (res.status === 401) {
-          forceLogin();
-          const err = data as ApiErrorBody;
-          return {
-            ok: false,
-            message: err.message ?? "Sesi berakhir. Masuk lagi.",
-          };
-        }
         if (!res.ok) {
           const err = data as ApiErrorBody;
           return { ok: false, message: err.message ?? "Permintaan gagal." };
         }
         return { ok: true, data: data as T };
-      } catch {
+      } catch (err) {
+        if (
+          err instanceof Error &&
+          (err.message === "AUTH_UNAUTHORIZED" ||
+            err.message === "AUTH_SESSION_EXPIRED")
+        ) {
+          return { ok: false, message: "Sesi berakhir. Masuk lagi." };
+        }
         return { ok: false, message: "Tidak dapat menghubungi API." };
       }
     },
-    [forceLogin],
+    [],
   );
 
   const load = useCallback(async () => {

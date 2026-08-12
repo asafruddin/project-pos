@@ -2,6 +2,9 @@ const TOKEN_KEY = "pos_apps_access_token";
 const ROLE_KEY = "pos_apps_role";
 const USER_ID_KEY = "pos_apps_user_id";
 
+/** Clock skew tolerance when checking JWT `exp` (ms). */
+const EXPIRY_SKEW_MS = 5_000;
+
 export type StoredSession = {
   accessToken: string;
   role: string;
@@ -32,4 +35,41 @@ export function getSession(): StoredSession | null {
   const userId = localStorage.getItem(USER_ID_KEY);
   if (!accessToken || !role || !userId) return null;
   return { accessToken, role, userId };
+}
+
+function readJwtExp(token: string): number | null {
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(
+      normalized.length + ((4 - (normalized.length % 4)) % 4),
+      "=",
+    );
+    const json = JSON.parse(atob(padded)) as { exp?: unknown };
+    return typeof json.exp === "number" ? json.exp : null;
+  } catch {
+    return null;
+  }
+}
+
+/** True when token is missing, malformed, or past JWT `exp`. */
+export function isAccessTokenExpired(
+  token: string | null = getAccessToken(),
+): boolean {
+  if (!token) return true;
+  const exp = readJwtExp(token);
+  if (exp == null) return true;
+  return Date.now() >= exp * 1000 - EXPIRY_SKEW_MS;
+}
+
+/**
+ * Full logout + redirect to login when session is invalid/expired.
+ */
+export function logoutToLogin(): void {
+  if (typeof window === "undefined") return;
+  clearSession();
+  if (window.location.pathname !== "/login") {
+    window.location.replace("/login");
+  }
 }

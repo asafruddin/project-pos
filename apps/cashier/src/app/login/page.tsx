@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AuthSplitShell } from "@/components/auth-shell";
 import { PrefControls } from "@/components/settings-menu";
-import { getAccessToken } from "@/lib/auth-token";
+import {
+  clearSession,
+  getAccessToken,
+  isAccessTokenExpired,
+} from "@/lib/auth-token";
 import { applyTheme, copy, getLang } from "@/lib/preferences";
 import { LoginForm } from "./login-form";
 
@@ -16,7 +20,12 @@ export default function LoginPage() {
   useEffect(() => {
     applyTheme();
     document.documentElement.lang = getLang();
-    if (getAccessToken()) {
+    const token = getAccessToken();
+    if (token && isAccessTokenExpired(token)) {
+      clearSession();
+      return;
+    }
+    if (token) {
       router.replace("/pin");
     }
   }, [router]);

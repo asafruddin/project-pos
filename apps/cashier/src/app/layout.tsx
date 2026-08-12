@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { PrefBootstrap } from "@/components/pref-bootstrap";
 import { CartProvider } from "@/components/cart-context";
+import { SessionGuard } from "@/components/session-guard";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -49,7 +50,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <PrefBootstrap>
-          <CartProvider>{children}</CartProvider>
+          <SessionGuard>
+            <CartProvider>{children}</CartProvider>
+          </SessionGuard>
         </PrefBootstrap>
       </body>
     </html>

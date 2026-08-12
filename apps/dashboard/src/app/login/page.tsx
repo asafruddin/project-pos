@@ -3,14 +3,23 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AuthSplitShell } from "@/components/auth-shell";
-import { getAccessToken } from "@/lib/auth-token";
+import {
+  clearSession,
+  getAccessToken,
+  isAccessTokenExpired,
+} from "@/lib/auth-token";
 import { LoginForm } from "./login-form";
 
 export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (getAccessToken()) {
+    const token = getAccessToken();
+    if (token && isAccessTokenExpired(token)) {
+      clearSession();
+      return;
+    }
+    if (token) {
       router.replace("/");
     }
   }, [router]);

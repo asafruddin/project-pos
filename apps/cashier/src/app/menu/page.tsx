@@ -19,12 +19,11 @@ import { AuthLoadingShell } from "@/components/auth-shell";
 import { Button } from "@/components/ui/button";
 import { CartPanel } from "@/components/cart-panel";
 import { useCart } from "@/components/cart-context";
-import { getAccessToken } from "@/lib/auth-token";
+import { getAccessToken, isAccessTokenExpired } from "@/lib/auth-token";
+import { authorizedFetch } from "@/lib/api-client";
 import { formatIdr } from "@/lib/money";
 import { isPinUnlocked } from "@/lib/pin-session";
 import { applyTheme, copy, getLang } from "@/lib/preferences";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 export default function MenuPage() {
   const router = useRouter();
@@ -54,7 +53,7 @@ export default function MenuPage() {
       return;
     }
     const token = getAccessToken();
-    if (!token) {
+    if (!token || isAccessTokenExpired(token)) {
       setPendingSyncCount(pending.length);
       if (pending.length) setSyncStatus("pending");
       return;
@@ -62,17 +61,21 @@ export default function MenuPage() {
     let failed = false;
     for (const sale of pending) {
       try {
-        const response = await fetch(`${API_URL}/sales/sync`, {
+        const response = await authorizedFetch("/sales/sync", {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(toSyncSaleRequest(sale)),
         });
         if (response.ok) await markSaleSynced(sale.saleId);
         else failed = true;
-      } catch {
+      } catch (err) {
+        if (
+          err instanceof Error &&
+          (err.message === "AUTH_UNAUTHORIZED" ||
+            err.message === "AUTH_SESSION_EXPIRED")
+        ) {
+          return;
+        }
         failed = true;
       }
     }
@@ -108,7 +111,7 @@ export default function MenuPage() {
   async function pullCatalog() {
     setPullError(null);
     const token = getAccessToken();
-    if (!token) {
+    if (!token || isAccessTokenExpired(token)) {
       setPullError(t.catalogNeedLogin);
       return;
     }
@@ -118,9 +121,7 @@ export default function MenuPage() {
     }
     setPulling(true);
     try {
-      const res = await fetch(`${API_URL}/catalog/products`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await authorizedFetch("/catalog/products");
       const data = (await res.json()) as ProductListResponse | ApiErrorBody;
       if (!res.ok) {
         setPullError((data as ApiErrorBody).message ?? t.catalogPullFail);
@@ -130,7 +131,14 @@ export default function MenuPage() {
       const list = (data as ProductListResponse).products ?? [];
       await replaceCatalog(list);
       await refreshLocal();
-    } catch {
+    } catch (err) {
+      if (
+        err instanceof Error &&
+        (err.message === "AUTH_UNAUTHORIZED" ||
+          err.message === "AUTH_SESSION_EXPIRED")
+      ) {
+        return;
+      }
       setPullError(t.catalogPullFail);
       await refreshLocal();
     } finally {
