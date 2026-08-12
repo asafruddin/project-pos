@@ -10,7 +10,7 @@ import {
 import { AuthLoadingShell, AuthSplitShell } from "@/components/auth-shell";
 import { PinPad } from "@/components/pin-pad";
 import { Button } from "@/components/ui/button";
-import { SettingsMenu } from "@/components/settings-menu";
+import { PrefControls } from "@/components/settings-menu";
 import { clearSession, getAccessToken, getSession, isShiftAuthorized } from "@/lib/auth-token";
 import { clearPinUnlock, isPinUnlocked, setPinUnlocked } from "@/lib/pin-session";
 import { applyTheme, copy, getLang } from "@/lib/preferences";
@@ -118,7 +118,10 @@ export default function PinPage() {
   }
 
   const settings = (
-    <SettingsMenu onLangChange={() => setLang(getLang())} />
+    <PrefControls
+      onLangChange={() => setLang(getLang())}
+      tooltipSide="bottom"
+    />
   );
 
   if (mode === "loading") {

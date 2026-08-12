@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AuthSplitShell } from "@/components/auth-shell";
-import { SettingsMenu } from "@/components/settings-menu";
+import { PrefControls } from "@/components/settings-menu";
 import { getAccessToken } from "@/lib/auth-token";
 import { applyTheme, copy, getLang } from "@/lib/preferences";
 import { LoginForm } from "./login-form";
@@ -28,7 +28,12 @@ export default function LoginPage() {
       heading={t.title}
       description={t.subtitle}
       quoteBy={t.brand}
-      topRight={<SettingsMenu onLangChange={() => setLang(getLang())} />}
+      topRight={
+        <PrefControls
+          onLangChange={() => setLang(getLang())}
+          tooltipSide="bottom"
+        />
+      }
     >
       <LoginForm lang={lang} />
     </AuthSplitShell>

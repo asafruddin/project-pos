@@ -1,6 +1,11 @@
 "use client";
 
-import { GearSixIcon } from "@phosphor-icons/react";
+import {
+  DesktopIcon,
+  MoonIcon,
+  SunIcon,
+  TranslateIcon,
+} from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import {
   applyTheme,
@@ -12,10 +17,55 @@ import {
   type LangPref,
   type ThemePref,
 } from "@/lib/preferences";
-import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
-export function SettingsMenu({ onLangChange }: { onLangChange?: () => void }) {
-  const [open, setOpen] = useState(false);
+const THEME_ORDER: ThemePref[] = ["system", "light", "dark"];
+
+function themeIcon(theme: ThemePref) {
+  if (theme === "light") return <SunIcon size={18} weight="duotone" />;
+  if (theme === "dark") return <MoonIcon size={18} weight="duotone" />;
+  return <DesktopIcon size={18} weight="duotone" />;
+}
+
+function IconTooltip({
+  label,
+  children,
+  className,
+  side = "top",
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+  side?: "top" | "bottom";
+}) {
+  return (
+    <div className={cn("group relative inline-flex", className)}>
+      {children}
+      <span
+        role="tooltip"
+        className={cn(
+          "pointer-events-none absolute left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-lg border border-border bg-popover px-2.5 py-1.5 text-xs font-medium text-popover-foreground opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100",
+          side === "top" ? "bottom-full mb-2" : "top-full mt-2",
+        )}
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Always-visible theme + language icon controls (no nested settings menu).
+ */
+export function PrefControls({
+  onLangChange,
+  className,
+  tooltipSide = "top",
+}: {
+  onLangChange?: () => void;
+  className?: string;
+  tooltipSide?: "top" | "bottom";
+}) {
   const [theme, setThemeState] = useState<ThemePref>("system");
   const [lang, setLangState] = useState<LangPref>("id");
   const t = copy(lang);
@@ -26,62 +76,58 @@ export function SettingsMenu({ onLangChange }: { onLangChange?: () => void }) {
     applyTheme(getTheme());
   }, []);
 
-  function onTheme(next: ThemePref) {
+  function cycleTheme() {
+    const idx = THEME_ORDER.indexOf(theme);
+    const next = THEME_ORDER[(idx + 1) % THEME_ORDER.length] ?? "system";
     setTheme(next);
     setThemeState(next);
   }
 
-  function onLanguage(next: LangPref) {
+  function toggleLang() {
+    const next: LangPref = lang === "id" ? "en" : "id";
     setLang(next);
     setLangState(next);
     onLangChange?.();
   }
 
+  const themeLabel =
+    theme === "light"
+      ? t.themeLight
+      : theme === "dark"
+        ? t.themeDark
+        : t.themeSystem;
+  const themeTip = `${t.theme}: ${themeLabel}`;
+  const langName = lang === "id" ? "Indonesia" : "English";
+  const langTip = `${t.language}: ${langName}`;
+
   return (
-    <div className="relative">
-      <button
-        type="button"
-        className="inline-flex h-12 min-h-12 items-center justify-center gap-2 rounded-2xl px-3 text-sm font-medium ring-1 ring-border"
-        aria-expanded={open}
-        aria-haspopup="true"
-        onClick={() => setOpen((v) => !v)}
-      >
-        <GearSixIcon size={18} weight="duotone" />
-        <span className="hidden sm:inline">{t.settings}</span>
-      </button>
-      {open ? (
-        <div
-          className="absolute right-0 z-20 mt-2 w-56 rounded-2xl border border-border bg-card p-3 shadow-sm"
-          role="dialog"
-          aria-label={t.settings}
+    <div className={cn("inline-flex items-center gap-1.5", className)}>
+      <IconTooltip label={themeTip} side={tooltipSide}>
+        <button
+          type="button"
+          onClick={cycleTheme}
+          className="inline-flex h-11 min-h-11 w-11 items-center justify-center rounded-2xl border border-border bg-card text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={themeTip}
         >
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1">
-              <Label>{t.theme}</Label>
-              <select
-                className="h-12 rounded-xl border border-border bg-background px-2 text-sm"
-                value={theme}
-                onChange={(e) => onTheme(e.target.value as ThemePref)}
-              >
-                <option value="system">{t.themeSystem}</option>
-                <option value="light">{t.themeLight}</option>
-                <option value="dark">{t.themeDark}</option>
-              </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label>{t.language}</Label>
-              <select
-                className="h-12 rounded-xl border border-border bg-background px-2 text-sm"
-                value={lang}
-                onChange={(e) => onLanguage(e.target.value as LangPref)}
-              >
-                <option value="id">Indonesia</option>
-                <option value="en">English</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      ) : null}
+          {themeIcon(theme)}
+        </button>
+      </IconTooltip>
+      <IconTooltip label={langTip} side={tooltipSide}>
+        <button
+          type="button"
+          onClick={toggleLang}
+          className="inline-flex h-11 min-h-11 items-center justify-center gap-1.5 rounded-2xl border border-border bg-card px-2.5 text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={langTip}
+        >
+          <TranslateIcon size={18} weight="duotone" />
+          <span className="min-w-[1.5rem] text-xs font-semibold tracking-wide">
+            {lang.toUpperCase()}
+          </span>
+        </button>
+      </IconTooltip>
     </div>
   );
 }
+
+/** @deprecated Use PrefControls — kept as alias for existing imports. */
+export const SettingsMenu = PrefControls;

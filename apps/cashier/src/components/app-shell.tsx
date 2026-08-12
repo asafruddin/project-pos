@@ -8,7 +8,7 @@ import {
 } from "@phosphor-icons/react";
 import { usePathname, useRouter } from "next/navigation";
 import { BottomNav, SideNav } from "@/components/pos-nav";
-import { SettingsMenu } from "@/components/settings-menu";
+import { PrefControls } from "@/components/settings-menu";
 import { Button } from "@/components/ui/button";
 import { clearSession } from "@/lib/auth-token";
 import { clearPinUnlock } from "@/lib/pin-session";
@@ -86,7 +86,10 @@ export function AppShell({
             }
             footer={
               <>
-                <SettingsMenu onLangChange={onLangChange} />
+                <PrefControls
+                  onLangChange={onLangChange}
+                  className="w-full justify-between"
+                />
                 <Button
                   type="button"
                   className="w-full bg-secondary text-secondary-foreground hover:opacity-90"
@@ -117,7 +120,10 @@ export function AppShell({
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
               {headerActions}
               <div className="lg:hidden">
-                <SettingsMenu onLangChange={onLangChange} />
+                <PrefControls
+                  onLangChange={onLangChange}
+                  tooltipSide="bottom"
+                />
               </div>
             </div>
           </header>
