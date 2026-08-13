@@ -72,11 +72,11 @@ export default function SalesPage() {
     return <DashboardLoading />;
   }
 
-  const salesCount = data?.sales.length ?? 0;
+  const salesCount = data?.sales.filter((s) => !s.voided_at).length ?? 0;
 
   return (
     <DashboardShell
-      role={me.role}
+      role={me.role} permissions={me.permissions}
       title="Penjualan"
       subtitle="Ringkasan penjualan yang sudah tersinkron dari kasir (bukan data offline lokal)."
     >
@@ -130,6 +130,7 @@ export default function SalesPage() {
                 <tr className="border-b border-border text-muted-foreground">
                   <th className="px-4 py-3 font-medium">Waktu</th>
                   <th className="px-4 py-3 font-medium">Total</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -146,6 +147,9 @@ export default function SalesPage() {
                     </td>
                     <td className="px-4 py-3 font-medium">
                       {formatIdr(s.amount_minor)}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {s.voided_at ? "Void" : "Selesai"}
                     </td>
                   </tr>
                 ))}

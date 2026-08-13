@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AuthMeResponse } from "@pos-apps/types";
+import { hasPermission } from "@pos-apps/types";
 import {
   DashboardLoading,
   DashboardShell,
@@ -61,11 +62,11 @@ export default function HomePage() {
 
   return (
     <DashboardShell
-      role={me.role}
+      role={me.role} permissions={me.permissions}
       title="Stok / Produk"
       subtitle="Kelola katalog toko. Harga dalam Rupiah penuh (mis. 15000 = Rp15.000)."
     >
-      <ProductsPanel canMutate={me.role === "catalog_admin"} />
+      <ProductsPanel canMutate={hasPermission(me.permissions, "products", "update")} />
     </DashboardShell>
   );
 }

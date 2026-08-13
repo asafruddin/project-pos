@@ -1,5 +1,5 @@
 # generated: 2026-08-06T09:45:27+07:00
-# last_updated: 2026-08-07T09:30:00+07:00
+# last_updated: 2026-08-13T15:00:00+07:00
 # project: POS Apps
 # project_key: NOKEY
 # tracking_system: file-system
@@ -41,7 +41,7 @@
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
 
 generated: 2026-08-06T09:45:27+07:00
-last_updated: 2026-08-07T11:00:00+07:00
+last_updated: 2026-08-13T23:20:00+07:00
 project: POS Apps
 project_key: NOKEY
 tracking_system: file-system
@@ -74,3 +74,37 @@ development_status:
   3-3-todays-sales-report-and-confirm: done
   3-4-end-session-and-return-to-account-login: done
   epic-3-retrospective: optional
+
+  epic-4: done
+  4-1-store-stub-stock-ledger-and-opening-movements: done
+  4-2-catalog-fields-beyond-name-and-price: done
+  4-3-product-media-via-mediaservice: done
+  4-4-catalog-refresh-caches-images-on-cashier: done
+  4-5-stock-overview-damaged-stock-and-low-stock: done
+  4-6-stock-opname: done
+  epic-4-retrospective: optional
+
+  epic-5: done
+  5-1-suppliers-and-purchase-order-lifecycle: done
+  5-2-goods-receipt-posts-stock-in: done
+  5-3-hold-park-cart-panel: done
+  5-4-same-day-void: done
+  5-5-return-lookup-inventory-decision-cash-refund: done
+  epic-5-retrospective: optional
+
+  epic-6: done
+  6-1-customer-profile-attach-history: done
+  6-2-open-shift-and-require-it-for-checkout: done
+  6-3-cash-in-out-expected-cash-close-shift: done
+  6-4-day-close-after-shift: done
+  6-5-split-tender-and-customer-specific-price: done
+  epic-6-retrospective: optional
+
+  epic-7: done
+  7-1-loyalty-earn-redeem: done
+  7-2-promotions-coupons-vouchers: done
+  7-3-reports-and-analytics: done
+  7-4-employees-and-rbac-on-dashboard: done
+  7-5-multi-store-and-stock-transfer: done
+  epic-7-retrospective: optional
+

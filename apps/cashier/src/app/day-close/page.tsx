@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  dayCloseGate,
   getDayCloseSummary,
   type DayCloseSummary,
 } from "@pos-apps/local-db";
@@ -42,11 +43,22 @@ export default function DayClosePage() {
   }, [router, load]);
 
   const pending = summary?.pendingSyncCount ?? 0;
-  const canContinue = pending === 0 || ack;
+  const gate = useMemo(() => {
+    if (!summary) return { ok: false as const, code: "DAY_CLOSE_SHIFT_OPEN" as const, message: "" };
+    return dayCloseGate(summary, ack);
+  }, [summary, ack]);
+  const canContinue = gate.ok;
+
+  function gateMessage(): string {
+    if (gate.ok) return "";
+    if (gate.code === "DAY_CLOSE_SHIFT_OPEN") return t.dayCloseShiftOpen;
+    if (gate.code === "DAY_CLOSE_SHIFT_REQUIRED") return t.dayCloseShiftRequired;
+    return t.dayCloseAckRequired;
+  }
 
   function goToReport() {
     if (!canContinue) {
-      setAckError(t.dayCloseAckRequired);
+      setAckError(gateMessage());
       return;
     }
     setAckError(null);
@@ -55,7 +67,7 @@ export default function DayClosePage() {
 
   function finishDayClose() {
     if (!canContinue) {
-      setAckError(t.dayCloseAckRequired);
+      setAckError(gateMessage());
       setStep("summary");
       return;
     }
@@ -71,6 +83,10 @@ export default function DayClosePage() {
   }
 
   const pendingSet = new Set(summary.pendingSyncSaleIds);
+  const shiftBlock =
+    !gate.ok &&
+    (gate.code === "DAY_CLOSE_SHIFT_OPEN" ||
+      gate.code === "DAY_CLOSE_SHIFT_REQUIRED");
 
   return (
     <AppShell
@@ -89,12 +105,6 @@ export default function DayClosePage() {
               </dd>
             </div>
             <div className="rounded-xl border border-border bg-background/70 p-4">
-              <dt className="text-sm text-muted-foreground">{t.dayCloseCash}</dt>
-              <dd className="mt-1 text-xl font-semibold">
-                {formatIdr(summary.cashMinor, lang)}
-              </dd>
-            </div>
-            <div className="rounded-xl border border-border bg-background/70 p-4">
               <dt className="text-sm text-muted-foreground">{t.dayCloseTxCount}</dt>
               <dd className="mt-1 text-xl font-semibold">{summary.transactionCount}</dd>
             </div>
@@ -102,9 +112,64 @@ export default function DayClosePage() {
               <dt className="text-sm text-muted-foreground">{t.waitingUpload}</dt>
               <dd className="mt-1 text-xl font-semibold">{pending}</dd>
             </div>
+            <div className="rounded-xl border border-border bg-background/70 p-4">
+              <dt className="text-sm text-muted-foreground">{t.dayCloseCash}</dt>
+              <dd className="mt-1 text-xl font-semibold">
+                {formatIdr(summary.shiftCountedTotalMinor, lang)}
+              </dd>
+            </div>
           </dl>
 
-          {pending === 0 ? (
+          <div className="space-y-2 rounded-2xl border border-border bg-background/70 p-4">
+            <p className="text-sm font-medium">{t.dayCloseCash}</p>
+            {summary.closedShifts.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t.dayCloseNoShifts}</p>
+            ) : (
+              <ul className="space-y-2 text-sm">
+                {summary.closedShifts.map((row) => (
+                  <li key={row.shiftId} className="rounded-xl border border-border px-3 py-2">
+                    <p className="text-muted-foreground">
+                      {new Date(row.closedAt).toLocaleTimeString(
+                        lang === "en" ? "en-US" : "id-ID",
+                        { hour: "2-digit", minute: "2-digit" },
+                      )}
+                    </p>
+                    <p>
+                      {t.dayCloseShiftExpected}: {formatIdr(row.expectedCashMinor, lang)}
+                    </p>
+                    <p>
+                      {t.dayCloseShiftCounted}: {formatIdr(row.countedCashMinor, lang)}
+                    </p>
+                    <p>
+                      {t.dayCloseShiftDiff}: {formatIdr(row.differenceMinor, lang)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {summary.closedShifts.length > 1 ? (
+              <p className="text-sm font-medium">
+                {t.dayCloseShiftCounted}: {formatIdr(summary.shiftCountedTotalMinor, lang)}
+                {" · "}
+                {t.dayCloseShiftDiff}: {formatIdr(summary.shiftDifferenceTotalMinor, lang)}
+              </p>
+            ) : null}
+          </div>
+
+          {shiftBlock ? (
+            <div className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/5 p-4">
+              <p className="text-sm font-medium text-destructive" role="alert">
+                {gateMessage()}
+              </p>
+              <Button
+                type="button"
+                className="min-h-12 rounded-2xl bg-accent text-accent-foreground"
+                onClick={() => router.push("/shift")}
+              >
+                {t.dayCloseGoShift}
+              </Button>
+            </div>
+          ) : pending === 0 ? (
             <p className="text-sm text-muted-foreground">{t.dayCloseSyncOk}</p>
           ) : (
             <div className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/5 p-4">
@@ -133,6 +198,12 @@ export default function DayClosePage() {
             </div>
           )}
 
+          {!shiftBlock && ackError ? (
+            <p className="text-sm text-destructive" role="alert">
+              {ackError}
+            </p>
+          ) : null}
+
           <div className="flex flex-wrap gap-3">
             <Button
               type="button"
@@ -158,7 +229,7 @@ export default function DayClosePage() {
               className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
               role="alert"
             >
-              {t.dayCloseAckRequired}
+              {gateMessage()}
             </p>
           ) : null}
 
@@ -193,7 +264,7 @@ export default function DayClosePage() {
                       </p>
                       <div className="flex flex-wrap gap-2">
                         <span className="rounded-md bg-secondary px-2 py-0.5 text-xs">
-                          {t.dayCloseStatusDone}
+                          {sale.voidedAt ? t.voided : t.dayCloseStatusDone}
                         </span>
                         {waiting ? (
                           <span className="rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground">

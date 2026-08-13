@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { EyeIcon, EyeSlashIcon } from "@phosphor-icons/react";
 import { FormEvent, useId, useState } from "react";
 import type { ApiErrorBody, LoginResponse } from "@pos-apps/types";
+import { ACCOUNT_ROLES } from "@pos-apps/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,7 +43,7 @@ export function LoginForm() {
         !ok.access_token ||
         typeof ok.user_id !== "string" ||
         !ok.user_id ||
-        (ok.role !== "cashier" && ok.role !== "catalog_admin")
+        !(ACCOUNT_ROLES as readonly string[]).includes(ok.role)
       ) {
         setError("Respons login tidak valid. Coba lagi.");
         return;

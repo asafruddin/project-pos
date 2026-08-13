@@ -4,6 +4,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { CatalogController } from "./catalog.controller";
 import { CatalogService } from "./catalog.service";
+import { MediaService } from "../media/media.service";
 
 describe("CatalogController", () => {
   it("create delegates to CatalogService", async () => {
@@ -20,7 +21,10 @@ describe("CatalogController", () => {
     };
     const moduleRef = await Test.createTestingModule({
       controllers: [CatalogController],
-      providers: [{ provide: CatalogService, useValue: catalog }],
+      providers: [
+        { provide: CatalogService, useValue: catalog },
+        { provide: MediaService, useValue: { upload: jest.fn() } },
+      ],
     })
       .overrideGuard(JwtAuthGuard)
       .useValue({ canActivate: () => true })
@@ -29,17 +33,65 @@ describe("CatalogController", () => {
       .compile();
 
     const controller = moduleRef.get(CatalogController);
-    const result = await controller.create({
-      name: "Espresso",
-      price_minor: 18000,
-      stock_qty: 10,
-    });
-    expect(catalog.create).toHaveBeenCalledWith({
-      name: "Espresso",
-      price_minor: 18000,
-      stock_qty: 10,
-    });
+    const result = await controller.create(
+      {
+        name: "Espresso",
+        price_minor: 18000,
+        stock_qty: 10,
+      },
+      { userId: "u-admin", role: "catalog_admin" },
+    );
+    expect(catalog.create).toHaveBeenCalledWith(
+      {
+        name: "Espresso",
+        price_minor: 18000,
+        stock_qty: 10,
+      },
+      "u-admin",
+    );
     expect(result.name).toBe("Espresso");
+  });
+
+  it("cashier GET omits cost_minor", async () => {
+    const catalog = {
+      create: jest.fn(),
+      list: jest.fn().mockResolvedValue({
+        products: [
+          {
+            product_id: "p1",
+            name: "Espresso",
+            price_minor: 18000,
+            stock_qty: 10,
+            status: "inactive",
+            cost_minor: 9000,
+          },
+        ],
+      }),
+      update: jest.fn(),
+      setStock: jest.fn(),
+    };
+    const moduleRef = await Test.createTestingModule({
+      controllers: [CatalogController],
+      providers: [
+        { provide: CatalogService, useValue: catalog },
+        { provide: MediaService, useValue: { upload: jest.fn() } },
+      ],
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(RolesGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
+
+    const controller = moduleRef.get(CatalogController);
+    const result = await controller.list({
+      userId: "u-cashier",
+      role: "cashier",
+      storeId: "store-2",
+    });
+    expect(catalog.list).toHaveBeenCalledWith("store-2");
+    expect(result.products[0]?.cost_minor).toBeUndefined();
+    expect(result.products[0]?.status).toBe("inactive");
   });
 });
 

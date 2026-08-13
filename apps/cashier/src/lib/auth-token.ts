@@ -7,10 +7,13 @@ const SHIFT_KEY = "pos_cashier_shift_ok";
 /** Clock skew tolerance when checking JWT `exp` (ms). */
 const EXPIRY_SKEW_MS = 5_000;
 
+const PERMS_KEY = "pos_cashier_permissions";
+
 export type CashierSession = {
   accessToken: string;
   role: string;
   userId: string;
+  permissions?: string[];
 };
 
 export function saveSession(session: CashierSession): void {
@@ -18,6 +21,7 @@ export function saveSession(session: CashierSession): void {
   localStorage.setItem(ROLE_KEY, session.role);
   localStorage.setItem(USER_ID_KEY, session.userId);
   localStorage.setItem(SHIFT_KEY, "1");
+  localStorage.setItem(PERMS_KEY, JSON.stringify(session.permissions ?? []));
 }
 
 export function clearSession(): void {
@@ -25,6 +29,7 @@ export function clearSession(): void {
   localStorage.removeItem(ROLE_KEY);
   localStorage.removeItem(USER_ID_KEY);
   localStorage.removeItem(SHIFT_KEY);
+  localStorage.removeItem(PERMS_KEY);
   // PIN unlock is tab-scoped; clear so Menu stays gated after Sign out / Day Close.
   if (typeof sessionStorage !== "undefined") {
     sessionStorage.removeItem("pos_cashier_pin_unlocked");
@@ -53,7 +58,19 @@ export function getSession(): CashierSession | null {
   const role = localStorage.getItem(ROLE_KEY);
   const userId = localStorage.getItem(USER_ID_KEY);
   if (!accessToken || !role || !userId) return null;
-  return { accessToken, role, userId };
+  const permissionsRaw = localStorage.getItem(PERMS_KEY);
+  let permissions: string[] = [];
+  if (permissionsRaw) {
+    try {
+      const parsed = JSON.parse(permissionsRaw) as unknown;
+      if (Array.isArray(parsed)) {
+        permissions = parsed.filter((p): p is string => typeof p === "string");
+      }
+    } catch {
+      permissions = [];
+    }
+  }
+  return { accessToken, role, userId, permissions };
 }
 
 function readJwtExp(token: string): number | null {

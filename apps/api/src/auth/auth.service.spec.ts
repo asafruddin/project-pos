@@ -36,16 +36,20 @@ describe("AuthService", () => {
     getDbMock.mockReturnValue({
       select: () => ({
         from: () => ({
-          where: () => ({
-            limit: async () => [
-              {
-                userId: "11111111-1111-4111-8111-111111111111",
-                username: "admin",
-                passwordHash,
-                role: "catalog_admin",
-              },
-            ],
-          }),
+          where: () =>
+            Object.assign(Promise.resolve([]), {
+              limit: async () => [
+                {
+                  userId: "11111111-1111-4111-8111-111111111111",
+                  username: "admin",
+                  passwordHash,
+                  role: "catalog_admin",
+                  active: true,
+                  storeId: "00000000-0000-4000-8000-000000000001",
+                },
+              ],
+            }),
+          limit: async () => [],
         }),
       }),
     } as never);
@@ -55,7 +59,35 @@ describe("AuthService", () => {
     expect(result.role).toBe("catalog_admin");
     expect(result.access_token).toBe("test.jwt.token");
     expect(result.user_id).toBe("11111111-1111-4111-8111-111111111111");
+    expect(result.store_id).toBe("00000000-0000-4000-8000-000000000001");
+    expect(result.permissions).toEqual(expect.arrayContaining(["users:create"]));
     expect(passwordHash).not.toBe("Admin123!");
+  });
+
+  it("rejects inactive users with AUTH_INVALID_CREDENTIALS", async () => {
+    const passwordHash = await hash("Admin123!", 10);
+    getDbMock.mockReturnValue({
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            limit: async () => [
+              {
+                userId: "11111111-1111-4111-8111-111111111111",
+                username: "admin",
+                passwordHash,
+                role: "catalog_admin",
+                active: false,
+                storeId: "00000000-0000-4000-8000-000000000001",
+              },
+            ],
+          }),
+        }),
+      }),
+    } as never);
+
+    await expect(service.login("admin", "Admin123!")).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
   });
 
   it("rejects invalid credentials with AUTH_INVALID_CREDENTIALS", async () => {

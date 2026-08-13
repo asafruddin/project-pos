@@ -6,9 +6,11 @@ import {
 import { JwtService } from "@nestjs/jwt";
 import { compare } from "bcryptjs";
 import { eq } from "drizzle-orm";
-import type { LoginResponse, Role } from "@pos-apps/types";
+import type { AuthMeResponse, LoginResponse, Role } from "@pos-apps/types";
+import { STORE_1_ID } from "@pos-apps/types";
 import { getDb } from "../db/client";
 import { users } from "../db/schema";
+import { loadRolePermissions } from "./load-permissions";
 import { isRole } from "./roles";
 
 export type JwtPayload = {
@@ -44,7 +46,7 @@ export class AuthService {
       ok = false;
     }
 
-    if (!user || !ok || !isRole(user.role)) {
+    if (!user || !user.active || !ok || !isRole(user.role)) {
       this.logger.warn("login failed");
       throw new UnauthorizedException({
         code: "AUTH_INVALID_CREDENTIALS",
@@ -58,16 +60,19 @@ export class AuthService {
     };
 
     const access_token = await this.jwt.signAsync(payload);
+    const permissions = await loadRolePermissions(user.role);
 
     return {
       access_token,
       token_type: "Bearer",
       user_id: user.userId,
       role: user.role,
+      permissions,
+      store_id: user.storeId ?? STORE_1_ID,
     };
   }
 
-  async me(userId: string): Promise<{ user_id: string; role: Role }> {
+  async me(userId: string): Promise<AuthMeResponse> {
     const db = getDb();
     const rows = await db
       .select()
@@ -75,12 +80,18 @@ export class AuthService {
       .where(eq(users.userId, userId))
       .limit(1);
     const user = rows[0];
-    if (!user || !isRole(user.role)) {
+    if (!user || !user.active || !isRole(user.role)) {
       throw new UnauthorizedException({
         code: "AUTH_INVALID_TOKEN",
         message: "Sesi tidak valid.",
       });
     }
-    return { user_id: user.userId, role: user.role };
+    return {
+      user_id: user.userId,
+      role: user.role,
+      permissions: await loadRolePermissions(user.role),
+      store_id: user.storeId ?? STORE_1_ID,
+      active: user.active,
+    };
   }
 }

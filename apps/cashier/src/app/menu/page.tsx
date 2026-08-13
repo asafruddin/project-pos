@@ -2,28 +2,32 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ApiErrorBody, ProductListResponse } from "@pos-apps/types";
 import {
+  cacheCatalogImages,
+  customerFromApi,
   getCatalogPulledAt,
   isValidSellablePrice,
   listCatalogProducts,
   replaceCatalog,
-  listPendingSyncSales,
-  markSaleSynced,
-  toSyncSaleRequest,
+  replaceCustomers,
+  replaceLoyaltyProgram,
+  replacePromotions,
   type CatalogProductRecord,
   type LocalSaleRecord,
 } from "@pos-apps/local-db";
+import type { ApiErrorBody, CustomerListResponse, LoyaltyProgram, ProductListResponse, PromotionListResponse } from "@pos-apps/types";
 import { AppShell } from "@/components/app-shell";
 import { AuthLoadingShell } from "@/components/auth-shell";
 import { Button } from "@/components/ui/button";
 import { CartPanel } from "@/components/cart-panel";
+import { CatalogProductThumb } from "@/components/catalog-product-thumb";
 import { useCart } from "@/components/cart-context";
 import { getAccessToken, isAccessTokenExpired } from "@/lib/auth-token";
 import { authorizedFetch } from "@/lib/api-client";
 import { formatIdr } from "@/lib/money";
 import { isPinUnlocked } from "@/lib/pin-session";
 import { applyTheme, copy, getLang } from "@/lib/preferences";
+import { flushSalesAndVoids } from "@/lib/flush-sync";
 
 export default function MenuPage() {
   const router = useRouter();
@@ -38,7 +42,7 @@ export default function MenuPage() {
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
   const [syncStatus, setSyncStatus] = useState<"idle" | "pending" | "synced">("idle");
   const [syncError, setSyncError] = useState<string | null>(null);
-  const { add } = useCart();
+  const { add, pruneToSellable } = useCart();
 
   const refreshLocal = useCallback(async () => {
     setProducts(await listCatalogProducts());
@@ -46,43 +50,45 @@ export default function MenuPage() {
   }, []);
 
   const flushSync = useCallback(async () => {
-    const pending = await listPendingSyncSales();
-    if (!navigator.onLine) {
-      setPendingSyncCount(pending.length);
-      if (pending.length) setSyncStatus("pending");
-      return;
-    }
-    const token = getAccessToken();
-    if (!token || isAccessTokenExpired(token)) {
-      setPendingSyncCount(pending.length);
-      if (pending.length) setSyncStatus("pending");
-      return;
-    }
-    let failed = false;
-    for (const sale of pending) {
+    const result = await flushSalesAndVoids();
+    setPendingSyncCount(result.pendingCount);
+    if (result.pendingCount) setSyncStatus("pending");
+    else if (result.uploaded) setSyncStatus("synced");
+    else setSyncStatus("idle");
+    setSyncError(result.failed ? copy(lang).syncFail : null);
+    if (navigator.onLine) {
       try {
-        const response = await authorizedFetch("/sales/sync", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(toSyncSaleRequest(sale)),
-        });
-        if (response.ok) await markSaleSynced(sale.saleId);
-        else failed = true;
-      } catch (err) {
-        if (
-          err instanceof Error &&
-          (err.message === "AUTH_UNAUTHORIZED" ||
-            err.message === "AUTH_SESSION_EXPIRED")
-        ) {
-          return;
+        const res = await authorizedFetch("/customers");
+        if (res.ok) {
+          const data = (await res.json()) as CustomerListResponse;
+          const pulledAt = new Date().toISOString();
+          await replaceCustomers(
+            data.customers.map((row) => customerFromApi(row, pulledAt)),
+          );
         }
-        failed = true;
+      } catch {
+        /* cached customers remain attachable */
+      }
+      try {
+        const loyaltyRes = await authorizedFetch("/loyalty/program");
+        if (loyaltyRes.ok) {
+          await replaceLoyaltyProgram(
+            (await loyaltyRes.json()) as LoyaltyProgram,
+          );
+        }
+      } catch {
+        /* last cached program remains; redeem hides if missing */
+      }
+      try {
+        const promoRes = await authorizedFetch("/promotions");
+        if (promoRes.ok) {
+          const data = (await promoRes.json()) as PromotionListResponse;
+          await replacePromotions(data.promotions ?? []);
+        }
+      } catch {
+        /* last cached autos remain */
       }
     }
-    const remaining = await listPendingSyncSales();
-    setPendingSyncCount(remaining.length);
-    setSyncStatus(remaining.length ? "pending" : pending.length ? "synced" : "idle");
-    setSyncError(failed && remaining.length ? copy(lang).syncFail : null);
   }, [lang]);
 
   useEffect(() => {
@@ -130,7 +136,49 @@ export default function MenuPage() {
       }
       const list = (data as ProductListResponse).products ?? [];
       await replaceCatalog(list);
-      await refreshLocal();
+      try {
+        await cacheCatalogImages(list, async (productId, image) => {
+          try {
+            const fileRes = await authorizedFetch(
+              `/catalog/products/${productId}/images/${image.image_id}/file`,
+              { signal: AbortSignal.timeout(8000) },
+            );
+            if (!fileRes.ok) return null;
+            const bytes = await fileRes.arrayBuffer();
+            const mimeType =
+              fileRes.headers.get("content-type")?.split(";")[0]?.trim() ||
+              "image/jpeg";
+            return { mimeType, bytes };
+          } catch {
+            return null;
+          }
+        });
+      } catch {
+        /* catalog rows already saved; missing images never block sell */
+      }
+      const sellable = await listCatalogProducts();
+      setProducts(sellable);
+      setPulledAt(await getCatalogPulledAt());
+      pruneToSellable(sellable);
+      try {
+        const loyaltyRes = await authorizedFetch("/loyalty/program");
+        if (loyaltyRes.ok) {
+          await replaceLoyaltyProgram(
+            (await loyaltyRes.json()) as LoyaltyProgram,
+          );
+        }
+      } catch {
+        /* catalog already saved; loyalty remains last cache */
+      }
+      try {
+        const promoRes = await authorizedFetch("/promotions");
+        if (promoRes.ok) {
+          const data = (await promoRes.json()) as PromotionListResponse;
+          await replacePromotions(data.promotions ?? []);
+        }
+      } catch {
+        /* last cached autos remain */
+      }
     } catch (err) {
       if (
         err instanceof Error &&
@@ -148,11 +196,7 @@ export default function MenuPage() {
 
   async function handleCompleted(_sale: LocalSaleRecord) {
     await refreshLocal();
-    if (navigator.onLine) await flushSync();
-    else {
-      setPendingSyncCount((await listPendingSyncSales()).length);
-      setSyncStatus("pending");
-    }
+    await flushSync();
   }
 
   if (!ready) {
@@ -238,6 +282,7 @@ export default function MenuPage() {
                         : t.catalogBlockedPrice
                   }
                 >
+                  <CatalogProductThumb productId={p.productId} alt="" />
                   <span className="font-medium text-foreground">{p.name}</span>
                   <span className="text-sm text-muted-foreground">
                     {sellable

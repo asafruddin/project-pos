@@ -6,7 +6,8 @@ inputDocuments:
   - _bmad-output/planning-artifacts/ux-designs/ux-pos-apps-2026-08-06/DESIGN.md
   - _bmad-output/planning-artifacts/ux-designs/ux-pos-apps-2026-08-06/EXPERIENCE.md
 epicsApproved: true
-uxDrPatched: 2026-08-06
+uxDrPatched: 2026-08-13
+phase2Appended: 2026-08-13
 ---
 
 # POS Apps - Epic Breakdown
@@ -479,3 +480,157 @@ So that the next shift cannot continue on my PIN session.
 **Then** the app returns to Account Login (FR27)
 **And** the prior POS PIN session cannot continue; Account Login + POS PIN are required again (FR4)
 **And** local complete Sales / Sync outbox data needed for later Sync is not wiped solely by Day Close (AD-8)
+
+## Epic List (Phase 2)
+
+### Epic 4: Product catalog, media, and Stock Ledger (wave 2A)
+Raka can run a full catalog with Product Media, and every quantity change is an auditable Stock Ledger movement, without breaking Instant Checkout or Offline Mode.
+**FRs covered:** FR33–FR54, FR41–FR43, AD-4, AD-9, AD-12, AD-13, AD-18, AD-19
+
+### Epic 5: Purchasing, Void, and Returns (wave 2B)
+Budi can receive a Purchase Order into Stock; Dewi can hold, Void, and Return with honest inventory — Store Credit waits for Epic 6.
+**FRs covered:** FR55–FR67, FR69, AD-4 commands, AD-14
+
+### Epic 6: Customers, Shift, and cashier ops (wave 2C)
+Dewi opens a Shift before selling, attaches Customers, and Day Close uses Shift cash totals. Loyalty does not gate this epic.
+**FRs covered:** FR70–FR81, FR110–FR112, FR111, AD-16, AD-14
+
+### Epic 7: Growth and management (wave 2D)
+Promotions, reports, Dashboard RBAC, and multi-Store / Stock Transfer — none of it enters Instant Checkout.
+**FRs covered:** FR82–FR109, AD-11, AD-17, AD-18, AD-19
+
+## Epic 4: Product catalog, media, and Stock Ledger (wave 2A)
+
+Raka can run a full catalog with Product Media, and every quantity change is an auditable Stock Ledger movement, without breaking Instant Checkout or Offline Mode.
+
+### Story 4.1: Store stub, Stock Ledger, and opening movements
+
+As a catalog_admin,
+I want Phase 1 `stock_qty` to become a projection of a Stock Ledger with a Store #1 stub,
+So that every later purchase, sale, and opname posts an auditable movement instead of a free-typed qty.
+
+**Acceptance Criteria:**
+
+**Given** existing Phase 1 products with `stock_qty`
+**When** 2A migrations run
+**Then** a `stores` row Store #1 and one Register exist (AD-19)
+**And** a `stock_movements` table exists with `bucket` `sellable` | `damaged` | `in_transit` (AD-13)
+**And** each tracked product gets one **opening** Stock Movement equal to current `stock_qty`
+**And** `AdjustStock` posts a movement (reason required); it does not UPDATE qty as the source of truth
+**And** `AcceptCompleteSale` posts STOCK OUT `sellable` (AD-4); Instant Checkout still never hard-blocks on qty (negative sellable allowed; Phase 1 non-negative CHECK lifted)
+**And** Dashboard Stock display is the ledger projection
+**And** unsynced complete Sales remain cashier-real (AD-3)
+**And** existing Epic 2 sell/sync tests still pass (SM-2)
+
+### Story 4.2: Catalog fields beyond name and price
+
+As a catalog_admin,
+I want SKU, barcode, description, category, brand, tags, status, cost, min/max, and Variants,
+So that Cashier Menu can sell a Variant `product_id` without a live round-trip.
+
+**Acceptance Criteria:**
+
+**Given** I am `catalog_admin` on Dashboard
+**When** I edit catalog fields (FR-33–FR-37)
+**Then** inactive products are not selectable on Cashier Menu after catalog refresh
+**And** line `product_id` is the Variant’s id when Variants exist
+**And** missing optional fields never block Instant Checkout (FR-38)
+**And** SKU unique per company `[ASSUMPTION]`
+
+### Story 4.3: Product Media via MediaService
+
+As a catalog_admin,
+I want to upload primary + gallery images through the API,
+So that Cloudinary is never on the cashier transaction path.
+
+**Acceptance Criteria:**
+
+**Given** Cloudinary credentials in API secrets (`cloudinary` npm 2.10.x, v2)
+**When** I upload/reorder/set-primary/delete images (FR-39–FR-43)
+**Then** only `MediaService` imports the Cloudinary SDK (AD-12)
+**And** POS DB stores references (public_id, secure_url, metadata)
+**And** delete removes provider + DB (retry orphans)
+**And** publish without primary **warns**, does not hard-block
+**And** Catalog/Sales modules do not import Cloudinary
+
+### Story 4.4: Catalog refresh caches images on Cashier
+
+As a cashier,
+I want Menu images from Local Database after catalog refresh,
+So that airplane-mode still sells when the CDN is down.
+
+**Acceptance Criteria:**
+
+**Given** a successful catalog refresh (AD-9)
+**When** the device is offline or Cloudinary is down
+**Then** Cashier Menu renders cache or placeholder; add-to-cart is never blocked (FR-40–FR-42)
+**And** Checkout, payment, Receipt, Sync make **no** Media Provider request
+**And** SM-2 offline drill is re-run and passes (SM-10)
+
+### Story 4.5: Stock Overview, Damaged Stock, and low-stock
+
+As inventory staff,
+I want Overview, Damaged Stock, and low/out lists from the ledger,
+So that I can see honest quantity without editing qty by hand.
+
+**Acceptance Criteria:** FR-44, FR-47, FR-50. Cashier does not need this screen to sell. Oversell warns, does not hard-block Checkout.
+
+### Story 4.6: Stock Opname
+
+As inventory staff,
+I want to count, see variance, and get manager approval,
+So that physical count becomes auditable Stock Adjustments.
+
+**Acceptance Criteria:** FR-51–FR-54. Draft does not change Stock. Approver until 2D is `catalog_admin`. No count-on-POS. Online-first Dashboard.
+
+## Epic 5: Purchasing, Void, and Returns (wave 2B)
+
+### Story 5.1: Suppliers and Purchase Order lifecycle
+FR-55–FR-58. States Draft → Submitted → Approved → Partially Received → Completed. Stock unchanged on submit.
+
+### Story 5.2: Goods Receipt posts STOCK IN
+FR-59–FR-61. Partial OK. `ReceiveGoods` command only (AD-4). Invoice status only, not GL.
+
+### Story 5.3: Hold/park Cart Panel
+FR-62. Device-local; not a Sale; not in outbox (AD-14).
+
+### Story 5.4: Same-day Void
+FR-63. `PostVoid`; STOCK IN sellable; cash Void decreases Shift Expected Cash once Shift exists (Epic 6). Manager PIN in-session. Incomplete cancel is not Void (AD-2).
+
+### Story 5.5: Return lookup, inventory decision, cash Refund
+FR-64–FR-67, FR-69. Lookup online-first. Cashier cannot Refund (API deny). Exchange = new complete Sale linked to Return (FR-68 without Store Credit). Store Credit out of this epic.
+
+## Epic 6: Customers, Shift, and cashier ops (wave 2C)
+
+### Story 6.1: Customer profile, attach, history
+FR-70–FR-74. Sale completes without Customer. Offline: cached attach OK; new create queued (`customer_create` outbox).
+
+### Story 6.2: Open Shift and require it for Checkout
+FR-75, AD-16. One open Shift per Register. After this story, Pay disabled without open Shift; `AcceptCompleteSale` requires `shift_id`.
+
+### Story 6.3: Cash In/Out, Expected Cash, close Shift
+FR-76–FR-81. Formula includes cash Voids. Difference recorded, not forced to zero. Offline-capable. Shift close does not drain Sync.
+
+### Story 6.4: Day Close after Shift
+FR-111, FR-23 after 2C. Cash summary = this Register’s closed Shifts. FR-24 still applies.
+
+### Story 6.5: Split tender and Customer-specific price
+FR-110, FR-112. Methods: cash + Store Credit only. Store Credit needs Customer. Fail open to Store/catalog price.
+
+## Epic 7: Growth and management (wave 2D)
+
+### Story 7.1: Loyalty earn/redeem (P1; does not gate Epic 6)
+FR-82–FR-86. Shared domain eval (AD-18). Redeem online-only. Fail open.
+
+### Story 7.2: Promotions, Coupons, Vouchers
+FR-87–FR-92. Fail open to list price.
+
+### Story 7.3: Reports and analytics
+FR-93–FR-97. COGS = product cost field. Cashier-only limited/none.
+
+### Story 7.4: Employees and RBAC on Dashboard
+FR-98–FR-103. API enforces (AD-17). Map `cashier` → Cashier, `catalog_admin` → Admin.
+
+### Story 7.5: Multi-Store and Stock Transfer
+FR-104–FR-109. `ShipTransfer` / `ReceiveTransfer`. In-transit bucket. Not on Checkout. Cross-Store offline Sync out.
+

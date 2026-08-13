@@ -1,9 +1,9 @@
 ---
 name: POS Apps
-description: "Warm, trustworthy coffee-shop POS — Instant Checkout + Offline Mode. shadcn/ui brand-layer delta only."
+description: "Warm, trustworthy coffee-shop POS — Instant Checkout + Offline Mode, then operations on Dashboard. shadcn/ui brand-layer delta only."
 status: final
 created: 2026-08-06
-updated: 2026-08-06
+updated: 2026-08-13
 sources:
   - _bmad-output/planning-artifacts/prds/prd-pos-apps-2026-08-05/prd.md
   - _bmad-output/planning-artifacts/architecture/architecture-pos-apps-2026-08-05/ARCHITECTURE-SPINE.md

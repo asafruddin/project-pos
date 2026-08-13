@@ -1,14 +1,33 @@
 import type { Product } from "@pos-apps/types";
-import { openLocalDb, type CatalogProductRecord } from "./db.js";
+import {
+  openLocalDb,
+  type CatalogImageRecord,
+  type CatalogProductRecord,
+} from "./db.js";
+import {
+  syncCatalogImageCache,
+  type ImageBytesFetcher,
+} from "./catalog-images.js";
 
-export type { CatalogProductRecord };
+export type { CatalogImageRecord, CatalogProductRecord };
+export { primaryCatalogImage, syncCatalogImageCache } from "./catalog-images.js";
 
 const META_CATALOG_PULLED_AT = "catalogPulledAt";
+
+export function isSellableCatalogRow(
+  product: CatalogProductRecord,
+  all: CatalogProductRecord[],
+): boolean {
+  const status = product.status ?? "active";
+  if (status !== "active") return false;
+  return !all.some((other) => other.parentId === product.productId);
+}
 
 export async function listCatalogProducts(): Promise<CatalogProductRecord[]> {
   const db = await openLocalDb();
   const rows = await db.getAll("catalogProducts");
-  return rows.sort((a, b) => a.name.localeCompare(b.name, "id"));
+  const sellable = rows.filter((row) => isSellableCatalogRow(row, rows));
+  return sellable.sort((a, b) => a.name.localeCompare(b.name, "id"));
 }
 
 export async function getCatalogPulledAt(): Promise<string | null> {
@@ -31,6 +50,10 @@ export async function replaceCatalog(products: Product[]): Promise<number> {
       name: p.name,
       priceMinor: p.price_minor,
       stockQty: p.stock_qty,
+      status: p.status ?? "active",
+      parentId: p.parent_id ?? null,
+      sku: p.sku ?? null,
+      categoryName: p.category_name ?? null,
       pulledAt,
     };
     await tx.objectStore("catalogProducts").put(row);
@@ -38,6 +61,33 @@ export async function replaceCatalog(products: Product[]): Promise<number> {
   await tx.objectStore("meta").put(pulledAt, META_CATALOG_PULLED_AT);
   await tx.done;
   return products.length;
+}
+
+export async function cacheCatalogImages(
+  products: Product[],
+  fetchBytes: ImageBytesFetcher,
+): Promise<void> {
+  const db = await openLocalDb();
+  await syncCatalogImageCache(
+    products,
+    {
+      list: () => db.getAll("catalogImages"),
+      put: async (row) => {
+        await db.put("catalogImages", row);
+      },
+      delete: async (productId) => {
+        await db.delete("catalogImages", productId);
+      },
+    },
+    fetchBytes,
+  );
+}
+
+export async function getCatalogImageRecord(
+  productId: string,
+): Promise<CatalogImageRecord | undefined> {
+  const db = await openLocalDb();
+  return db.get("catalogImages", productId);
 }
 
 export function isValidSellablePrice(priceMinor: number): boolean {

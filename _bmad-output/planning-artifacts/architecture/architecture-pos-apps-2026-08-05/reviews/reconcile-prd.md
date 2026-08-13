@@ -1,187 +1,102 @@
 ---
-title: "Reconcile — PRD vs Architecture Spine"
-status: draft
-created: 2026-08-06
-updated: 2026-08-06
+title: "Reconcile — Phase 2 PRD vs Architecture Spine"
+status: extract
+created: 2026-08-13
+updated: 2026-08-13
 sources:
   - _bmad-output/planning-artifacts/prds/prd-pos-apps-2026-08-05/prd.md
-  - _bmad-output/planning-artifacts/architecture/architecture-pos-apps-2026-08-05/ARCHITECTURE-SPINE.md
-focus:
-  - Offline Mode
-  - Sale completeness
-  - Sync
-  - Stock
-  - NestJS api
-  - Cashier Local Database
+  - _bmad-output/planning-artifacts/prds/prd-pos-apps-2026-08-05/addendum.md
+against: _bmad-output/planning-artifacts/architecture/architecture-pos-apps-2026-08-05/ARCHITECTURE-SPINE.md
 ---
 
-# Reconcile: Final PRD ↔ Architecture Spine
+# Reconcile — PRD + addendum → Architecture Spine
 
-Compares **PRD** (`prd.md`, status: final) against **ARCHITECTURE-SPINE** (status: draft) for Phase 1 gaps. Focus areas called out explicitly; other drift noted only when it blocks those areas.
+**Input:** `prd.md` (final, 2026-08-13) + `addendum.md`  
+**Against:** `ARCHITECTURE-SPINE.md` (draft, Phase 1 + Phase 2, AD-1..19)  
+**Date:** 2026-08-13  
+**Job:** What from the PRD did not land in the spine — especially quiet constraints the AD structure dropped. Not a PRD rewrite. Not a re-litigation of Phase 1 gaps already closed (catalog pull, single Sale write path, AdjustStock).
 
-**Verdict:** Spine correctly adopts Sale completeness (AD-2), Day Close vs Sync (AD-8), and auth split (AD-6). Several **write-path and catalog-pull** decisions remain underspecified relative to the PRD’s Offline Mode + Stock FRs. NestJS module list is a seed, not a contract that fully covers FR surface.
+## Covered (keep short)
 
----
+Phase 1 locked path: local-primary Sale write (AD-1), completeness = payment + Receipt (AD-2), idempotent Sync (AD-3), single server Stock mutator (AD-4), apps→packages (AD-5), Account Login vs POS PIN (AD-6), Day Close vs unsynced acknowledge (AD-8), catalog pull into Local Database including image cache (AD-9), line `price_minor` snapshot (AD-10).
 
-## 1. Offline Mode
+Phase 2 ADs exist for the named quiet constraints at headline level: MediaService-only Cloudinary (AD-12) + no live Media Provider after catalog refresh (AD-9); Stock Ledger as server qty truth + cutover opening movement (AD-13, AD-4); Shift required for Checkout / `AcceptCompleteSale` requires `shift_id` (AD-16); promo / loyalty / customer-price eval once in `packages/domain` with fail-open to last-cached catalog / Store / list price (AD-18); two apps, Offline Mode cashier-only, Dashboard online-only, no third Phase 2 app (AD-7). Durable outbox extended to Shift / Void / queued Customer create; Return lookup and Loyalty redeem online-first (AD-14). API Permission enforcement (AD-17). Store/Register stub (AD-19). Nest domain seams (AD-15). Oversell-on-Sync warn-not-block in Deferred. Non-goals (CRDT, KDS, card gateway, native shell, owner-mobile required) match PRD §5.
 
-### Aligned
+## Gaps (2–5, the important ones)
 
-| PRD | Spine |
-| --- | --- |
-| FR-14–FR-21 offline sell on Local Database; complete Sale = success; Sync may lag | AD-1 local-primary; Offline Mode + Sync row in capability map |
-| Sync pending must not re-label Sale incomplete (FR-15, FR-20) | AD-3 explicit |
-| Offline drill (FR-21); no CRDT / multi-cashier perfection | Deferred matches PRD §5 |
-| Offline Mode only on Cashier | AD-7 surface separation |
+### 1. Fail-open is narrower than Instant Checkout decorations
 
-### Gaps
+- **Input:** §4.2: Promotions, Loyalty, **Customer attach**, **Product Media**, **split tender**, and Customer-specific price may decorate Checkout; they must **fail open** so FR-6–FR-13 still pass. FR-71 unattached Sale still completes. FR-86 / FR-92 Loyalty and Promotion outage. FR-112 price lookup fails open. FR-50 oversell **warn**, never wait on a live count. FR-89 invalid Coupon → Sale proceeds. FR-40 / UJ-4: image load failure never blocks add-to-cart.
+- **Spine:** AD-18 fail-open names **last-cached catalog / Store / list price** and says completeness (AD-2) never waits on **Media Provider, Loyalty, or Promotion evaluation**. AD-14: Return lookup and Loyalty redeem must not block Instant Checkout if unavailable.
+- **Why it matters:** The quiet rule is “every decoration fails open,” not “promo/loyalty/CDN fail open.” Customer attach down, Store Credit / split tender unavailable, missing image bytes, invalid Coupon, and oversell-at-zero can still grow a second completeness gate beside AD-2. AD-18’s Prevents (“decorations blocking Instant Checkout”) is broader than its Rule.
+- **Placement:** **Spine AD-18** — extend the fail-open set to Customer attach, Product Media load, split tender / Store Credit, Coupon, oversell-warn (cite FR-50 already in Deferred). Completeness waits on payment + Receipt (+ open Shift after 2C) only.
 
-| ID | Severity | Gap |
-| --- | --- | --- |
-| G-OFF-1 | **High** | **Catalog bootstrap for offline Cashier Menu is missing from spine invariants.** PRD FR-14 requires Cashier Menu / Cart / Checkout offline; FR-29 requires products available after “catalog refresh / Sync to Local Database.” Spine Sync contract (AD-3 + conventions) describes **upload of complete Sales only**. Diagram arrow is one-way `Outbox → API`. No AD for: when catalog is pulled, what is cached (products, prices, stock snapshot?), invalidate-on-edit, or failure if Local Database has no catalog. Offline Mode is incomplete without a catalog-in path. |
-| G-OFF-2 | Medium | **Local Database readiness gate.** FR-14: without Local Database, offline sell blocked with clear error. Spine does not define “ready” (schema migrated? catalog present? PIN material present?). Needed for FR-5 + FR-14 acceptance. |
-| G-OFF-3 | Low | **Online vs offline UX switch.** PRD UJ-2 assumes POS usable against Local Database when network drops mid-shift. Spine implies local-primary always, but does not state whether online path still writes Local-first (see G-SALE-1). Mid-Sale network flap behavior is unspecified. |
+### 2. Dual SoT: unsynced complete Sale is still real
 
----
+- **Input:** §8 Quantity truth: until Sync succeeds, Local Database is SoT for **that device’s complete Sales** (cashier-facing). After Sync, Stock Ledger is server SoT. **Dashboard must not treat an unsynced complete Sale as “not real.”** Addendum: until Sync ack, device Local Database is SoT for those Sales; ledger is server truth after. FR-15 / FR-18 / FR-45: complete Sale is success; Sync posts STOCK OUT once; double-count is a test fail.
+- **Spine:** AD-13 = ledger is **server quantity** truth after 2A. AD-1 = Local Database write path. AD-3 = rejected Sync does not delete the local complete Sale. No AD says Dashboard / reports / Day Close **must count local-complete-but-unsynced Sales as real**, or that ledger SoT starts **at Sync ack**, not at Receipt.
+- **Why it matters:** Easy to implement “Stock Overview = sum(movements)” and hide or zero unsynced Sales on Dashboard (contradicts FR-15 + §8). Also easy to post STOCK OUT at local complete (two qty truths) or skip the post and treat the Sale as incomplete until ack. The quiet split is **cashier SoT vs server SoT**, not “ledger replaces Local Database.”
+- **Placement:** **Spine AD-13** (or a one-line amendment on AD-1/AD-4): Local-complete unsynced Sale is real on Cashier and must not be denied on Dashboard; ledger movement is created by `AcceptCompleteSale` on Sync ack; no double-post. Damaged vs sellable and non-tracked products (FR-35, FR-47) still unnamed.
 
-## 2. Sale completeness
+### 3. Shift gate leftovers (Day Close coupling, Expected Cash, close ≠ Sync)
 
-### Aligned
+- **Input:** FR-75 / AD-16 headline is adopted: after 2C, Checkout disabled without open Shift; Sales never have `shift_id = null`. FR-111 extra: finish Day Close **disabled while Shift open**; Day Close with **zero closed Shifts that day is blocked if any complete Sale exists**; cash summary **displays** closed Shift Expected Cash / counted — does not invent a second formula. FR-78 formula (opening + cash Sales + Cash In − Cash Out − cash Refunds − cash Voids). FR-80: Shift close does **not** require FR-24 (Sync drain stays Day Close). FR-79: non-zero difference **warn, not hard-block**. Midnight-spanning Shift; same-calendar-day Void uses Sale date, not Shift open date.
+- **Spine:** AD-16: Checkout off without open Shift; `AcceptCompleteSale` requires `shift_id`; one open Shift per Register. AD-8: Day Close cannot finish while a Shift is open; cash summary displays closed Shift Expected Cash / counted. Conventions still mark Sync DTO `shift_id?`.
+- **Why it matters:** SM-9 assumes every Sale has a Shift; a builder can ship optional `shift_id` forever (conventions still `?`). Day Close can pass with Sales and **no** closed Shift. Shift close can be incorrectly blocked on unsynced Sales (collapsing Shift into Day Close). Expected Cash can be re-derived on Day Close and disagree with FR-78. Midnight Shift + calendar-day Void will split cash.
+- **Placement:** **Spine AD-8 / AD-16 / conventions:** after 2C, `shift_id` required on complete Sale + Accept; Day Close blocked if complete Sales exist with zero closed Shifts; Shift close independent of FR-24; Expected Cash owned by Shift (formula or “FR-78, do not fork”); Void date = Sale calendar date.
 
-| PRD | Spine |
-| --- | --- |
-| Complete = payment recorded **and** Receipt success (print or on-screen) | AD-2 `[ADOPTED]` |
-| Incomplete → no Stock update; retry/cancel (FR-10–FR-12) | AD-2: incomplete must not enter Sync outbox; must not mutate server Stock |
-| Offline complete Sale remains success while Sync waits (FR-15) | AD-2 + AD-3 |
+### 4. Two surfaces: capability placement + Register-local Refund, not only “no third app”
 
-### Gaps
+- **Input:** §2.4 / §5 / §8: two surfaces — sell path on Cashier, run-the-business on Dashboard; not “all-in-one.” Offline split: Cashier search / cart / Checkout / payment / Receipt / **hold** / Void / Shift; Dashboard receiving / PO / Suppliers / products / Customers / reports / Promotions — online-first. FR-54 Stock Opname not on Cashier. FR-109 multi-Store not in Checkout. FR-62 hold/park **device-local**. FR-67 quiet exception: Refund is manager/admin, **API-enforced**, but approval is **in-session manager PIN at the Register** so the customer is made whole **without a Dashboard round-trip**; Return may be parked. Addendum already flattened three pillars → two surfaces (do not re-open a third app).
+- **Spine:** AD-7 Prevents “ops screens on Instant Checkout” and a third Phase 2 app; Rule is Offline Mode / Local Database cashier-only, Dashboard online-only, multi-Store not in Instant Checkout. AD-11: Cashier never creates users. Capability map puts Opname / purchasing / RBAC on Dashboard. **Hold/park has no AD or map row.** Refund in-session at Register is absent (AD-17 only: cashier tokens cannot call Refund endpoints).
+- **Why it matters:** AD-7 reads as “two Next apps + no KDS.” The quiet discipline is **which jobs may live on Instant Checkout**. Without it, Stock Opname-on-POS or PO-on-Cashier can still ship “because AD-7 didn’t name them.” Conversely, FR-67 without the Register-PIN exception becomes “go to Dashboard to Refund,” which breaks UJ-7 on the floor. Hold/park (FR-62) can become a shared Register queue (PRD OQ-3) or a Sale, mutating Stock.
+- **Placement:** **Spine AD-7** — name the offline split (hold/Void/Shift on Cashier; receiving/PO/Opname/RBAC/reports on Dashboard). **AD-14 or AD-17:** Refund Permission stays API-enforced; the UX path is in-session at Register, not a Dashboard detour. Hold/park = device-local, not a Sale, no Stock.
 
-| ID | Severity | Gap |
-| --- | --- | --- |
-| G-SALE-1 | **High** | **Dual write path ambiguity (“online create” vs local-primary).** AD-1: Cashier Local Database is SoR for complete-but-unsynced Sales. AD-4: API mutates Stock on “**online create or Sync**.” That implies a Cashier→API direct Sale create when online, parallel to outbox Sync. PRD Instant Checkout + Offline Mode treat Local Database as the sell path for UJ-2 and do not define a separate online-bypass. If online bypasses Local DB, Offline Mode mid-shift and Day Close totals (local + synced) get harder; if everything is Local-first + Sync, “online create” should be removed or redefined as “Sync of a just-completed Sale while online.” **Spine must pick one Sale write topology.** |
-| G-SALE-2 | Medium | **Incomplete / cancel lifecycle in Local Database.** FR-12: print failed → incomplete; cancel discards without Stock change. Spine bans incomplete from outbox/Stock but does not say whether incomplete Sales are stored in Local DB, their `status` enum, or how cancel purges them. ER diagram has `status` + `synced` with no allowed values. |
-| G-SALE-3 | Low | **On-screen Receipt confirm (PRD §8) vs print.** AD-2 mentions print or on-screen confirm; capability map points at cashier. No shared domain predicate in spine text for “Receipt success” variants — fine for seed, but `packages/domain` Sale completeness rule should enumerate both before stories. |
+### 5. Media isolation remainder: sell-path never depends on bytes or publish-with-image
 
----
+- **Input:** Manifesto: Media Provider is infrastructure, **not transaction infrastructure**; must never sit on Checkout, payment, Receipt, Sync, **or Cashier Menu after catalog refresh**. FR-41 / SM-10 / SM-C5: after refresh, airplane-mode Menu renders from cache; **any design that makes SM-1 require Cloudinary fails**. FR-40: warn, **not hard-block**, publish without primary image; placeholder allowed; add-to-cart still works. FR-42: forced provider failure, SM-1 still completes. Notes: category / brand / Promotion / Store images may share the provider; they are **not** a 2A success gate.
+- **Spine:** Paradigm sentence + AD-12 (MediaService-only SDK, DB references, delete+retry, transforms) + AD-9 (durable image cache; Menu/Checkout/payment/Receipt/Sync must not require a live Media Provider call). Strong on **SDK / live-call isolation**. Silent on: add-to-cart when cache is empty or fetch failed; warn-not-hard-block publish; SM-C5 as a gate; non-product folders not a 2A gate.
+- **Why it matters:** A builder can isolate the SDK, still `hard-block` publish without a primary image, or treat a missing cache entry as a blocked Menu tile — SM-1 then depends on Cloudinary/cache fullness. That is the isolation *feel* the AD dropped while keeping the mechanism.
+- **Placement:** **Spine AD-9 or AD-12:** missing/failed image → placeholder; add-to-cart never blocked (FR-40). Publish warn-not-block. SM-C5: SM-1 must not require the Media Provider. Non-product assets = convention, not 2A gate (PRD already cut this).
 
-## 3. Sync
+## Qualitative dropped
 
-### Aligned
+Tone the ADs kept as slogans or Prevents but not as Rules:
 
-| PRD | Spine |
-| --- | --- |
-| Reconnect Syncs complete Sales; no silent drop (FR-17) | AD-3 + outbox |
-| Retry; do not block next Sale (FR-19) | AD-3 |
-| Status indicator ≠ incomplete Sale (FR-20) | AD-3 |
-| Day Close hard block / acknowledge (FR-24); remain for later Sync (FR-27) | AD-8 |
+- **“Not all-in-one / Dashboard feels like operations, not an ERP.”** AD-7 bans a third app; it does not bind Dashboard IA (ops vs management). PRD addendum already flattened three pillars — do not revive a third surface — but the anti-ERP *feel* has no AD. Builders can still dump 2A–2D into one Admin monolith and “pass” AD-7.
+- **“Do not ship Phase 2 as one giant release” / 2D cannot delay 2A / 2C done without Loyalty.** Waves appear in AD names (2A cutover, 2C Shift). No invariant that Loyalty/Promotions/RBAC are not gates for 2A ledger or 2C Shift (SM-C2, §6.4). Capability map lists Customers / Loyalty in one row — easy to couple SM-9 to FR-82.
+- **Offline Mode as pride, not apology.** Drills (FR-21) and “complete Sale remains success” landed; cashier-facing voice did not (architecture-appropriate to skip, unless UX copy is derived from the spine).
+- **Audit as a cross-cutting NFR.** Ledger has reason/actor/timestamp (AD-13). Returns, Refunds, Shift differences, RBAC changes, Day Close unsynced acknowledgements are attributable in PRD §8 — only ledger is bound. Day Close acknowledge persistence (local vs API) still unnamed.
+- **Native-feel latency.** §4.2 NFR search &lt;100ms / add &lt;50ms / checkout &lt;300ms; SM-4 re-measure after Phase 2A+. Operations envelope has hosts, not the Local Database latency bar.
+- **Exchange = new complete Sale** (FR-68), not a mutant original — no AD; STOCK OUT for replacements can be implemented as line-edits on the old Sale.
+- **Payments / Store Credit / split tender** have no module or command. Addendum suggested a Payments module; spine Nest list has no Payments. Money-out (Refund, Store Credit, split) can land as ad-hoc Sales fields.
 
-### Gaps
+## Not a gap
 
-| ID | Severity | Gap |
-| --- | --- | --- |
-| G-SYNC-1 | **High** | Same as G-OFF-1: **no catalog / product pull Sync.** PRD uses “Sync” for Sales upload **and** catalog-to-device refresh (FR-29). Spine overloads Sync as Sales upload only. Rename or split: e.g. `SalesSync` (outbox) vs `CatalogPull` — otherwise FR-29 has no architectural home. |
-| G-SYNC-2 | Medium | **Idempotency + payload fields are spine-only.** AD-3 (`sale_id` UUID before complete, idempotent POST, `device_id`) is correct enrichment; PRD does not contradict. Not a PRD violation — but epics need this locked before Nest SyncModule. Confirm: Sync accepts **only** `status=complete` documents. |
-| G-SYNC-3 | Medium | **Stale catalog / deleted product on Sync accept.** Offline Sale may reference a product later disabled on Dashboard (FR-29). Spine defers CRDT but does not say Sync accept behavior: reject, accept with snapshot lines, or soft-warn. Affects Stock mutation (AD-4) and FR-17 “one record per complete local Sale.” |
-| G-SYNC-4 | Low | **Day Close acknowledge audit note (FR-24).** AD-8 requires acknowledge; PRD says recorded audit note. Spine does not say Local DB vs API persistence of that note — Dashboard cannot see acknowledge if only local. |
+Do not re-open; already in spine or explicit PRD/addendum cuts:
 
----
+- Dual online-POST vs local-first Sale path — AD-1 closed it (local always, Sync when online).
+- Catalog pull vs Sales Sync overload — AD-9 vs AD-3.
+- Completeness gate, idempotent `sale_id`, Day Close vs unsynced acknowledge, POS PIN offline — AD-2, AD-3, AD-8, AD-6.
+- MediaService-only Cloudinary SDK + no live CDN after refresh — AD-12 + AD-9 (remainder is gap 5, not “AD-12 missing”).
+- Ledger as server qty after 2A + `AdjustStock` ≠ Sync — AD-13 + AD-4 (remainder is gap 2).
+- Shift required for Checkout after 2C — AD-16 (remainder is gap 3).
+- Shared promo/loyalty/customer-price eval — AD-18 (remainder is gap 1).
+- Two Next apps, no owner-mobile / warehouse / KDS required — AD-7 + addendum three-pillars override (remainder is gap 4).
+- Cloudinary named in addendum; PRD capability = Media Provider.
+- Category/brand/promo/store folders = ops convention, not 2A SM-10 gate (PRD §4.7 Notes).
+- Oversell warn-not-hard-block — Deferred (aligned with FR-50).
+- CRDT / cross-Store offline Sync / card gateway / native shell / Background Worker as required app — Deferred + PRD §5.
+- Until 2D, `cashier` | `catalog_admin`; `catalog_admin` is approver — AD-11.
+- Type-safe contracts as architecture bar not SM-* — addendum override; AD-15 typed DTOs is the landing.
+- Phase 1 coffee-shop journeys vs retail-first vision docs — PRD domain note, not a spine miss.
 
-## 4. Stock
+## Priority for spine amend (before Reviewer Gate)
 
-### Aligned
+1. **AD-18** — fail-open set = all Instant Checkout decorations, not only promo/loyalty/CDN.
+2. **AD-13 (+ AD-1/AD-4)** — dual SoT: unsynced complete Sale is real; ledger posts on Sync ack; no double-count.
+3. **AD-8 / AD-16 / Sync DTO** — required `shift_id` after 2C; Day Close vs zero closed Shifts; Shift close ≠ FR-24; Expected Cash owner.
+4. **AD-7 / hold / FR-67** — capability split + device-local hold + Register-local Refund PIN.
+5. **AD-9 / AD-12** — placeholder / never-block add-to-cart; warn-not-block publish; SM-C5.
 
-| PRD | Spine |
-| --- | --- |
-| Stock updates only for complete Sales (online or after Sync) — FR-11, FR-18, FR-30 | AD-2 + AD-4 |
-| Dashboard reads Stock | AD-4, AD-7 |
-| Only server Stock is Dashboard truth | AD-4 |
-
-### Gaps
-
-| ID | Severity | Gap |
-| --- | --- | --- |
-| G-STK-1 | Medium | **Manual Stock edit vs Sale-driven mutation.** FR-28: Dashboard can set Stock qty. AD-4: only API mutates Stock when accepting a complete Sale. Manual adjust needs an explicit API path (CatalogModule/StockModule) so it does not conflict with “Sale-only mutation” wording. |
-| G-STK-2 | Medium | **Offline oversell / negative Stock.** Neither PRD nor spine says whether Cashier blocks sell when local/server qty would go negative. Coffee-shop Phase 1 may allow oversell; if so, document. If not, Local Database needs a stock snapshot rule (ties to G-OFF-1). |
-| G-STK-3 | Medium | **Optimistic local qty (AD-4) unbound.** Spine allows Cashier “optimistic local qty for UX”; PRD Instant Checkout FRs never require showing Stock on Cashier Menu. When does local qty decrement (complete Sale? add to cart?)? Can it diverge permanently if Sync fails? Prefer: omit Cashier Stock UI in Phase 1 **or** specify decrement-at-complete + reconcile-on-catalog-pull. |
-| G-STK-4 | Low | **Stock timing on online path.** Depends on G-SALE-1: Stock mutates on Sync ack only (pure local-primary) vs on online create response. PRD FR-11 “after complete Sale on the online path” fits either if Sync is immediate when online — but architecture text must not imply two mutators. |
-
----
-
-## 5. NestJS `apps/api`
-
-### Aligned
-
-| PRD need | Spine seed |
-| --- | --- |
-| Account Login (FR-1) | AuthModule; Bearer after login |
-| Catalog for Dashboard + feed Cashier (FR-28–29) | CatalogModule |
-| Sync accept + Stock from Sales (FR-17–18, FR-30) | Sales/SyncModule, StockModule |
-| No public marketplace API / Background Worker required (PRD §5) | Deferred Background Worker; API is product API not marketplace |
-
-### Gaps
-
-| ID | Severity | Gap |
-| --- | --- | --- |
-| G-API-1 | **High** | **Endpoint / use-case inventory not mapped to FRs.** Module names are a scaffold only. Missing explicit spine (or companion) coverage for: Account Login + token; role-gated catalog CRUD (FR-32); catalog list/pull for Cashier; Sync POST idempotent; Stock read for Dashboard; sales list/daily totals (FR-31); optional Day Close acknowledge upload. Without this map, Nest boundaries vs `packages/domain` stay vague. |
-| G-API-2 | Medium | **Authorization for FR-32.** Spine Auth headers = Bearer; POS PIN local-only (AD-6). No rule that JWT/session carries catalog vs cashier-only role, or that CatalogModule enforces it. PRD consequences require cashier-only cannot edit products. |
-| G-API-3 | Medium | **Sales/SyncModule vs StockModule ownership.** AD-4 says Stock mutates only when accepting a complete Sale — imply Stock decrement is inside Sync/Sale accept transaction, not a separate Cashier-callable Stock write. Spine should state single transactional accept path. |
-| G-API-4 | Low | **Session expiry offline.** Account Login is online-only (AD-6). Token refresh while offline, expired Bearer after reconnect before Sync — not specified; Sync retries may fail auth and need re-login without losing outbox (FR-16, FR-19). |
-
----
-
-## 6. Cashier Local Database
-
-### Aligned
-
-| PRD | Spine |
-| --- | --- |
-| Local Database for offline sell (glossary, FR-14–16) | `packages/local-db` IndexedDB (idb); cashier only (AD-7) |
-| Durable unsynced complete Sales (FR-16) | Outbox + Local DB in structural seed |
-| Offline POS PIN material (FR-5) | AD-6 persist PIN verification material |
-| Latency ASSUMPTIONs on Local Database path (PRD §4.2 / SM-4) | Stack choice (IndexedDB) supports; no contradiction |
-
-### Gaps
-
-| ID | Severity | Gap |
-| --- | --- | --- |
-| G-LDB-1 | **High** | **Schema incomplete vs PRD entities.** ER sketch: USER, PRODUCT, SALE, SALE_LINE. Missing relative to FRs: Sync outbox records, POS PIN / session material (FR-5), Day Close acknowledge audit (FR-24), catalog sync metadata (version/`pulled_at`), incomplete Sale records (FR-12). Spine should list required local stores before scaffold stories. |
-| G-LDB-2 | Medium | **Authority of local PRODUCT.stock_qty.** PRODUCT includes `stock_qty` in ER diagram; AD-4 says Cashier qty is not Dashboard truth. Clarify local `stock_qty` is cache/UX only (or omit from local schema until needed). |
-| G-LDB-3 | Medium | **Security of PIN material at rest.** PRD §8: passwords/PIN not logged plaintext. AD-6 stores PIN verification material in Local Database — hashing/wrapping, device binding, and clear-on-logout (FR-4 / FR-27) not specified. |
-| G-LDB-4 | Low | **Quota, multi-tab, eviction.** FR-16 durability vs IndexedDB quota and multi-tab PWA writers — deferred OK for Phase 1 demo, but note as Open Question if pilot runs long shifts with many unsynced Sales. |
-
----
-
-## 7. Cross-cutting / secondary drift
-
-| ID | Notes |
-| --- | --- |
-| G-X-1 | **Money:** Spine = integer minor units. PRD Open Question #3 tax inclusive/exclusive — domain money rules not yet bound; does not block Offline Mode but blocks Sale line totals consistency. |
-| G-X-2 | **Platform:** PRD §8 PWA-first; spine Next.js PWA + Serwist assumption — aligned. Native shell deferred — aligned. |
-| G-X-3 | **Binds header:** Spine claims `FR-1..FR-32` but several FRs (catalog pull, roles, incomplete cancel, Day Close audit) lack governing ADs beyond AD-2/6/8. |
-| G-X-4 | **Status mismatch:** PRD `final`, spine `draft` — expected; close High gaps before treating spine as build substrate. |
-
----
-
-## 8. Priority summary (architecture follow-ups)
-
-Resolve in spine (or a short companion) before epics/stories on Offline Mode:
-
-1. **G-SALE-1** — Single Sale write topology: Local-first always + Sync (including when online), **or** documented dual path with Day Close/Stock implications.
-2. **G-OFF-1 / G-SYNC-1** — Catalog pull / Local Database bootstrap invariant (separate from Sales Sync outbox).
-3. **G-LDB-1** — Local Database store inventory (outbox, PIN material, catalog meta, Sale status enum).
-4. **G-API-1 / G-API-2 / G-API-3** — NestFR map: Sync accept transaction owns Stock; roles on catalog; Cashier catalog pull endpoint.
-5. **G-STK-1 / G-STK-2 / G-STK-3** — Manual Stock adjust path; oversell policy; drop or bind optimistic Cashier qty.
-
-Medium/Low items (G-SALE-2, G-SYNC-3–4, G-LDB-3–4, G-API-4, G-X-1) can land as Open Questions on the spine or first infra/auth stories.
-
----
-
-## 9. What is *not* a gap
-
-- Sale completeness gate matching PRD (AD-2).
-- Sync status must not demote complete Sales (AD-3).
-- Day Close vs unsynced acknowledge (AD-8).
-- Offline POS PIN after prior Account Login (AD-6).
-- Dashboard online-only; Offline Mode Cashier-only (AD-7).
-- Deferred list matching PRD non-goals (CRDT, KDS, card gateway, native shell contingency).
-- Stack choices (NestJS, IndexedDB, Next PWA) — PRD-compatible; NestJS not required by PRD but valid binding.
+Medium leftovers (Damaged vs sellable, non-tracked sell, Exchange = new Sale, Payments/Store Credit home, Day Close ack persistence, latency NFR, 2C-without-Loyalty wave gate, audit beyond ledger) can be Deferred or Open Questions if the five amends land.

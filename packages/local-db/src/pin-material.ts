@@ -8,6 +8,8 @@ import {
 
 export type { PinMaterialRecord };
 
+export const MANAGER_PIN_USER_ID = "__manager__";
+
 export async function getPinMaterial(
   userId: string,
 ): Promise<PinMaterialRecord | null> {
@@ -18,7 +20,7 @@ export async function getPinMaterial(
 export async function getAnyPinMaterial(): Promise<PinMaterialRecord | null> {
   const db = await openLocalDb();
   const all = await db.getAll("pinMaterial");
-  return all[0] ?? null;
+  return all.find((row) => row.userId !== MANAGER_PIN_USER_ID) ?? null;
 }
 
 export async function hasPinMaterial(userId?: string): Promise<boolean> {
@@ -62,6 +64,18 @@ export async function verifyPin(
   if (!material) return false;
   const candidate = await hashPin(pin, material.salt);
   return timingSafeEqual(candidate, material.pinHash);
+}
+
+export async function hasManagerPin(): Promise<boolean> {
+  return hasPinMaterial(MANAGER_PIN_USER_ID);
+}
+
+export async function enrollManagerPin(pin: string): Promise<PinMaterialRecord> {
+  return enrollPin(MANAGER_PIN_USER_ID, pin);
+}
+
+export async function verifyManagerPin(pin: string): Promise<boolean> {
+  return verifyPin(MANAGER_PIN_USER_ID, pin);
 }
 
 export async function clearPinMaterial(userId?: string): Promise<void> {

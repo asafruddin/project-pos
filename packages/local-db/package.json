@@ -15,9 +15,10 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch",
     "lint": "echo \"no lint configured\"",
-    "test": "tsx --test src/pin-hash.spec.ts src/day-close.spec.ts"
+    "test": "tsx --test src/pin-hash.spec.ts src/day-close.spec.ts src/catalog-sellable.spec.ts src/catalog-images.spec.ts src/parked-carts.spec.ts src/void-sale.spec.ts src/customers.spec.ts src/shifts.spec.ts src/shift-cash.spec.ts src/loyalty.spec.ts src/promotions.spec.ts"
   },
   "dependencies": {
+    "@pos-apps/domain": "workspace:*",
     "@pos-apps/types": "workspace:*",
     "idb": "^8.0.3"
   },

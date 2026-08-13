@@ -1,5 +1,16 @@
 import { Transform } from "class-transformer";
-import { IsInt, IsNotEmpty, IsString, Max, Min } from "class-validator";
+import {
+  IsArray,
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  Min,
+} from "class-validator";
 
 export class CreateProductDto {
   @Transform(({ value }: { value: unknown }) =>
@@ -18,4 +29,65 @@ export class CreateProductDto {
   @Min(0)
   @Max(2_147_483_647)
   stock_qty!: number;
+
+  @IsOptional()
+  @IsString()
+  sku?: string | null;
+
+  @IsOptional()
+  @IsString()
+  barcode?: string | null;
+
+  @IsOptional()
+  @IsString()
+  description?: string | null;
+
+  @IsOptional()
+  @IsIn(["active", "inactive"])
+  status?: "active" | "inactive";
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(2_147_483_647)
+  cost_minor?: number | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(2_147_483_647)
+  compare_at_minor?: number | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(-2_147_483_648)
+  @Max(2_147_483_647)
+  min_qty?: number | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(-2_147_483_648)
+  @Max(2_147_483_647)
+  max_qty?: number | null;
+
+  @IsOptional()
+  @IsBoolean()
+  track_stock?: boolean;
+
+  @IsOptional()
+  @IsUUID()
+  parent_id?: string | null;
+
+  @IsOptional()
+  @IsString()
+  category_name?: string | null;
+
+  @IsOptional()
+  @IsString()
+  brand_name?: string | null;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
 }

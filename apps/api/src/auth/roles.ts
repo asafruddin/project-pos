@@ -1,7 +1,8 @@
 import type { Role } from "@pos-apps/types";
+import { ACCOUNT_ROLES } from "@pos-apps/types";
 
-export const ACCOUNT_ROLES = ["cashier", "catalog_admin"] as const satisfies readonly Role[];
+export { ACCOUNT_ROLES };
 
 export function isRole(value: unknown): value is Role {
-  return value === "cashier" || value === "catalog_admin";
+  return typeof value === "string" && (ACCOUNT_ROLES as readonly string[]).includes(value);
 }

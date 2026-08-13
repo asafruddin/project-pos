@@ -1,6 +1,6 @@
 # POS Platform Vision
 
-Version: 1.2
+Version: 1.3
 Status: Draft
 Last Updated: August 2026
 
@@ -9,6 +9,7 @@ Sources:
 - Brainstorm session: `_bmad-output/brainstorming/brainstorm-pos-vision-first-phase-2026-08-04/`
 - Decision: Vision is the long-term north star; Phase 1 is Instant Checkout + Offline Mode for one retail store — not full platform completeness.
 - Decision (v1.2): Offline Mode is a Phase 1 cashier capability, not a later “nice to have.”
+- Decision (v1.3): Phase 2 is **Run the business** — inventory, purchasing, returns, customers, shifts, media — without breaking Phase 1 offline checkout. Canonical spec: [phase-2.md](./phase-2.md).
 
 ---
 
@@ -16,7 +17,9 @@ Sources:
 
 This project aims to build a modern, scalable, offline-first Point of Sale (POS) platform designed for businesses ranging from small retail stores to multi-branch enterprises.
 
-**Phase 1 focus:** prove one retail store can sell all day with Instant Checkout **and Offline Mode** — catalog, cart, payment, receipt, basic stock, and day close — including when the network is down — before expanding into full SaaS / multi-branch platform scope.
+**Phase 1 focus:** prove one retail store can sell all day with Instant Checkout **and Offline Mode** — catalog, cart, payment, receipt, basic stock, and day close — including when the network is down — before expanding into operations or SaaS / multi-branch platform scope.
+
+**Phase 2 focus:** take that transactional foundation and **run the business** — product catalog + media, inventory ledger, purchasing, returns, customers, cashier shifts — then growth modules (promotions, loyalty, analytics, RBAC, multi-store). Cloudinary is media infrastructure only; it never sits on the cashier transaction path. See [phase-2.md](./phase-2.md).
 
 The long-term platform consists of multiple applications sharing a unified backend and business logic through a monorepo architecture.
 
@@ -52,6 +55,8 @@ Create a POS platform that is:
 - Suitable for SaaS deployment.
 
 Phase 1 wins when a cashier prefers this system to a notebook or spreadsheet for a full store week — including hours with no internet — not when the monorepo or module map is complete.
+
+Phase 2 wins when the store can trust stock, receiving, returns, shifts, and catalog images — while the Phase 1 sell loop still works offline.
 
 ---
 
@@ -96,6 +101,16 @@ Phase 1 JTBD pack:
 4. Adjust stock by sale
 5. Day close / cash reconciliation
 6. See pending sync / reconnect without losing work
+
+Phase 2 JTBD pack (operations — does not replace Phase 1):
+
+1. Know exact stock (ledger, opname, low/out)
+2. Buy from suppliers and receive goods into stock
+3. Return / refund / exchange after the sale day
+4. Attach a customer; earn and redeem loyalty
+5. Open and close a cashier shift with cash reconciliation
+6. Put product images on Admin and Cashier without blocking checkout
+7. (P1 modules) Apply promotions; report; permissioned staff; second store + transfer
 
 ---
 
@@ -194,6 +209,73 @@ Explicitly later (not Phase 1 Offline Mode):
 
 ---
 
+# Phase 2 Scope
+
+Canonical detail: [phase-2.md](./phase-2.md). This section is the vision-level boundary.
+
+## Crown jewel: Run the business
+
+Phase 2 takes Instant Checkout + Offline Mode and adds operations:
+
+```text
+CASHIER          OPERATIONS         MANAGEMENT
+  Sales            Inventory          Analytics
+  Returns          Purchasing         Reports
+  Shift            Suppliers          RBAC
+  Loyalty          Stock transfer     Multi-store
+                   Customers
+                   Promotions
+```
+
+If a feature does not help the store **run operations** (stock, buying, returns, customers, shifts, catalog media) or **manage growth** (promotions, reports, RBAC, multi-store) — and it is not already Phase 1 — it is not Phase 2.
+
+## Phase 2 IN (P0 — core)
+
+- Product management: full catalog (SKU, barcode, description, category, brand, tags, status, variants, cost / selling / compare-at / store pricing)
+- Product images required (primary + gallery); metadata in POS DB
+- Cloudinary as media layer (upload, CDN, `q_auto` / `f_auto` transforms) — **never on cashier checkout path**
+- Inventory: overview, by store, movement, ledger, adjustment, opname, low/out, damaged
+- Purchasing & suppliers: profile, PO workflow, goods received → stock IN, invoice/payment
+- Returns & refunds: full/partial return, exchange, refund, store credit; inventory decision (resellable / damaged / warranty)
+- Customer management: profile, history, groups, notes; cashier search/create/attach
+- Cashier shift: open, cash in/out, count, close, reconciliation
+- Phase 1 offline promise **preserved** (cashier sell + shift ops offline-capable; Admin online-first)
+
+## Phase 2 IN (P1 — growth)
+
+- Promotions & vouchers (percentage, fixed, BXGY, bundle, coupon, happy hour, …)
+- Loyalty & rewards (points, tiers, earn/redeem — rules centralized, not duplicated)
+- Reports & analytics (sales, product, inventory, cashier, financial)
+- Employee & RBAC **on the Admin Dashboard** — users, roles, permission matrix. Cashier never manages users. API enforces. Roles: owner, admin, store manager, supervisor, cashier, inventory, purchasing.
+- Multi-store + stock transfer (activates Phase 1 tenancy stub)
+
+## Phase 2 OUT (P2+ — prepare architecture, do not require)
+
+- Advanced multi-device conflict / CRDT / cross-branch offline sync
+- Warehouse app, owner mobile app, KDS, customer app, self-checkout
+- Public API, marketplace, accounting integrations
+- Offline Admin / receiving / supplier flows
+- Becoming an ERP, accounting system, manufacturing system, or CMS
+
+## Phase 2 architecture stance
+
+- Do **not** break Phase 1 offline checkout.
+- Cloudinary is isolated behind a media service; cashier transaction path stays independent.
+- Admin is online-first; Cashier remains offline-capable for sell / void / hold / shift.
+- Shared business logic (tax, discounts, loyalty, permissions) lives once.
+- Deliver in waves: **2A** product + inventory + media → **2B** purchasing + returns → **2C** customers + cashier ops → **2D** promotions, analytics, RBAC, multi-store.
+
+## Phase 2 success (summary)
+
+- Accurate stock ledger and successful opname
+- Purchase → receive → inventory; return → refund → inventory
+- Shift reconciliation
+- Images in Admin and Cashier; no orphaned Cloudinary assets; Cloudinary outage does not block sales
+- Customer history; promotions and loyalty calculated correctly (when those modules ship)
+- Phase 1 offline sell loop still reliable
+
+---
+
 # Core Principles
 
 ## Offline First
@@ -234,6 +316,8 @@ Long-term: discount, tax, permissions, validation, rewards must not be duplicate
 
 Phase 1: keep rules correct in one place (API / local checkout path); avoid building a full promotions/rewards engine early.
 
+Phase 2: introduce promotions, loyalty, and permissions as **centralized** rules — still not duplicated between Admin and Cashier.
+
 ---
 
 ## Monorepo
@@ -270,13 +354,13 @@ Generated API clients (after the domain stabilizes)
 
 Features should be independent over time.
 
-Examples (platform roadmap, not Phase 1 checklist):
+Examples (Phase 2 introduces these as real modules; not a Phase 1 checklist):
 
 Inventory
 
 Orders
 
-Products
+Products (including images)
 
 Customers
 
@@ -337,21 +421,25 @@ Phase 1 features:
 - Hold / park sale
 - Day close (includes offline-captured sales)
 
-Later Cashier features:
+Phase 2 Cashier features (see [phase-2.md](./phase-2.md)):
 
-- Full shift management
-- Full customer management / CRM
-- Full returns
-- Advanced promotions
-- Advanced multi-device offline conflict resolution
+- Shift management (open, cash in/out, count, close, reconciliation)
+- Customer search / create / attach; loyalty view / redeem
+- Full / partial returns, exchange, refund
+- Promotions, coupons, vouchers, manager-approved discount
+- Split payment, store credit, customer-specific pricing
+
+Later than Phase 2:
+
+- Advanced multi-device offline conflict resolution / CRDT
 
 ---
 
-## Admin Dashboard (Phase 1 thin; expands later)
+## Admin Dashboard (Phase 1 thin; Phase 2 operations)
 
 Purpose:
 
-Manage the business — in Phase 1, only what feeds Instant Checkout.
+Manage the business — in Phase 1, only what feeds Instant Checkout. In Phase 2, the operations back office.
 
 Primary Devices:
 
@@ -366,21 +454,21 @@ Phase 1 features:
 - Products / prices
 - Basic stock
 - Sales list + daily totals / CSV
-- Settings (tax profile, store, roles: cashier / manager)
+- Settings (tax profile, store; two seeded roles: cashier / catalog_admin — **not** a user-management screen)
 
-Later Admin features:
+Phase 2 Admin features:
 
-Dashboard / analytics
+- Product catalog + Cloudinary media, categories, brands, variants
+- Inventory (ledger, adjustment, opname, low/out, damaged)
+- Purchasing & suppliers (PO, goods receipt)
+- Customers
+- Returns / refunds (manager flows)
+- Reports / analytics
+- Promotions, coupons, vouchers, loyalty rules
+- Employees / RBAC — **Dashboard is the only UI** to create users, assign roles, and edit permissions (Owner/Admin only). API enforces every action.
+- Stores, registers, stock transfer
 
-Full inventory
-
-Customers
-
-Suppliers
-
-Employees (deep RBAC)
-
-Promotions
+Admin is **online-first**. Inventory receiving, POs, product/customer management, reports, and promotions require connectivity.
 
 ---
 
@@ -408,7 +496,24 @@ Day close / export
 
 Conflict / rejection reporting back to Cashier on sync
 
-Later: notifications, advanced reporting, multi-tenant SaaS surface, public API.
+Phase 2: domain APIs for products/images, inventory, purchasing, returns, customers, loyalty, promotions, shifts, stores, roles/permissions, reports. MediaService → Cloudinary (not on checkout path).
+
+Later than Phase 2: notifications at SaaS scale, public API, marketplace.
+
+---
+
+## Media / Cloudinary (Phase 2 infrastructure)
+
+Purpose:
+
+Store original product (and later category/brand/promotion/store) assets; deliver resized/optimized images via CDN.
+
+Rules:
+
+- POS database owns products and `product_images` references (`public_id`, `secure_url`, dimensions, alt, sort, primary).
+- Cloudinary is never on the cashier transaction-critical path (cart, pay, receipt, offline sync).
+- If Cloudinary is down, cashiers still sell from cached catalog data/images.
+- Do not store our own 150/400/800px files — use transforms (`q_auto`, `f_auto`).
 
 ---
 
@@ -420,11 +525,13 @@ Run asynchronous tasks (email, notifications, scheduled reports, heavy imports).
 
 Phase 1: not required. Prefer in-process / API jobs until queue pain appears.
 
+Phase 2: still not a required app. Queue only if imports, reports, or media jobs hurt API latency.
+
 ---
 
 # Future Applications
 
-The architecture should support future expansion after Phase 1 is proven.
+The architecture should support future expansion. **Phase 2 does not require these apps** — only prepare the platform so they can land later (P2+).
 
 Examples:
 
@@ -461,6 +568,28 @@ Day close cash matches (local + synced)
 Cashier prefers system to notebook after one week
 
 Printer / scanner path proven on target hardware
+
+## Phase 2 (operations)
+
+Accurate stock ledger; successful stock opname
+
+Purchase → receiving → inventory; return → refund → inventory
+
+Shift reconciliation
+
+Product images in Admin and Cashier; Cloudinary linked; optimized delivery; no orphans
+
+Cloudinary failure cannot block checkout
+
+Customer purchase history; promotions and loyalty correct (when those modules ship)
+
+Sales and inventory analytics available
+
+Permission-based access, managed on Admin Dashboard (users/roles/permissions); store-level inventory/reporting; stock transfer (P1 modules)
+
+Phase 1 offline checkout remains reliable
+
+Detail and gates: [success-metrics.md](./success-metrics.md) · [phase-2.md](./phase-2.md)
 
 ## Long-term (platform)
 
@@ -510,11 +639,23 @@ Business Owner (light)
 
 Administrator (light)
 
-Later:
+Phase 2 additional:
 
-Warehouse Staff
+Inventory staff
 
-Accountant (export path may start thin in Phase 1)
+Purchasing staff
+
+Supervisor
+
+Owner (analytics / multi-store)
+
+Accountant (stronger reporting, still not ERP)
+
+Later than Phase 2:
+
+Warehouse Staff (warehouse app)
+
+Regional / multi-branch ops at SaaS scale
 
 ---
 
@@ -532,7 +673,9 @@ Become a CMS.
 
 Those integrations may exist in the future but are outside the current scope.
 
-Additionally out of Phase 1 (see Phase 1 OUT above): multi-branch launch, promotions engine, full returns, suppliers, analytics suite, required Worker, KDS, public API.
+Additionally out of Phase 1 (see Phase 1 OUT above): multi-branch launch, promotions engine, full returns, suppliers, analytics suite, required Worker, KDS, public API. Those become Phase 2 (or P1-within-Phase-2) except KDS, Worker-as-required-app, public API — which stay later.
+
+Additionally out of Phase 2: warehouse/owner/KDS/customer/self-checkout apps, public API, marketplace, CRDT, accounting integrations, becoming an ERP.
 
 ---
 
@@ -542,4 +685,4 @@ Build a production-ready POS platform capable of powering retail businesses whil
 
 The architecture should remain maintainable for many years and support additional applications without major restructuring.
 
-Phase 1 proves Instant Checkout **with Offline Mode** in one store. Later phases earn multi-branch, deeper multi-device sync, admin breadth, and SaaS scale — without rewriting the core sell path.
+Phase 1 proves Instant Checkout **with Offline Mode** in one store. Phase 2 earns the operations platform (inventory, purchasing, returns, customers, shifts, media) without rewriting the core sell path. Later phases earn SaaS scale, extra apps, and deeper multi-device sync.

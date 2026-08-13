@@ -1,10 +1,14 @@
 "use client";
 
 import {
+  ArrowUDownLeftIcon,
+  ArrowUUpLeftIcon,
   CalendarCheckIcon,
+  ClockCountdownIcon,
   CoffeeIcon,
   HouseIcon,
   ShoppingCartIcon,
+  UserCircleIcon,
 } from "@phosphor-icons/react";
 import { usePathname, useRouter } from "next/navigation";
 import { BottomNav, SideNav } from "@/components/pos-nav";
@@ -56,6 +60,30 @@ export function AppShell({
       label: t.menuTitle,
       icon: <HouseIcon size={20} weight="duotone" />,
       match: (p: string) => p === "/menu" || p === "/",
+    },
+    {
+      href: "/shift",
+      label: t.shiftTitle,
+      icon: <ClockCountdownIcon size={20} weight="duotone" />,
+      match: (p: string) => p.startsWith("/shift"),
+    },
+    {
+      href: "/void",
+      label: t.voidTitle,
+      icon: <ArrowUUpLeftIcon size={20} weight="duotone" />,
+      match: (p: string) => p.startsWith("/void"),
+    },
+    {
+      href: "/returns",
+      label: t.returnTitle,
+      icon: <ArrowUDownLeftIcon size={20} weight="duotone" />,
+      match: (p: string) => p.startsWith("/returns"),
+    },
+    {
+      href: "/customers",
+      label: t.customerTitle,
+      icon: <UserCircleIcon size={20} weight="duotone" />,
+      match: (p: string) => p.startsWith("/customers"),
     },
     {
       href: "/day-close",

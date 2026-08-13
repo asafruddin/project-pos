@@ -1,21 +1,33 @@
 "use client";
 
 import {
+  ArrowUDownLeftIcon,
+  ChartBarIcon,
   ChartLineUpIcon,
+  ClipboardTextIcon,
+  ClockCountdownIcon,
   CoffeeIcon,
   PackageIcon,
+  PercentIcon,
   SignOutIcon,
+  StarIcon,
+  TruckIcon,
+  UserCircleIcon,
+  UsersThreeIcon,
+  WarehouseIcon,
+  BuildingsIcon,
+  ArrowsLeftRightIcon,
 } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
+import { hasPermission, ROLE_LABELS, type Role } from "@pos-apps/types";
 import { AuthLoadingShell } from "@/components/auth-shell";
 import { SideNav } from "@/components/pos-nav";
 import { Button } from "@/components/ui/button";
 import { clearSession } from "@/lib/auth-token";
 
 function roleLabel(role: string) {
-  if (role === "catalog_admin") return "Admin katalog";
-  if (role === "cashier") return "Kasir";
+  if (role in ROLE_LABELS) return ROLE_LABELS[role as Role];
   return role;
 }
 
@@ -24,11 +36,13 @@ function roleLabel(role: string) {
  */
 export function DashboardShell({
   role,
+  permissions,
   title,
   subtitle,
   children,
 }: {
   role: string;
+  permissions?: string[];
   title: string;
   subtitle?: ReactNode;
   children: ReactNode;
@@ -40,18 +54,103 @@ export function DashboardShell({
     router.replace("/login");
   }
 
+  function can(resource: string, action: string) {
+    if (Array.isArray(permissions)) {
+      return hasPermission(permissions, resource, action);
+    }
+    if (resource === "users") return role === "catalog_admin" || role === "owner";
+    if (resource === "purchases" || resource === "inventory") {
+      return role === "catalog_admin" || role === "owner" || role === "store_manager";
+    }
+    return true;
+  }
+
   const nav = [
     {
       href: "/",
       label: "Stok / Produk",
       icon: <PackageIcon size={20} weight="duotone" />,
+      show: can("products", "view"),
+    },
+    {
+      href: "/stock",
+      label: "Ikhtisar stok",
+      icon: <WarehouseIcon size={20} weight="duotone" />,
+      show: can("inventory", "view"),
+    },
+    {
+      href: "/stores",
+      label: "Toko",
+      icon: <BuildingsIcon size={20} weight="duotone" />,
+      show: can("stores", "view"),
+    },
+    {
+      href: "/transfers",
+      label: "Transfer stok",
+      icon: <ArrowsLeftRightIcon size={20} weight="duotone" />,
+      show: can("transfers", "view"),
+    },
+    {
+      href: "/opname",
+      label: "Opname stok",
+      icon: <ClipboardTextIcon size={20} weight="duotone" />,
+      show: can("inventory", "view"),
+    },
+    {
+      href: "/purchasing",
+      label: "Pembelian",
+      icon: <TruckIcon size={20} weight="duotone" />,
+      show: can("purchases", "view"),
     },
     {
       href: "/sales",
       label: "Penjualan",
       icon: <ChartLineUpIcon size={20} weight="duotone" />,
+      show: can("sales", "view") || can("reports", "view"),
     },
-  ];
+    {
+      href: "/reports",
+      label: "Laporan",
+      icon: <ChartBarIcon size={20} weight="duotone" />,
+      show: can("reports", "view"),
+    },
+    {
+      href: "/returns",
+      label: "Retur",
+      icon: <ArrowUDownLeftIcon size={20} weight="duotone" />,
+      show: can("returns", "view"),
+    },
+    {
+      href: "/customers",
+      label: "Pelanggan",
+      icon: <UserCircleIcon size={20} weight="duotone" />,
+      show: can("customers", "view"),
+    },
+    {
+      href: "/loyalty",
+      label: "Loyalitas",
+      icon: <StarIcon size={20} weight="duotone" />,
+      show: can("loyalty", "view"),
+    },
+    {
+      href: "/promotions",
+      label: "Promo",
+      icon: <PercentIcon size={20} weight="duotone" />,
+      show: can("promotions", "view"),
+    },
+    {
+      href: "/shifts",
+      label: "Shift",
+      icon: <ClockCountdownIcon size={20} weight="duotone" />,
+      show: can("shifts", "view"),
+    },
+    {
+      href: "/employees",
+      label: "Karyawan",
+      icon: <UsersThreeIcon size={20} weight="duotone" />,
+      show: can("users", "view"),
+    },
+  ].filter((item) => item.show);
 
   return (
     <div className="relative flex min-h-dvh flex-1 bg-background">

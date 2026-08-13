@@ -1,30 +1,69 @@
 "use client";
 
 import { createContext, useContext, useMemo, useState } from "react";
-import type { CatalogProductRecord } from "@pos-apps/local-db";
+import {
+  resolveSellingPrice,
+  type CachedCustomerRecord,
+  type CatalogProductRecord,
+} from "@pos-apps/local-db";
 
 export type CartLine = {
   productId: string;
   name: string;
   priceMinor: number;
+  catalogPriceMinor: number;
   qty: number;
   stockQty: number;
 };
 
 type CartContextValue = {
   lines: CartLine[];
+  customer: CachedCustomerRecord | null;
   add: (product: CatalogProductRecord) => void;
   setQty: (productId: string, qty: number) => void;
   clear: () => void;
+  replaceLines: (next: CartLine[]) => void;
+  pruneToSellable: (sellable: CatalogProductRecord[]) => void;
+  setCustomer: (customer: CachedCustomerRecord | null) => void;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
 
+function sellingPrice(
+  catalogPriceMinor: number,
+  productId: string,
+  customer: CachedCustomerRecord | null,
+): number {
+  return resolveSellingPrice({
+    catalog_price_minor: catalogPriceMinor,
+    customer_price_minor: customer?.customerPrices?.[productId],
+    group_price_minor: customer?.groupPrices?.[productId],
+  });
+}
+
+function reprice(
+  lines: CartLine[],
+  customer: CachedCustomerRecord | null,
+): CartLine[] {
+  return lines.map((line) => {
+    const catalogPriceMinor = line.catalogPriceMinor ?? line.priceMinor;
+    return {
+      ...line,
+      catalogPriceMinor,
+      priceMinor: sellingPrice(catalogPriceMinor, line.productId, customer),
+    };
+  });
+}
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
+  const [customer, setCustomerState] = useState<CachedCustomerRecord | null>(
+    null,
+  );
   const value = useMemo<CartContextValue>(
     () => ({
       lines,
+      customer,
       add(product) {
         setLines((current) => {
           const line = current.find((entry) => entry.productId === product.productId);
@@ -36,12 +75,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             );
           }
           if (product.stockQty <= 0) return current;
+          const catalogPriceMinor = product.priceMinor;
           return [
             ...current,
             {
               productId: product.productId,
               name: product.name,
-              priceMinor: product.priceMinor,
+              catalogPriceMinor,
+              priceMinor: sellingPrice(
+                catalogPriceMinor,
+                product.productId,
+                customer,
+              ),
               qty: 1,
               stockQty: product.stockQty,
             },
@@ -61,9 +106,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       },
       clear() {
         setLines([]);
+        setCustomerState(null);
+      },
+      replaceLines(next) {
+        setLines(reprice(next, customer));
+      },
+      pruneToSellable(sellable) {
+        const ids = new Set(sellable.map((product) => product.productId));
+        setLines((current) =>
+          current.filter((line) => ids.has(line.productId)),
+        );
+      },
+      setCustomer(next) {
+        setCustomerState(next);
+        setLines((current) => reprice(current, next));
       },
     }),
-    [lines],
+    [lines, customer],
   );
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

@@ -2,7 +2,7 @@
 name: POS Apps
 status: final
 created: 2026-08-06
-updated: 2026-08-06
+updated: 2026-08-13
 sources:
   - _bmad-output/planning-artifacts/prds/prd-pos-apps-2026-08-05/prd.md
   - _bmad-output/planning-artifacts/architecture/architecture-pos-apps-2026-08-05/ARCHITECTURE-SPINE.md
@@ -21,7 +21,7 @@ Behavioral contract for Cashier (multi-surface PWA) and Dashboard (desktop). Vis
 - **UI system:** shadcn/ui on Next.js + Tailwind. EXPERIENCE specifies behavioral delta only; visuals inherit `DESIGN.md` / shadcn defaults.
 - **Theme:** Light and dark supported; **system preference is default**, with an in-app override under Settings / avatar menu on both apps.
 - **Language:** **Indonesian first**, English second. Default locale ID; per-device preference to switch to EN under Settings. Microcopy tables below show ID primary / EN secondary.
-- **Stakes:** Consumer SaaS (demo/portfolio Phase 1 still applies to scope depth — no multi-branch, KDS, etc.).
+- **Stakes:** Launch-caliber cafe POS. Phase 1 = Instant Checkout + Offline Mode. Phase 2 = run the business on Dashboard; Cashier stays fast. No KDS, no ERP feel.
 - **Density:** Big tap targets on Cashier (see `{spacing.tap-min}` / `{spacing.tap-comfortable}` in DESIGN.md).
 
 ## Information Architecture
@@ -35,17 +35,28 @@ Behavioral contract for Cashier (multi-surface PWA) and Dashboard (desktop). Vis
 | Checkout | Cashier | Cart with ≥1 item | Payment record |
 | Receipt | Cashier | After payment | Print or on-screen confirm → Sale complete |
 | Sync status | Cashier | Global chrome | Waiting to upload / synced — never re-labels complete Sale |
-| Day Close | Cashier | From Cashier chrome | Totals, cash, Sync check → report → confirm |
+| Day Close | Cashier | From Cashier chrome | Totals, cash, Sync check → report → confirm. After 2C: requires closed Shift first |
 | Today’s Sales Report | Cashier | Inside Day Close | Transactions, totals, prices |
-| Products / Stock | Dashboard | After Login as catalog_admin | Create/edit name, price, Stock qty |
-| Sales list / daily totals | Dashboard | After Login | List + totals (no charts) |
+| Shift open / close | Cashier | After POS PIN (2C) | Opening cash → sell → count vs Expected Cash. Checkout disabled without open Shift |
+| Hold / park | Cashier | Cart before pay (2B) | Device-local parked cart; not a Sale |
+| Return / Void | Cashier | Chrome (2B) | Void same-day (may offline); Return lookup online-first; Refund = manager PIN in-session |
+| Customer attach | Cashier | Cart (2C) | Search/create; Sale works without attach |
+| Products / Stock | Dashboard | After Login as catalog_admin | Phase 1: name, price, qty. 2A: full catalog + images + ledger / opname |
+| Product Media | Dashboard | Product edit (2A) | Upload/reorder/primary; warn if no primary; never blocks Cashier sell |
+| Stock Ledger / Opname | Dashboard | Inventory nav (2A) | Movements; physical count → approve |
+| Suppliers / Purchase Orders | Dashboard | Purchasing nav (2B) | Online-first; Goods Receipt → Stock IN |
+| Customers | Dashboard | Customers nav (2C) | Profiles, history; cashier create is POS-side |
+| Reports | Dashboard | Reports nav (2D) | Analytics; cashier-only limited/none |
+| Employees / Access | Dashboard | Owner/Admin only (2D) | Users, roles, Permissions |
+| Stores / Transfers | Dashboard | 2D | Not on Instant Checkout |
+| Sales list / daily totals | Dashboard | After Login | List + totals (charts are 2D reports, not this list) |
 | Settings (theme/lang) | Both | Avatar / gear | Theme + language |
 
-**Cashier layout rule:** Menu + right Cart Panel on `md+`; below `md`, Cart is a bottom/full sheet with the same behaviors. Modal stacks **one level** deep.
+**Cashier layout rule:** Menu + right Cart Panel on `md+`; below `md`, Cart is a bottom/full sheet with the same behaviors. Modal stacks **one level** deep. Phase 2 chrome (Shift, Return, Customer) must not steal the Pay tap.
 
-→ `mockups/cashier-sell.html` (Menu + Keranjang, synced chrome).
+→ `mockups/cashier-sell.html` (Menu + Keranjang, synced chrome). Phase 2 screens are **spine-only** until mocked.
 
-**Out of IA (Phase 1):** KDS, modifiers matrix, manager void PIN, offline Dashboard, analytics charts, multi-store switcher.
+**Out of IA (this PRD):** KDS, warehouse app, owner app, offline Dashboard, English-only chrome, Media Provider on Checkout.
 
 ## Voice and Tone
 
@@ -60,7 +71,9 @@ Microcopy. Brand warmth lives in DESIGN.md; here = what the UI *says*.
 | "Struk berhasil — penjualan selesai." | "Receipt OK — Sale complete." | "Pending sync sale" for a complete Sale |
 | "Menunggu unggah" | "Waiting to upload" | "Sale incomplete" / "Pending sale" for Sync wait |
 | "Mode offline" | "Offline mode" | "Connection error" as the only framing when selling still works |
+| "Tutup shift" | "Close Shift" | Inventing a matching cash number |
 | "Tutup hari" | "Day Close" | Soft-dismiss unsynced without acknowledge |
+| "Retur" | "Return" | Using "void" for a next-day take-back |
 | "PIN salah. Coba lagi." | "Wrong PIN. Try again." | Silent fail |
 
 Tone: calm, short, cafe-counter pace. Errors name the next action (retry / cancel). Never log or display raw PIN/password.
@@ -71,7 +84,10 @@ Behavioral. Visuals: `DESIGN.md` / shadcn.
 
 | Pattern | Where | Rules |
 |---|---|---|
-| Product tile | Cashier Menu | Tap adds/increments line in Cart Panel. Reads Local Database only. |
+| Product tile | Cashier Menu | Tap adds/increments line. Reads Local Database only. Missing image → placeholder; never blocks add. |
+| Shift bar | Cashier chrome (2C) | Shows open/closed. Checkout disabled if no open Shift after 2C. |
+| Manager PIN sheet | Cashier | In-session approval for Void/Refund; does not rewrite cashier role. Other sales not blocked. |
+| Opname table | Dashboard | Count vs system; unapproved does not change Stock. |
 | Cart line | Cart Panel | Qty stepper + remove before Checkout. Price from catalog until Sale complete snapshots. |
 | Checkout pay | Checkout | Enabled only with ≥1 cart line + payment recorded path. Does **not** mark Sale complete. |
 | Receipt gate | Receipt | Complete only after print success **or** on-screen confirm. Failure → incomplete; Stock unchanged; retry or cancel. |
@@ -95,6 +111,9 @@ Behavioral. Visuals: `DESIGN.md` / shadcn.
 | Sync fail | Keep Sale complete; retry; **do not** block next Sale |
 | Day Close + unsynced | Hard block finish until Sync or acknowledge |
 | After Day Close confirm | Return to Account Login; prior PIN session dead |
+| After 2C, no open Shift | Checkout/Pay disabled; prompt to open Shift |
+| Media Provider down | Cashier still sells from cache/placeholder |
+| Return lookup offline | Clear fail; same-day Void of local Sale still offered |
 | catalog_admin vs cashier on Dashboard | Mutate vs read-only (API enforced) |
 | Empty catalog on Cashier | Empty Menu + guidance to pull/sync catalog when online |
 | Theme | Follow system until user overrides |
@@ -136,7 +155,7 @@ Behavioral. Visuals: `DESIGN.md` / shadcn.
 
 - **Lifted from counter POS muscle memory:** always-visible cart, big pay, PIN then sell.
 - **Lifted from shadcn:** component vocabulary; brand is delta only.
-- **Rejected:** Calling Sync-wait a “pending Sale”; alarm-red offline when selling still works; Dashboard-as-POS; chart dashboards in Phase 1; English-only chrome.
+- **Rejected:** Calling Sync-wait a “pending Sale”; alarm-red offline when selling still works; Dashboard-as-POS; ERP-dense cashier; English-only chrome; Cloudinary spinner on Pay.
 
 ## Key Flows
 
@@ -173,3 +192,38 @@ Failure: Receipt fails → Sale incomplete; retry/cancel; Stock unchanged.
 4. After Sync of complete Sales, Stock and sales list reflect reality.
 
 Failure: cashier role attempts mutate → API 403; UI hides/disables edit.
+
+### Flow 5 — UJ-4 Catalog images (Andi / Raka on Dashboard; Dewi still sells)
+
+1. Dashboard: create product → upload Product Media → set primary.
+2. Cashier catalog refresh stores images in Local Database.
+3. **Climax:** Dewi sells; if CDN is down, placeholder/cache — Pay still works.
+
+### Flow 6 — UJ-5 Stock Opname (Budi)
+
+1. Dashboard online: create Stock Opname → enter counts → variance.
+2. Sari approves.
+3. **Climax:** Stock Overview matches count; unapproved draft never moved qty.
+
+### Flow 7 — UJ-6 Goods Receipt (Budi)
+
+1. Approved Purchase Order → Goods Receipt (partial OK).
+2. **Climax:** Stock IN on ledger. Dewi can still sell offline while Dashboard waits on network.
+
+### Flow 8 — UJ-7 Return (Dewi + Sari)
+
+1. Online: find Sale → items → reason → inspect → inventory decision.
+2. Refund waits on Sari’s in-session PIN. Other carts not blocked.
+3. **Climax:** Customer made whole; Stock honest. Offline: lookup fails clearly; same-day Void of a local Sale still works.
+
+### Flow 9 — UJ-8 Shift then Day Close (Dewi)
+
+1. Open Shift (opening cash) → sell. After 2C, Pay disabled without open Shift.
+2. Close Shift: counted vs Expected Cash (difference allowed, recorded).
+3. Then Flow 3 Day Close (Sync still hard-blocks).
+4. **Climax:** Difference visible; she is not asked to invent a match.
+
+### Flow 10 — UJ-9 Customer attach (Dewi, online)
+
+1. Search/create Customer → attach to Cart → complete Sale.
+2. **Climax:** Points if Loyalty online; Sale still succeeds if skipped or Loyalty is down.

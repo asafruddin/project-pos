@@ -4,6 +4,7 @@ import { EyeIcon, EyeSlashIcon } from "@phosphor-icons/react";
 import { FormEvent, useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ApiErrorBody, LoginResponse } from "@pos-apps/types";
+import { hasPermission } from "@pos-apps/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,13 +43,12 @@ export function LoginForm({ lang }: { lang: LangPref }) {
         typeof ok.access_token !== "string" ||
         !ok.access_token ||
         typeof ok.user_id !== "string" ||
-        !ok.user_id ||
-        (ok.role !== "cashier" && ok.role !== "catalog_admin")
+        !ok.user_id
       ) {
         setError(t.invalidResponse);
         return;
       }
-      if (ok.role !== "cashier") {
+      if (!hasPermission(ok.permissions, "sales", "create")) {
         setError(t.notCashier);
         return;
       }
@@ -56,6 +56,7 @@ export function LoginForm({ lang }: { lang: LangPref }) {
         accessToken: ok.access_token,
         role: ok.role,
         userId: ok.user_id,
+        permissions: ok.permissions ?? [],
       });
       router.replace("/pin");
       router.refresh();
