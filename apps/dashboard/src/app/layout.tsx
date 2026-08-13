@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { DashboardFrame } from "@/components/dashboard-frame";
 import { SessionGuard } from "@/components/session-guard";
 import "./globals.css";
 
@@ -27,8 +28,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="id"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
-        <SessionGuard>{children}</SessionGuard>
+      <body className="h-full bg-background text-foreground">
+        <SessionGuard>
+          <DashboardFrame>{children}</DashboardFrame>
+        </SessionGuard>
       </body>
     </html>
   );

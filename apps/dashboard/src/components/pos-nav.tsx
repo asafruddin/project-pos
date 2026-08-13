@@ -30,14 +30,17 @@ export function SideNav({
   return (
     <aside
       className={cn(
-        "flex shrink-0 flex-col gap-4 rounded-3xl border border-border bg-card p-3 shadow-sm sm:gap-6 sm:p-5",
+        "flex shrink-0 flex-col gap-4 overflow-hidden rounded-3xl border border-border bg-card p-3 shadow-sm sm:gap-5 sm:p-5",
         compact ? "w-[4.5rem] items-center" : "w-56 sm:w-64",
         className,
       )}
     >
-      {brand}
+      <div className="shrink-0">{brand}</div>
       <nav
-        className={cn("flex flex-col gap-1", compact && "items-center")}
+        className={cn(
+          "flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          compact && "items-center",
+        )}
         aria-label="Main"
       >
         {items.map((item) => {
@@ -48,10 +51,12 @@ export function SideNav({
             <Link
               key={item.href}
               href={item.href}
+              scroll={false}
+              prefetch
               title={item.label}
               className={cn(
-                "flex items-center gap-3 rounded-2xl text-sm font-medium transition-colors",
-                compact ? "h-11 w-11 justify-center px-0" : "px-3 py-3",
+                "flex shrink-0 items-center gap-3 rounded-2xl text-sm font-medium transition-colors",
+                compact ? "h-10 w-10 justify-center px-0" : "px-3 py-2.5",
                 active
                   ? "bg-secondary text-foreground"
                   : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
@@ -66,7 +71,7 @@ export function SideNav({
         })}
       </nav>
       {footer ? (
-        <div className={cn("mt-auto space-y-3", compact && "w-full")}>
+        <div className={cn("shrink-0 space-y-3", compact && "w-full")}>
           {footer}
         </div>
       ) : null}

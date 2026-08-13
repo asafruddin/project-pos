@@ -7,79 +7,39 @@ import {
   WarningCircleIcon,
 } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import type { AuthMeResponse, SalesListResponse } from "@pos-apps/types";
-import {
-  DashboardLoading,
-  DashboardShell,
-} from "@/components/dashboard-shell";
+import type { SalesListResponse } from "@pos-apps/types";
 import { StatCard } from "@/components/ui/brand";
 import { authorizedFetch } from "@/lib/api-client";
-import {
-  getAccessToken,
-  isAccessTokenExpired,
-  logoutToLogin,
-} from "@/lib/auth-token";
 import { formatIdr } from "@/lib/format-money";
 
 export default function SalesPage() {
-  const router = useRouter();
-  const [ready, setReady] = useState(false);
-  const [me, setMe] = useState<AuthMeResponse | null>(null);
   const [data, setData] = useState<SalesListResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = getAccessToken();
-    if (!token || isAccessTokenExpired(token)) {
-      setReady(true);
-      logoutToLogin();
-      return;
-    }
-
+    let cancelled = false;
     void (async () => {
       try {
-        const meRes = await authorizedFetch("/auth/me");
-        if (!meRes.ok) {
-          logoutToLogin();
-          return;
-        }
-        setMe((await meRes.json()) as AuthMeResponse);
-
         const salesRes = await authorizedFetch("/sales");
+        if (cancelled) return;
         if (!salesRes.ok) {
           setError("Gagal memuat penjualan.");
-          setReady(true);
           return;
         }
         setData((await salesRes.json()) as SalesListResponse);
-        setReady(true);
-      } catch (err) {
-        if (
-          err instanceof Error &&
-          (err.message === "AUTH_UNAUTHORIZED" ||
-            err.message === "AUTH_SESSION_EXPIRED")
-        ) {
-          return;
-        }
-        setReady(true);
-        router.replace("/login");
+      } catch {
+        if (!cancelled) setError("Gagal memuat penjualan.");
       }
     })();
-  }, [router]);
-
-  if (!ready || !me) {
-    return <DashboardLoading />;
-  }
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const salesCount = data?.sales.filter((s) => !s.voided_at).length ?? 0;
 
   return (
-    <DashboardShell
-      role={me.role} permissions={me.permissions}
-      title="Penjualan"
-      subtitle="Ringkasan penjualan yang sudah tersinkron dari kasir (bukan data offline lokal)."
-    >
+    <>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard
           label="Total hari ini (UTC)"
@@ -158,6 +118,6 @@ export default function SalesPage() {
           </div>
         </div>
       )}
-    </DashboardShell>
+    </>
   );
 }

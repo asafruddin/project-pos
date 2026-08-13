@@ -18,7 +18,7 @@ import {
   BuildingsIcon,
   ArrowsLeftRightIcon,
 } from "@phosphor-icons/react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { hasPermission, ROLE_LABELS, type Role } from "@pos-apps/types";
 import { AuthLoadingShell } from "@/components/auth-shell";
@@ -26,28 +26,98 @@ import { SideNav } from "@/components/pos-nav";
 import { Button } from "@/components/ui/button";
 import { clearSession } from "@/lib/auth-token";
 
+const PAGE_COPY: Record<string, { title: string; subtitle: string }> = {
+  "/": {
+    title: "Stok / Produk",
+    subtitle:
+      "Kelola katalog toko. Harga dalam Rupiah penuh (mis. 15000 = Rp15.000).",
+  },
+  "/stock": {
+    title: "Ikhtisar stok",
+    subtitle:
+      "Jumlah dijual dan rusak dari buku besar. Kasir tetap bisa menjual meski stok habis.",
+  },
+  "/stores": {
+    title: "Toko",
+    subtitle:
+      "Store #1 tetap toko awal. Harga toko menimpa harga katalog setelah kasir menyegarkan menu.",
+  },
+  "/transfers": {
+    title: "Transfer stok",
+    subtitle:
+      "Draft → requested → approved → preparing → shipped → received. Stok baru pindah saat dikirim/diterima. Checkout tidak berubah.",
+  },
+  "/opname": {
+    title: "Opname stok",
+    subtitle: "Hitung fisik, lihat selisih, lalu setujui. Draf tidak mengubah stok.",
+  },
+  "/purchasing": {
+    title: "Pembelian",
+    subtitle:
+      "Pemasok, pesanan, dan penerimaan barang. Faktur tidak wajib lunas untuk menyelesaikan stok.",
+  },
+  "/sales": {
+    title: "Penjualan",
+    subtitle:
+      "Ringkasan penjualan yang sudah tersinkron dari kasir (bukan data offline lokal).",
+  },
+  "/reports": {
+    title: "Laporan",
+    subtitle:
+      "Analitik online dari penjualan tersinkron. Kasir hanya melihat ringkasan terbatas dan kinerjanya sendiri. HPP memakai harga modal produk.",
+  },
+  "/returns": {
+    title: "Retur",
+    subtitle:
+      "Retur online-first. Refund tunai hanya admin katalog (kasir ditolak API).",
+  },
+  "/customers": {
+    title: "Pelanggan",
+    subtitle:
+      "Profil, grup, kredit toko, dan harga pelanggan. Kasir tidak dapat menghapus atau mengubah kredit/harga. Penjualan tanpa pelanggan tetap sah.",
+  },
+  "/loyalty": {
+    title: "Loyalitas",
+    subtitle:
+      "Aturan poin bersama. Kasir tidak mengubah aturan. Tukar poin hanya saat online; penjualan tetap selesai jika program mati.",
+  },
+  "/promotions": {
+    title: "Promo",
+    subtitle:
+      "Persen/nominal, kupon, jam happy hour, dan voucher. Kasir tidak mengubah aturan. Penjualan tetap selesai jika promo mati.",
+  },
+  "/shifts": {
+    title: "Shift",
+    subtitle:
+      "Tinjau shift tertutup dan selisih kas. Kasir tidak dapat mengubah shift tertutup. Tutup shift tidak mengosongkan Sync.",
+  },
+  "/employees": {
+    title: "Karyawan",
+    subtitle:
+      "Pengguna, peran, dan matriks izin. Perubahan izin berlaku pada permintaan API berikutnya.",
+  },
+};
+
 function roleLabel(role: string) {
   if (role in ROLE_LABELS) return ROLE_LABELS[role as Role];
   return role;
 }
 
 /**
- * Dashboard keeps a sidebar at all breakpoints (compact icons on narrow screens).
+ * Persistent chrome: sidebar stays mounted and does not scroll with page content.
  */
 export function DashboardShell({
   role,
   permissions,
-  title,
-  subtitle,
   children,
 }: {
   role: string;
   permissions?: string[];
-  title: string;
-  subtitle?: ReactNode;
   children: ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const copy = PAGE_COPY[pathname] ?? { title: "Dashboard", subtitle: "" };
 
   function logout() {
     clearSession();
@@ -153,10 +223,10 @@ export function DashboardShell({
   ].filter((item) => item.show);
 
   return (
-    <div className="relative flex min-h-dvh flex-1 bg-background">
-      <div className="mx-auto flex w-full max-w-[90rem] flex-1 gap-3 p-3 sm:gap-4 sm:p-4 lg:gap-5 lg:p-6">
+    <div className="flex h-dvh overflow-hidden bg-background">
+      <div className="mx-auto flex h-full w-full max-w-[90rem] gap-3 p-3 sm:gap-4 sm:p-4 lg:gap-5 lg:p-6">
         <SideNav
-          className="hidden md:flex"
+          className="hidden h-full md:flex"
           items={nav}
           brand={
             <div className="flex items-center gap-3">
@@ -192,7 +262,7 @@ export function DashboardShell({
 
         <SideNav
           compact
-          className="flex md:hidden"
+          className="flex h-full md:hidden"
           items={nav}
           brand={
             <div className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-secondary text-accent">
@@ -212,23 +282,23 @@ export function DashboardShell({
           }
         />
 
-        <div className="flex min-w-0 flex-1 flex-col gap-4">
-          <header className="rounded-3xl border border-border bg-card px-4 py-4 shadow-sm sm:px-5">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-hidden">
+          <header className="shrink-0 rounded-3xl border border-border bg-card px-4 py-4 shadow-sm sm:px-5">
             <p className="text-sm text-muted-foreground md:hidden">
               {roleLabel(role)}
             </p>
             <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-              {title}
+              {copy.title}
             </h1>
-            {subtitle ? (
-              <div className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                {subtitle}
-              </div>
+            {copy.subtitle ? (
+              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                {copy.subtitle}
+              </p>
             ) : null}
           </header>
 
-          <section className="flex flex-1 flex-col gap-5 rounded-3xl border border-border bg-card p-4 shadow-sm sm:gap-6 sm:p-6">
-            {children}
+          <section className="min-h-0 flex-1 overflow-y-auto rounded-3xl border border-border bg-card p-4 shadow-sm sm:p-6">
+            <div className="flex flex-col gap-5 sm:gap-6">{children}</div>
           </section>
         </div>
       </div>
