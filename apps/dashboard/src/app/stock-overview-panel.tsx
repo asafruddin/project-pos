@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type {
   ApiErrorBody,
   StockOverviewItem,
@@ -10,7 +10,7 @@ import type {
 } from "@pos-apps/types";
 import { STORE_1_ID } from "@pos-apps/types";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { RowLink } from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { authorizedFetch } from "@/lib/api-client";
@@ -30,10 +30,6 @@ export function StockOverviewPanel({ canMutate }: { canMutate: boolean }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [pending, setPending] = useState(false);
-  const [targetId, setTargetId] = useState<string | null>(null);
-  const [qty, setQty] = useState("");
-  const [reason, setReason] = useState("");
   const [storeId, setStoreId] = useState(STORE_1_ID);
   const [stores, setStores] = useState<StoreRecord[]>([]);
 
@@ -77,50 +73,6 @@ export function StockOverviewPanel({ canMutate }: { canMutate: boolean }) {
   }, [load]);
 
   const visible = rows.filter((row) => matchesFilter(row, filter));
-
-  async function onMarkDamaged(e: FormEvent) {
-    e.preventDefault();
-    if (!targetId) return;
-    const n = Number(qty);
-    if (!Number.isInteger(n) || n < 1) {
-      setError("Jumlah rusak harus bilangan bulat ≥ 1.");
-      return;
-    }
-    if (!reason.trim()) {
-      setError("Alasan wajib saat memindah ke rusak.");
-      return;
-    }
-    setPending(true);
-    setError(null);
-    try {
-      const qs = storeId ? `?store_id=${encodeURIComponent(storeId)}` : "";
-      const res = await authorizedFetch(`/inventory/products/${targetId}/damaged${qs}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ qty: n, reason: reason.trim() }),
-      });
-      const data = (await res.json()) as StockOverviewItem | ApiErrorBody;
-      if (!res.ok) {
-        setError((data as ApiErrorBody).message ?? "Gagal memindah stok.");
-        setPending(false);
-        return;
-      }
-      setTargetId(null);
-      setQty("");
-      setReason("");
-      await load();
-    } catch (err) {
-      if (
-        err instanceof Error &&
-        (err.message === "AUTH_UNAUTHORIZED" ||
-          err.message === "AUTH_SESSION_EXPIRED")
-      ) {
-        return;
-      }
-      setError("Tidak dapat menghubungi API.");
-    }
-    setPending(false);
-  }
 
   const filters: { id: Filter; label: string }[] = [
     { id: "all", label: "Semua" },
@@ -175,57 +127,6 @@ export function StockOverviewPanel({ canMutate }: { canMutate: boolean }) {
         </div>
       ) : null}
 
-      {canMutate && targetId ? (
-        <form
-          onSubmit={(e) => void onMarkDamaged(e)}
-          className="flex max-w-md flex-col gap-3 rounded-md border border-border p-4"
-        >
-          <p className="font-medium">
-            Pindah ke rusak —{" "}
-            {rows.find((row) => row.product_id === targetId)?.name}
-          </p>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="dmgQty">Jumlah</Label>
-            <Input
-              id="dmgQty"
-              inputMode="numeric"
-              value={qty}
-              onChange={(e) => setQty(e.target.value)}
-              disabled={pending}
-              className="h-12"
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="dmgReason">Alasan</Label>
-            <Input
-              id="dmgReason"
-              placeholder="contoh: pecah saat kirim"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              disabled={pending}
-              className="h-12"
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button type="submit" disabled={pending} className="h-12">
-              {pending ? "Menyimpan…" : "Simpan"}
-            </Button>
-            <Button
-              type="button"
-              className="h-12 bg-secondary text-secondary-foreground hover:opacity-90"
-              onClick={() => {
-                setTargetId(null);
-                setQty("");
-                setReason("");
-              }}
-              disabled={pending}
-            >
-              Batal
-            </Button>
-          </div>
-        </form>
-      ) : null}
-
       {loading ? (
         <TableSkeleton rows={7} />
       ) : visible.length === 0 ? (
@@ -272,16 +173,11 @@ export function StockOverviewPanel({ canMutate }: { canMutate: boolean }) {
                   </td>
                   <td className="px-4 py-3">
                     {canMutate ? (
-                      <Button
-                        type="button"
-                        className="h-9 bg-secondary px-3 text-secondary-foreground hover:opacity-90"
-                        onClick={() => {
-                          setTargetId(row.product_id);
-                          setError(null);
-                        }}
+                      <RowLink
+                        href={`/stock/${row.product_id}/damage?store_id=${encodeURIComponent(storeId)}`}
                       >
-                        Pindah ke rusak
-                      </Button>
+                        Stok rusak
+                      </RowLink>
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}

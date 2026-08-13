@@ -6,8 +6,8 @@ import { FormEvent, useId, useState } from "react";
 import type { ApiErrorBody, LoginResponse } from "@pos-apps/types";
 import { ACCOUNT_ROLES } from "@pos-apps/types";
 import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { saveSession } from "@/lib/auth-token";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
@@ -68,8 +68,7 @@ export function LoginForm() {
       className="flex w-full flex-col gap-5"
       aria-describedby={error ? errorId : undefined}
     >
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="login">Username</Label>
+      <FormField id="login" label="Username" required>
         <Input
           id="login"
           name="login"
@@ -88,10 +87,9 @@ export function LoginForm() {
           className="h-12 min-h-12 text-base sm:text-sm"
           aria-invalid={error ? true : undefined}
         />
-      </div>
+      </FormField>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="password">Password</Label>
+      <FormField id="password" label="Password" required>
         <div className="relative">
           <Input
             id="password"
@@ -122,7 +120,7 @@ export function LoginForm() {
             )}
           </button>
         </div>
-      </div>
+      </FormField>
 
       {error ? (
         <div

@@ -8,3 +8,8 @@ _None — triage deferred zero pre-existing items; low scaffold nits were either
 
 - JwtStrategy trusts JWT `sub`/`role` without DB re-load on every guarded request — Phase 1 only `/auth/me` re-queries users; revisit when more protected routes land.
 - No login rate limiting / lockout — acceptable for Phase 1 demo; harden before public exposure.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-dashboard-form-pages.md`
+  summary: Dashboard fetch-on-mount effects still trip `react-hooks/set-state-in-effect`.
+  evidence: Pre-existing eslint failure on `void load()` inside `useEffect`; this story added more files using the same established data-load pattern.
+

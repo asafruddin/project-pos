@@ -10,8 +10,8 @@ import type {
 } from "@pos-apps/types";
 import { hasPermission } from "@pos-apps/types";
 import { Button } from "@/components/ui/button";
+import { FormField, formInputClass } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { StatCard } from "@/components/ui/brand";
 import { authorizedFetch } from "@/lib/api-client";
 import { formatIdr } from "@/lib/format-money";
@@ -197,22 +197,26 @@ export function ReportsPanel({
         onSubmit={onSubmit}
       >
         <div className="min-w-0 flex-1">
-          <Label htmlFor="report-from">Dari (UTC)</Label>
-          <Input
-            id="report-from"
-            type="date"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-          />
+          <FormField id="report-from" label="Dari (UTC)">
+            <Input
+              id="report-from"
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+              className={formInputClass}
+            />
+          </FormField>
         </div>
         <div className="min-w-0 flex-1">
-          <Label htmlFor="report-to">Sampai (UTC)</Label>
-          <Input
-            id="report-to"
-            type="date"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-          />
+          <FormField id="report-to" label="Sampai (UTC)">
+            <Input
+              id="report-to"
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              className={formInputClass}
+            />
+          </FormField>
         </div>
         <Button type="submit" disabled={pending}>
           Terapkan

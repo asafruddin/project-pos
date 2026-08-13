@@ -99,16 +99,136 @@ const PAGE_COPY: Record<string, { title: string; subtitle: string }> = {
     title: "Tambah produk",
     subtitle: "Isi nama dan harga dulu. Detail lain opsional.",
   },
+  "/customers/new": {
+    title: "Tambah pelanggan",
+    subtitle: "Nama wajib. Telepon, email, dan catatan opsional.",
+  },
+  "/employees/new": {
+    title: "Tambah karyawan",
+    subtitle: "Toko mengikuti akun, bukan Checkout.",
+  },
+  "/employees/roles": {
+    title: "Matriks izin",
+    subtitle:
+      "Satu izin per baris (resource:action). Berlaku pada permintaan API berikutnya.",
+  },
+  "/loyalty/program": {
+    title: "Program loyalitas",
+    subtitle: "Aturan poin bersama. Kasir tidak mengubah aturan.",
+  },
+  "/opname/new": {
+    title: "Opname baru",
+    subtitle: "Pilih produk. Draf tidak mengubah stok sampai disetujui.",
+  },
+  "/promotions/new": {
+    title: "Tambah promo",
+    subtitle: "Persen atau nominal. Kosongkan kupon untuk aturan otomatis.",
+  },
+  "/promotions/vouchers/new": {
+    title: "Tambah voucher",
+    subtitle: "Kode dan sisa nilai. Kasir tidak mengubah aturan.",
+  },
+  "/purchasing/suppliers/new": {
+    title: "Tambah pemasok",
+    subtitle: "Nama wajib. Produk dipasok opsional.",
+  },
+  "/purchasing/orders/new": {
+    title: "Pesanan pembelian baru",
+    subtitle: "Pilih pemasok dan item. Draf belum mengubah stok.",
+  },
+  "/stores/new": {
+    title: "Tambah toko",
+    subtitle: "Store #1 tetap toko awal.",
+  },
+  "/stores/prices": {
+    title: "Harga toko",
+    subtitle: "Menimpa harga katalog setelah kasir menyegarkan menu.",
+  },
+  "/transfers/new": {
+    title: "Transfer stok baru",
+    subtitle: "Stok baru pindah saat dikirim/diterima.",
+  },
 };
 
-function pageCopy(pathname: string): { title: string; subtitle: string } {
-  if (/^\/products\/[^/]+\/edit$/.test(pathname)) {
-    return {
+const PAGE_COPY_MATCHERS: Array<{
+  test: (pathname: string) => boolean;
+  copy: { title: string; subtitle: string };
+}> = [
+  {
+    test: (p) => /^\/products\/[^/]+\/edit$/.test(p),
+    copy: {
       title: "Ubah produk",
       subtitle: "Ubah harga, stok, atau gambar. Simpan di bagian bawah.",
-    };
-  }
-  return PAGE_COPY[pathname] ?? { title: "Dashboard", subtitle: "" };
+    },
+  },
+  {
+    test: (p) => /^\/customers\/[^/]+\/edit$/.test(p),
+    copy: {
+      title: "Ubah pelanggan",
+      subtitle: "Profil, grup, kredit, dan harga pelanggan. Simpan di bagian bawah.",
+    },
+  },
+  {
+    test: (p) => /^\/employees\/[^/]+\/edit$/.test(p),
+    copy: {
+      title: "Ubah karyawan",
+      subtitle: "Peran, status, toko, dan sandi. Simpan di bagian bawah.",
+    },
+  },
+  {
+    test: (p) => /^\/opname\/[^/]+$/.test(p),
+    copy: {
+      title: "Hitung opname",
+      subtitle: "Isi hitung fisik, lalu setujui. Draf tidak mengubah stok.",
+    },
+  },
+  {
+    test: (p) => /^\/purchasing\/suppliers\/[^/]+\/edit$/.test(p),
+    copy: {
+      title: "Ubah pemasok",
+      subtitle: "Kontak dan produk dipasok. Simpan di bagian bawah.",
+    },
+  },
+  {
+    test: (p) => /^\/purchasing\/orders\/[^/]+$/.test(p),
+    copy: {
+      title: "Pesanan pembelian",
+      subtitle: "Status, penerimaan, dan faktur. Faktur tidak wajib lunas untuk stok.",
+    },
+  },
+  {
+    test: (p) => /^\/stores\/[^/]+\/registers\/new$/.test(p),
+    copy: {
+      title: "Tambah register",
+      subtitle: "Register terikat pada toko, bukan Checkout.",
+    },
+  },
+  {
+    test: (p) => /^\/stock\/[^/]+\/damage$/.test(p),
+    copy: {
+      title: "Stok rusak",
+      subtitle: "Jumlah dan alasan. Kasir tetap bisa menjual.",
+    },
+  },
+  {
+    test: (p) => /^\/returns\/[^/]+$/.test(p),
+    copy: {
+      title: "Retur",
+      subtitle: "Tautkan tukar atau refund tunai. Refund tunai hanya admin katalog.",
+    },
+  },
+];
+
+function pageCopy(pathname: string): { title: string; subtitle: string } {
+  if (PAGE_COPY[pathname]) return PAGE_COPY[pathname];
+  const matched = PAGE_COPY_MATCHERS.find((row) => row.test(pathname));
+  if (matched) return matched.copy;
+  return { title: "Dashboard", subtitle: "" };
+}
+
+function navMatches(href: string, pathname: string) {
+  if (href === "/") return pathname === "/" || pathname.startsWith("/products");
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 function roleLabel(role: string) {
@@ -154,8 +274,7 @@ export function DashboardShell({
       label: "Stok / Produk",
       icon: <PackageIcon size={20} weight="duotone" />,
       show: can("products", "view"),
-      match: (pathname: string) =>
-        pathname === "/" || pathname.startsWith("/products"),
+      match: (pathname: string) => navMatches("/", pathname),
     },
     {
       href: "/stock",
@@ -235,7 +354,11 @@ export function DashboardShell({
       icon: <UsersThreeIcon size={20} weight="duotone" />,
       show: can("users", "view"),
     },
-  ].filter((item) => item.show);
+  ].filter((item) => item.show)
+    .map((item) => ({
+      ...item,
+      match: item.match ?? ((pathname: string) => navMatches(item.href, pathname)),
+    }));
 
   return (
     <div className="flex h-dvh overflow-hidden bg-background">

@@ -1,13 +1,19 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState, type ReactNode } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeftIcon } from "@phosphor-icons/react";
 import type { Product, ProductImage, ProductListResponse } from "@pos-apps/types";
 import { Button } from "@/components/ui/button";
+import {
+  FormActions,
+  FormBackLink,
+  FormDenied,
+  FormField,
+  FormSection,
+  formInputClass,
+  formTextareaClass,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { catalogRequest } from "@/lib/catalog-request";
 import { formatIdr } from "@/lib/format-money";
@@ -96,58 +102,6 @@ function formFromProduct(p: Product): FormState {
     trackStock: p.track_stock ?? true,
   };
 }
-
-function Field({
-  id,
-  label,
-  hint,
-  required,
-  children,
-}: {
-  id?: string;
-  label: string;
-  hint?: string;
-  required?: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <Label htmlFor={id}>
-        {label}
-        {required ? (
-          <span className="text-destructive" aria-hidden>
-            {" "}
-            *
-          </span>
-        ) : null}
-      </Label>
-      {children}
-      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
-    </div>
-  );
-}
-
-function Section({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="rounded-md border border-border bg-background/40 p-4 sm:p-5">
-      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-      {description ? (
-        <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
-      ) : null}
-      <div className="mt-4 flex flex-col gap-4">{children}</div>
-    </section>
-  );
-}
-
-const inputClass = "h-10 min-h-10";
 
 export function ProductForm({
   canMutate,
@@ -427,10 +381,10 @@ export function ProductForm({
 
   if (!canMutate) {
     return (
-      <p className="text-sm text-muted-foreground">
+      <FormDenied href="/">
         Akun kasir hanya dapat melihat produk. Perubahan katalog memerlukan peran
         admin katalog.
-      </p>
+      </FormDenied>
     );
   }
 
@@ -455,14 +409,7 @@ export function ProductForm({
       className="flex min-h-full flex-col gap-5"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link
-          href="/"
-          scroll={false}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeftIcon size={16} />
-          Daftar produk
-        </Link>
+        <FormBackLink href="/">Daftar produk</FormBackLink>
         {form.parentId ? (
           <p className="rounded-md border border-border bg-secondary/50 px-3 py-1.5 text-xs text-muted-foreground">
             Varian
@@ -478,11 +425,11 @@ export function ProductForm({
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
         <div className="flex flex-col gap-4">
-          <Section
+          <FormSection
             title="Produk"
             description="Nama yang tampil di kasir. SKU dan barcode opsional."
           >
-            <Field id="name" label="Nama" required>
+            <FormField id="name" label="Nama" required>
               <Input
                 id="name"
                 placeholder="contoh: Espresso"
@@ -490,10 +437,10 @@ export function ProductForm({
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 required
                 disabled={pending}
-                className={inputClass}
+                className={formInputClass}
               />
-            </Field>
-            <Field id="description" label="Deskripsi" hint="Opsional. Tampil di katalog, bukan di Checkout.">
+            </FormField>
+            <FormField id="description" label="Deskripsi" hint="Opsional. Tampil di katalog, bukan di Checkout.">
               <textarea
                 id="description"
                 value={form.description}
@@ -502,20 +449,20 @@ export function ProductForm({
                 }
                 disabled={pending}
                 rows={3}
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                className={formTextareaClass}
               />
-            </Field>
+            </FormField>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field id="sku" label="SKU">
+              <FormField id="sku" label="SKU">
                 <Input
                   id="sku"
                   value={form.sku}
                   onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))}
                   disabled={pending}
-                  className={inputClass}
+                  className={formInputClass}
                 />
-              </Field>
-              <Field id="barcode" label="Barcode">
+              </FormField>
+              <FormField id="barcode" label="Barcode">
                 <Input
                   id="barcode"
                   value={form.barcode}
@@ -523,12 +470,12 @@ export function ProductForm({
                     setForm((f) => ({ ...f, barcode: e.target.value }))
                   }
                   disabled={pending}
-                  className={inputClass}
+                  className={formInputClass}
                 />
-              </Field>
+              </FormField>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field id="category" label="Kategori">
+              <FormField id="category" label="Kategori">
                 <Input
                   id="category"
                   placeholder="contoh: Minuman"
@@ -537,33 +484,33 @@ export function ProductForm({
                     setForm((f) => ({ ...f, category: e.target.value }))
                   }
                   disabled={pending}
-                  className={inputClass}
+                  className={formInputClass}
                 />
-              </Field>
-              <Field id="brand" label="Merek">
+              </FormField>
+              <FormField id="brand" label="Merek">
                 <Input
                   id="brand"
                   value={form.brand}
                   onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value }))}
                   disabled={pending}
-                  className={inputClass}
+                  className={formInputClass}
                 />
-              </Field>
+              </FormField>
             </div>
-            <Field id="tags" label="Tag" hint="Pisahkan dengan koma.">
+            <FormField id="tags" label="Tag" hint="Pisahkan dengan koma.">
               <Input
                 id="tags"
                 placeholder="kopi, hot, signature"
                 value={form.tags}
                 onChange={(e) => setForm((f) => ({ ...f, tags: e.target.value }))}
                 disabled={pending}
-                className={inputClass}
+                className={formInputClass}
               />
-            </Field>
-          </Section>
+            </FormField>
+          </FormSection>
 
           {editingId ? (
-            <Section
+            <FormSection
               title="Gambar"
               description="Gambar utama dipakai kasir setelah menyegarkan menu."
             >
@@ -650,16 +597,16 @@ export function ProductForm({
                   ))}
                 </ul>
               ) : null}
-            </Section>
+            </FormSection>
           ) : null}
         </div>
 
         <div className="flex flex-col gap-4">
-          <Section
+          <FormSection
             title="Harga"
             description="Angka utuh Rupiah. 15000 = Rp15.000."
           >
-            <Field
+            <FormField
               id="price"
               label="Harga jual"
               required
@@ -675,11 +622,11 @@ export function ProductForm({
                 onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
                 required
                 disabled={pending}
-                className={inputClass}
+                className={formInputClass}
               />
-            </Field>
+            </FormField>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field id="cost" label="Harga modal">
+              <FormField id="cost" label="Harga modal">
                 <Input
                   id="cost"
                   inputMode="numeric"
@@ -687,10 +634,10 @@ export function ProductForm({
                   value={form.cost}
                   onChange={(e) => setForm((f) => ({ ...f, cost: e.target.value }))}
                   disabled={pending}
-                  className={inputClass}
+                  className={formInputClass}
                 />
-              </Field>
-              <Field id="compareAt" label="Harga banding">
+              </FormField>
+              <FormField id="compareAt" label="Harga banding">
                 <Input
                   id="compareAt"
                   inputMode="numeric"
@@ -699,14 +646,14 @@ export function ProductForm({
                     setForm((f) => ({ ...f, compareAt: e.target.value }))
                   }
                   disabled={pending}
-                  className={inputClass}
+                  className={formInputClass}
                 />
-              </Field>
+              </FormField>
             </div>
-          </Section>
+          </FormSection>
 
-          <Section title="Stok" description="Kasir tetap bisa menjual meski stok habis.">
-            <Field id="stock" label="Jumlah" required>
+          <FormSection title="Stok" description="Kasir tetap bisa menjual meski stok habis.">
+            <FormField id="stock" label="Jumlah" required>
               <Input
                 id="stock"
                 inputMode="numeric"
@@ -715,9 +662,9 @@ export function ProductForm({
                 onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
                 required
                 disabled={pending}
-                className={inputClass}
+                className={formInputClass}
               />
-            </Field>
+            </FormField>
             <label className="flex items-center gap-2.5 text-sm">
               <input
                 id="trackStock"
@@ -732,29 +679,29 @@ export function ProductForm({
               Lacak stok di buku besar
             </label>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field id="minQty" label="Stok min" hint="Tandai rendah di ikhtisar.">
+              <FormField id="minQty" label="Stok min" hint="Tandai rendah di ikhtisar.">
                 <Input
                   id="minQty"
                   inputMode="numeric"
                   value={form.minQty}
                   onChange={(e) => setForm((f) => ({ ...f, minQty: e.target.value }))}
                   disabled={pending}
-                  className={inputClass}
+                  className={formInputClass}
                 />
-              </Field>
-              <Field id="maxQty" label="Stok max">
+              </FormField>
+              <FormField id="maxQty" label="Stok max">
                 <Input
                   id="maxQty"
                   inputMode="numeric"
                   value={form.maxQty}
                   onChange={(e) => setForm((f) => ({ ...f, maxQty: e.target.value }))}
                   disabled={pending}
-                  className={inputClass}
+                  className={formInputClass}
                 />
-              </Field>
+              </FormField>
             </div>
             {editingId ? (
-              <Field
+              <FormField
                 id="reason"
                 label="Alasan ubah stok"
                 hint="Wajib hanya jika jumlah stok berubah."
@@ -767,13 +714,13 @@ export function ProductForm({
                     setForm((f) => ({ ...f, reason: e.target.value }))
                   }
                   disabled={pending}
-                  className={inputClass}
+                  className={formInputClass}
                 />
-              </Field>
+              </FormField>
             ) : null}
-          </Section>
+          </FormSection>
 
-          <Section title="Status">
+          <FormSection title="Status">
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -805,28 +752,15 @@ export function ProductForm({
             <p className="text-xs text-muted-foreground">
               Produk nonaktif tetap di katalog Dashboard, tersembunyi dari menu kasir.
             </p>
-          </Section>
+          </FormSection>
         </div>
       </div>
 
-      <div className="sticky bottom-0 z-10 mt-auto flex flex-wrap items-center gap-2 border-t border-border bg-card/95 py-3 backdrop-blur">
-        {error ? (
-          <p className="w-full text-sm text-destructive" role="alert">
-            {error}
-          </p>
-        ) : null}
-        <Button type="submit" disabled={pending} className="min-w-28">
-          {pending ? "Menyimpan…" : "Simpan"}
-        </Button>
-        <Button
-          type="button"
-          className="bg-secondary text-secondary-foreground hover:opacity-90"
-          onClick={() => router.push("/")}
-          disabled={pending}
-        >
-          Batal
-        </Button>
-      </div>
+      <FormActions
+        error={error}
+        pending={pending}
+        cancelHref="/"
+      />
     </form>
   );
 }

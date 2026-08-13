@@ -13,5 +13,5 @@ export default function EmployeesPage() {
       </p>
     );
   }
-  return <EmployeesPanel actorRole={me.role} permissions={me.permissions} />;
+  return <EmployeesPanel permissions={me.permissions} />;
 }
