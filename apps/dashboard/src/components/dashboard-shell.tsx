@@ -21,7 +21,6 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { hasPermission, ROLE_LABELS, type Role } from "@pos-apps/types";
-import { AuthLoadingShell } from "@/components/auth-shell";
 import { SideNav } from "@/components/pos-nav";
 import { Button } from "@/components/ui/button";
 import { clearSession } from "@/lib/auth-token";
@@ -96,7 +95,21 @@ const PAGE_COPY: Record<string, { title: string; subtitle: string }> = {
     subtitle:
       "Pengguna, peran, dan matriks izin. Perubahan izin berlaku pada permintaan API berikutnya.",
   },
+  "/products/new": {
+    title: "Tambah produk",
+    subtitle: "Isi detail katalog. Harga dalam Rupiah penuh (mis. 15000 = Rp15.000).",
+  },
 };
+
+function pageCopy(pathname: string): { title: string; subtitle: string } {
+  if (/^\/products\/[^/]+\/edit$/.test(pathname)) {
+    return {
+      title: "Ubah produk",
+      subtitle: "Perbarui nama, harga, stok, atau gambar, lalu simpan.",
+    };
+  }
+  return PAGE_COPY[pathname] ?? { title: "Dashboard", subtitle: "" };
+}
 
 function roleLabel(role: string) {
   if (role in ROLE_LABELS) return ROLE_LABELS[role as Role];
@@ -117,7 +130,7 @@ export function DashboardShell({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const copy = PAGE_COPY[pathname] ?? { title: "Dashboard", subtitle: "" };
+  const copy = pageCopy(pathname);
 
   function logout() {
     clearSession();
@@ -141,6 +154,8 @@ export function DashboardShell({
       label: "Stok / Produk",
       icon: <PackageIcon size={20} weight="duotone" />,
       show: can("products", "view"),
+      match: (pathname: string) =>
+        pathname === "/" || pathname.startsWith("/products"),
     },
     {
       href: "/stock",
@@ -243,7 +258,7 @@ export function DashboardShell({
           }
           footer={
             <>
-              <p className="rounded-2xl border border-border bg-background/70 px-3 py-2 text-xs text-muted-foreground">
+              <p className="rounded-md border border-border bg-background/70 px-3 py-2 text-xs text-muted-foreground">
                 Peran:{" "}
                 <span className="font-medium text-foreground">
                   {roleLabel(role)}
@@ -251,7 +266,7 @@ export function DashboardShell({
               </p>
               <Button
                 type="button"
-                className="w-full rounded-2xl bg-secondary text-secondary-foreground hover:opacity-90"
+                className="w-full rounded-md bg-secondary text-secondary-foreground hover:opacity-90"
                 onClick={logout}
               >
                 Keluar
@@ -272,7 +287,7 @@ export function DashboardShell({
           footer={
             <Button
               type="button"
-              className="h-11 w-11 rounded-2xl bg-secondary p-0 text-secondary-foreground hover:opacity-90"
+              className="h-11 w-11 rounded-md bg-secondary p-0 text-secondary-foreground hover:opacity-90"
               onClick={logout}
               aria-label="Keluar"
               title="Keluar"
@@ -283,7 +298,7 @@ export function DashboardShell({
         />
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-hidden">
-          <header className="shrink-0 rounded-3xl border border-border bg-card px-4 py-4 shadow-sm sm:px-5">
+          <header className="shrink-0 rounded-lg border border-border bg-card px-4 py-4 shadow-sm sm:px-5">
             <p className="text-sm text-muted-foreground md:hidden">
               {roleLabel(role)}
             </p>
@@ -297,15 +312,11 @@ export function DashboardShell({
             ) : null}
           </header>
 
-          <section className="min-h-0 flex-1 overflow-y-auto rounded-3xl border border-border bg-card p-4 shadow-sm sm:p-6">
+          <section className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-border bg-card p-4 shadow-sm sm:p-6">
             <div className="flex flex-col gap-5 sm:gap-6">{children}</div>
           </section>
         </div>
       </div>
     </div>
   );
-}
-
-export function DashboardLoading({ message = "Memuat…" }: { message?: string }) {
-  return <AuthLoadingShell message={message} />;
 }

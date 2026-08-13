@@ -54,7 +54,7 @@ export function SurfaceCard({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-border bg-card text-card-foreground shadow-sm",
+        "rounded-md border border-border bg-card text-card-foreground shadow-sm",
         className,
       )}
     >
@@ -90,7 +90,7 @@ export function StatCard({
       {icon ? (
         <div
           className={cn(
-            "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-secondary",
+            "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-secondary",
             toneClass,
           )}
         >

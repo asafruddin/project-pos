@@ -212,7 +212,7 @@ export function OpnamePanel({
       {canMutate ? (
       <form onSubmit={(e) => void onCreate(e)} className="flex flex-col gap-3">
         <p className="font-medium">Buat opname</p>
-        <div className="max-h-48 overflow-y-auto rounded-xl border border-border p-3">
+        <div className="max-h-48 overflow-y-auto rounded-md border border-border p-3">
           {catalog.length === 0 ? (
             <p className="text-sm text-muted-foreground">Tidak ada produk.</p>
           ) : (
@@ -280,7 +280,7 @@ export function OpnamePanel({
           <p className="font-medium">
             {statusLabel(selected.status)} · {selected.lines.length} produk
           </p>
-          <div className="overflow-x-auto rounded-xl border border-border">
+          <div className="overflow-x-auto rounded-md border border-border">
             <table className="w-full min-w-[32rem] border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b border-border text-muted-foreground">

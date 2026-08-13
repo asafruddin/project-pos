@@ -148,7 +148,7 @@ export function PromotionsPanel({ canEdit }: { canEdit: boolean }) {
           {rows.map((row) => (
             <li
               key={row.promotion_id}
-              className="flex items-center justify-between rounded-2xl border border-border px-3 py-2 text-sm"
+              className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm"
             >
               <span>
                 {row.name}
@@ -172,7 +172,7 @@ export function PromotionsPanel({ canEdit }: { canEdit: boolean }) {
             <Label htmlFor="promo-name">Nama</Label>
             <Input id="promo-name" value={name} onChange={(e) => setName(e.target.value)} />
             <select
-              className="w-full rounded-2xl border border-border bg-background px-3 py-2 text-sm"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
               value={kind}
               onChange={(e) => setKind(e.target.value as "percent" | "fixed")}
             >
@@ -226,7 +226,7 @@ export function PromotionsPanel({ canEdit }: { canEdit: boolean }) {
             <Button
               type="submit"
               disabled={pending}
-              className="rounded-2xl bg-accent text-accent-foreground"
+              className="rounded-md bg-accent text-accent-foreground"
             >
               Simpan promo
             </Button>
@@ -241,7 +241,7 @@ export function PromotionsPanel({ canEdit }: { canEdit: boolean }) {
         <p className="font-medium">Voucher</p>
         <ul className="space-y-2 text-sm">
           {vouchers.map((row) => (
-            <li key={row.voucher_id} className="rounded-2xl border border-border px-3 py-2">
+            <li key={row.voucher_id} className="rounded-md border border-border px-3 py-2">
               {row.code} · sisa {formatIdr(row.remaining_minor)}
               {row.enabled ? "" : " · nonaktif"}
             </li>
@@ -263,7 +263,7 @@ export function PromotionsPanel({ canEdit }: { canEdit: boolean }) {
             <Button
               type="submit"
               disabled={pending}
-              className="rounded-2xl bg-secondary text-secondary-foreground"
+              className="rounded-md bg-secondary text-secondary-foreground"
             >
               Simpan voucher
             </Button>

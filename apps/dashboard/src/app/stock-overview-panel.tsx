@@ -12,6 +12,7 @@ import { STORE_1_ID } from "@pos-apps/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { authorizedFetch } from "@/lib/api-client";
 import { getAccessToken, isAccessTokenExpired, logoutToLogin } from "@/lib/auth-token";
 
@@ -177,7 +178,7 @@ export function StockOverviewPanel({ canMutate }: { canMutate: boolean }) {
       {canMutate && targetId ? (
         <form
           onSubmit={(e) => void onMarkDamaged(e)}
-          className="flex max-w-md flex-col gap-3 rounded-xl border border-border p-4"
+          className="flex max-w-md flex-col gap-3 rounded-md border border-border p-4"
         >
           <p className="font-medium">
             Pindah ke rusak —{" "}
@@ -226,11 +227,11 @@ export function StockOverviewPanel({ canMutate }: { canMutate: boolean }) {
       ) : null}
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Memuat ikhtisar stok…</p>
+        <TableSkeleton rows={7} />
       ) : visible.length === 0 ? (
         <p className="text-sm text-muted-foreground">Tidak ada produk pada filter ini.</p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-border">
+        <div className="overflow-x-auto rounded-md border border-border">
           <table className="w-full min-w-[32rem] border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-border text-muted-foreground">
@@ -255,12 +256,12 @@ export function StockOverviewPanel({ canMutate }: { canMutate: boolean }) {
                     {row.is_out || row.is_low ? (
                       <span className="flex flex-wrap gap-1">
                         {row.is_out ? (
-                          <span className="rounded-full bg-destructive/15 px-2 py-0.5 text-xs font-medium text-destructive">
+                          <span className="rounded-md bg-destructive/15 px-2 py-0.5 text-xs font-medium text-destructive">
                             Habis
                           </span>
                         ) : null}
                         {row.is_low && !row.is_out ? (
-                          <span className="rounded-full bg-accent/20 px-2 py-0.5 text-xs font-medium text-foreground">
+                          <span className="rounded-md bg-accent/20 px-2 py-0.5 text-xs font-medium text-foreground">
                             Rendah
                           </span>
                         ) : null}

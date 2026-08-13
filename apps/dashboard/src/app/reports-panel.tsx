@@ -27,9 +27,9 @@ function qs(from: string, to: string): string {
 function Bar({ value, max }: { value: number; max: number }) {
   const pct = max <= 0 ? 0 : Math.min(100, Math.round((value / max) * 100));
   return (
-    <div className="h-2 overflow-hidden rounded-full bg-secondary">
+    <div className="h-2 overflow-hidden rounded-sm bg-secondary">
       <div
-        className="h-2 rounded-full bg-primary"
+        className="h-2 rounded-sm bg-primary"
         style={{ width: `${pct}%` }}
       />
     </div>
@@ -238,7 +238,7 @@ export function ReportsPanel({
 
       {error ? (
         <div
-          className="rounded-2xl border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+          className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
           role="alert"
         >
           {error}
@@ -296,7 +296,7 @@ export function ReportsPanel({
             label="Nilai stok jual (modal)"
             value={formatIdr(inventory.stock_value_minor)}
           />
-          <div className="overflow-x-auto rounded-2xl border border-border">
+          <div className="overflow-x-auto rounded-md border border-border">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-border text-muted-foreground">
@@ -322,7 +322,7 @@ export function ReportsPanel({
               </tbody>
             </table>
           </div>
-          <div className="overflow-x-auto rounded-2xl border border-border">
+          <div className="overflow-x-auto rounded-md border border-border">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-border text-muted-foreground">
@@ -348,7 +348,7 @@ export function ReportsPanel({
               </tbody>
             </table>
           </div>
-          <div className="overflow-x-auto rounded-2xl border border-border">
+          <div className="overflow-x-auto rounded-md border border-border">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-border text-muted-foreground">
@@ -384,7 +384,7 @@ export function ReportsPanel({
             Hanya menampilkan penjualan dan refund milik Anda.
           </p>
         ) : null}
-        <div className="overflow-x-auto rounded-2xl border border-border">
+        <div className="overflow-x-auto rounded-md border border-border">
           <table className="w-full min-w-[20rem] text-left text-sm">
             <thead>
               <tr className="border-b border-border text-muted-foreground">

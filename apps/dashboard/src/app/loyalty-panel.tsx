@@ -11,6 +11,7 @@ import type {
 } from "@pos-apps/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { authorizedFetch } from "@/lib/api-client";
 import { getAccessToken, isAccessTokenExpired, logoutToLogin } from "@/lib/auth-token";
@@ -157,7 +158,12 @@ export function LoyaltyPanel({ canEdit }: { canEdit: boolean }) {
           </p>
         ) : null}
         {!program ? (
-          <p className="text-sm text-muted-foreground">Memuat program…</p>
+          <div className="space-y-3" role="status" aria-label="Memuat program">
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-11 w-full" />
+            <Skeleton className="h-11 w-full" />
+            <Skeleton className="h-11 w-28" />
+          </div>
         ) : (
           <>
             <label className="flex items-center gap-2 text-sm">
@@ -255,7 +261,7 @@ export function LoyaltyPanel({ canEdit }: { canEdit: boolean }) {
               <div className="flex gap-2">
                 <Button
                   type="button"
-                  className="rounded-2xl bg-secondary text-secondary-foreground"
+                  className="rounded-md bg-secondary text-secondary-foreground"
                   onClick={() => setTiers([...tiers, emptyTier()])}
                 >
                   Tambah tingkat
@@ -263,7 +269,7 @@ export function LoyaltyPanel({ canEdit }: { canEdit: boolean }) {
                 <Button
                   type="submit"
                   disabled={pending}
-                  className="rounded-2xl bg-accent text-accent-foreground"
+                  className="rounded-md bg-accent text-accent-foreground"
                 >
                   {pending ? "Menyimpan…" : "Simpan program"}
                 </Button>
@@ -279,7 +285,7 @@ export function LoyaltyPanel({ canEdit }: { canEdit: boolean }) {
       <div className="space-y-3">
         <p className="font-medium">Buku besar pelanggan</p>
         <select
-          className="w-full rounded-2xl border border-border bg-background px-3 py-2 text-sm"
+          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
           value={customerId}
           onChange={(e) => void loadAccount(e.target.value)}
         >
@@ -291,7 +297,7 @@ export function LoyaltyPanel({ canEdit }: { canEdit: boolean }) {
           ))}
         </select>
         {account ? (
-          <div className="space-y-2 rounded-2xl border border-border p-4">
+          <div className="space-y-2 rounded-md border border-border p-4">
             <p className="text-sm text-muted-foreground">
               Saldo {account.points_balance} · seumur hidup{" "}
               {account.lifetime_earned}

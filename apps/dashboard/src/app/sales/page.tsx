@@ -70,7 +70,7 @@ export default function SalesPage() {
 
       {error ? (
         <div
-          className="rounded-2xl border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+          className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
           role="alert"
         >
           {error}
@@ -78,12 +78,12 @@ export default function SalesPage() {
       ) : null}
 
       {!data || data.sales.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border bg-secondary/40 px-4 py-8 text-sm text-muted-foreground">
+        <div className="rounded-md border border-dashed border-border bg-secondary/40 px-4 py-8 text-sm text-muted-foreground">
           Belum ada penjualan tersinkron. Daftar ini terisi setelah kasir
           mengunggah penjualan selesai — bukan mode offline kasir.
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-border bg-background/70">
+        <div className="overflow-hidden rounded-md border border-border bg-background/70">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[20rem] border-collapse text-left text-sm">
               <thead>

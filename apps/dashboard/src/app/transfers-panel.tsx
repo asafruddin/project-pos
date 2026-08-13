@@ -218,7 +218,7 @@ export function TransfersPanel({
           transfers.map((row) => {
             const next = NEXT[row.status];
             return (
-              <li key={row.transfer_id} className="rounded-2xl border border-border p-4">
+              <li key={row.transfer_id} className="rounded-md border border-border p-4">
                 <p className="font-medium">
                   {storeName(row.from_store_id)} → {storeName(row.to_store_id)} · {row.status}
                 </p>

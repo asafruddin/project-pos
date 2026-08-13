@@ -59,7 +59,7 @@ export function ShiftsPanel() {
         </p>
         <Button
           type="button"
-          className="rounded-2xl bg-secondary text-secondary-foreground"
+          className="rounded-md bg-secondary text-secondary-foreground"
           onClick={() => void load()}
         >
           Muat ulang
@@ -70,7 +70,7 @@ export function ShiftsPanel() {
           {error}
         </p>
       ) : null}
-      <div className="overflow-x-auto rounded-2xl border border-border">
+      <div className="overflow-x-auto rounded-md border border-border">
         <table className="w-full min-w-[52rem] text-left text-sm">
           <thead className="bg-secondary/60 text-muted-foreground">
             <tr>

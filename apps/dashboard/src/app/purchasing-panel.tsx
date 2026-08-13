@@ -372,7 +372,7 @@ export function PurchasingPanel() {
               className="h-12"
             />
           </div>
-          <div className="max-h-40 overflow-y-auto rounded-xl border border-border p-3">
+          <div className="max-h-40 overflow-y-auto rounded-md border border-border p-3">
             <p className="mb-2 text-sm text-muted-foreground">Produk dipasok</p>
             {catalog.length === 0 ? (
               <p className="text-sm text-muted-foreground">Tidak ada produk.</p>
@@ -525,7 +525,7 @@ export function PurchasingPanel() {
         </ul>
 
         {selectedPo ? (
-          <div className="flex flex-col gap-3 rounded-xl border border-border p-4">
+          <div className="flex flex-col gap-3 rounded-md border border-border p-4">
             <p className="font-medium">
               {statusLabel(selectedPo.status)} · {selectedPo.supplier_name}
             </p>

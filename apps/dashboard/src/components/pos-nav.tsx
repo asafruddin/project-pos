@@ -30,7 +30,7 @@ export function SideNav({
   return (
     <aside
       className={cn(
-        "flex shrink-0 flex-col gap-4 overflow-hidden rounded-3xl border border-border bg-card p-3 shadow-sm sm:gap-5 sm:p-5",
+        "flex shrink-0 flex-col gap-4 overflow-hidden rounded-lg border border-border bg-card p-3 shadow-sm sm:gap-5 sm:p-5",
         compact ? "w-[4.5rem] items-center" : "w-56 sm:w-64",
         className,
       )}
@@ -55,7 +55,7 @@ export function SideNav({
               prefetch
               title={item.label}
               className={cn(
-                "flex shrink-0 items-center gap-3 rounded-2xl text-sm font-medium transition-colors",
+                "flex shrink-0 items-center gap-3 rounded-md text-sm font-medium transition-colors",
                 compact ? "h-10 w-10 justify-center px-0" : "px-3 py-2.5",
                 active
                   ? "bg-secondary text-foreground"

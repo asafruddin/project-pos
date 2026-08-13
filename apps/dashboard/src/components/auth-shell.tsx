@@ -57,7 +57,7 @@ export function AuthSplitShell({
           <p className="text-lg leading-relaxed text-white/95 xl:text-xl">
             “{quote}”
           </p>
-          <span className="inline-flex rounded-full border border-white/70 px-4 py-1.5 text-sm text-white">
+          <span className="inline-flex rounded-md border border-white/70 px-4 py-1.5 text-sm text-white">
             {quoteBy}
           </span>
         </div>

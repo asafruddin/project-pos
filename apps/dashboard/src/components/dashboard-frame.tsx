@@ -9,10 +9,8 @@ import {
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { AuthMeResponse } from "@pos-apps/types";
-import {
-  DashboardLoading,
-  DashboardShell,
-} from "@/components/dashboard-shell";
+import { DashboardShell } from "@/components/dashboard-shell";
+import { DashboardSkeleton } from "@/components/ui/skeleton";
 import { authorizedFetch } from "@/lib/api-client";
 import {
   getAccessToken,
@@ -90,7 +88,7 @@ export function DashboardFrame({ children }: { children: ReactNode }) {
   }
 
   if (!ready || !me) {
-    return <DashboardLoading />;
+    return <DashboardSkeleton />;
   }
 
   return (

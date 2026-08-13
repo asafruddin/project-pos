@@ -137,7 +137,7 @@ export function LoginForm() {
       <Button
         type="submit"
         disabled={pending || !login.trim() || !password}
-        className="mt-1 h-12 min-h-12 w-full rounded-2xl bg-accent text-base text-accent-foreground hover:opacity-90 sm:text-sm"
+        className="mt-1 h-12 min-h-12 w-full rounded-md bg-accent text-base text-accent-foreground hover:opacity-90 sm:text-sm"
       >
         {pending ? "Memproses…" : "Masuk"}
       </Button>

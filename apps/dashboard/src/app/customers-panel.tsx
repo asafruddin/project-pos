@@ -267,7 +267,7 @@ export function CustomersPanel({ canDelete }: { canDelete: boolean }) {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Cari nama, telepon, email"
           />
-          <Button type="submit" className="rounded-2xl bg-secondary text-secondary-foreground">
+          <Button type="submit" className="rounded-md bg-secondary text-secondary-foreground">
             Cari
           </Button>
         </form>
@@ -276,7 +276,7 @@ export function CustomersPanel({ canDelete }: { canDelete: boolean }) {
             <li key={row.customer_id}>
               <button
                 type="button"
-                className="w-full rounded-2xl border border-border px-3 py-3 text-left hover:bg-secondary/60"
+                className="w-full rounded-md border border-border px-3 py-3 text-left hover:bg-secondary/60"
                 onClick={() => void openHistory(row)}
               >
                 <p className="font-medium">{row.name}</p>
@@ -293,7 +293,7 @@ export function CustomersPanel({ canDelete }: { canDelete: boolean }) {
           ))}
         </ul>
         {history ? (
-          <div className="space-y-2 rounded-2xl border border-border p-4">
+          <div className="space-y-2 rounded-md border border-border p-4">
             <p className="font-medium">Riwayat belanja</p>
             <p className="text-sm text-muted-foreground">
               Total belanja: {formatIdr(history.total_spend_minor)}
@@ -406,7 +406,7 @@ export function CustomersPanel({ canDelete }: { canDelete: boolean }) {
           </ul>
         ) : null}
         {canDelete && selected ? (
-          <div className="space-y-2 rounded-2xl border border-border p-3">
+          <div className="space-y-2 rounded-md border border-border p-3">
             <p className="text-sm font-medium">Harga pelanggan</p>
             <Input
               value={priceProductId}
@@ -425,7 +425,7 @@ export function CustomersPanel({ canDelete }: { canDelete: boolean }) {
             <Button
               type="button"
               disabled={pending}
-              className="min-h-10 w-full rounded-2xl bg-secondary text-secondary-foreground"
+              className="min-h-10 w-full rounded-md bg-secondary text-secondary-foreground"
               onClick={() => void savePrice()}
             >
               Simpan harga pelanggan
@@ -450,7 +450,7 @@ export function CustomersPanel({ canDelete }: { canDelete: boolean }) {
                 <Button
                   type="button"
                   disabled={pending}
-                  className="min-h-10 w-full rounded-2xl bg-secondary text-secondary-foreground"
+                  className="min-h-10 w-full rounded-md bg-secondary text-secondary-foreground"
                   onClick={() => void saveGroupPrice()}
                 >
                   Simpan harga grup
@@ -469,7 +469,7 @@ export function CustomersPanel({ canDelete }: { canDelete: boolean }) {
         <Button
           type="submit"
           disabled={pending}
-          className="min-h-12 w-full rounded-2xl bg-accent text-accent-foreground"
+          className="min-h-12 w-full rounded-md bg-accent text-accent-foreground"
         >
           Simpan
         </Button>

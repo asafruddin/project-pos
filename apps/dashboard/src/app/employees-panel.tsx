@@ -173,7 +173,7 @@ export function EmployeesPanel({
     <div className="flex flex-col gap-8">
       {error ? (
         <div
-          className="rounded-2xl border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+          className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
           role="alert"
         >
           {error}
@@ -243,7 +243,7 @@ export function EmployeesPanel({
         Toko mengikuti akun, bukan Checkout. Store Manager tidak dapat membuat Admin. Kasir PWA tidak punya layar ini.
       </p>
 
-      <div className="overflow-x-auto rounded-2xl border border-border">
+      <div className="overflow-x-auto rounded-md border border-border">
         <table className="w-full min-w-[32rem] text-left text-sm">
           <thead>
             <tr className="border-b border-border text-muted-foreground">

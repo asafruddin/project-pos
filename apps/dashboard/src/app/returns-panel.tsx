@@ -110,7 +110,7 @@ export function ReturnsPanel({
     <div className="space-y-4">
       {error ? (
         <p
-          className="rounded-2xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
           role="alert"
         >
           {error}
@@ -126,7 +126,7 @@ export function ReturnsPanel({
       ) : (
         <ul className="space-y-3">
           {open.map((row) => (
-            <li key={row.return_id} className="rounded-2xl border border-border p-4">
+            <li key={row.return_id} className="rounded-md border border-border p-4">
               <p className="font-medium">
                 {formatIdr(row.amount_minor)} · {row.reason}
               </p>
@@ -151,7 +151,7 @@ export function ReturnsPanel({
                   onSubmit={(e) => void linkExchange(e, row)}
                 >
                   <input
-                    className="min-h-12 min-w-[12rem] flex-1 rounded-xl border border-border bg-background px-3 text-sm"
+                    className="min-h-12 min-w-[12rem] flex-1 rounded-md border border-border bg-background px-3 text-sm"
                     placeholder="ID penjualan tukar"
                     value={exchangeId[row.return_id] ?? ""}
                     onChange={(e) =>
@@ -164,7 +164,7 @@ export function ReturnsPanel({
                   <Button
                     type="submit"
                     disabled={pending}
-                    className="min-h-12 rounded-xl bg-secondary text-secondary-foreground"
+                    className="min-h-12 rounded-md bg-secondary text-secondary-foreground"
                   >
                     Tautkan tukar
                   </Button>
@@ -174,7 +174,7 @@ export function ReturnsPanel({
                 <Button
                   type="button"
                   disabled={pending}
-                  className="mt-3 min-h-12 rounded-2xl bg-accent text-accent-foreground"
+                  className="mt-3 min-h-12 rounded-md bg-accent text-accent-foreground"
                   onClick={() => void refund(row)}
                 >
                   Refund tunai {formatIdr(row.amount_minor)}
