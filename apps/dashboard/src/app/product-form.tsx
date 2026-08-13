@@ -1,13 +1,17 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeftIcon } from "@phosphor-icons/react";
 import type { Product, ProductImage, ProductListResponse } from "@pos-apps/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { catalogRequest } from "@/lib/catalog-request";
+import { formatIdr } from "@/lib/format-money";
+import { cn } from "@/lib/utils";
 
 type FormState = {
   name: string;
@@ -93,6 +97,58 @@ function formFromProduct(p: Product): FormState {
   };
 }
 
+function Field({
+  id,
+  label,
+  hint,
+  required,
+  children,
+}: {
+  id?: string;
+  label: string;
+  hint?: string;
+  required?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label htmlFor={id}>
+        {label}
+        {required ? (
+          <span className="text-destructive" aria-hidden>
+            {" "}
+            *
+          </span>
+        ) : null}
+      </Label>
+      {children}
+      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+    </div>
+  );
+}
+
+function Section({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-md border border-border bg-background/40 p-4 sm:p-5">
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+      {description ? (
+        <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
+      ) : null}
+      <div className="mt-4 flex flex-col gap-4">{children}</div>
+    </section>
+  );
+}
+
+const inputClass = "h-10 min-h-10";
+
 export function ProductForm({
   canMutate,
   productId,
@@ -104,39 +160,76 @@ export function ProductForm({
 }) {
   const router = useRouter();
   const [product, setProduct] = useState<Product | null>(null);
+  const [parentName, setParentName] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>({
     ...emptyForm,
     parentId: parentId ?? "",
   });
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [loading, setLoading] = useState(Boolean(productId));
+  const [loading, setLoading] = useState(Boolean(productId || parentId));
+
+  const loadCatalog = useCallback(async () => {
+    const result = await catalogRequest<ProductListResponse>("/catalog/products");
+    if (!result.ok) {
+      setError(result.message);
+      setLoading(false);
+      return null;
+    }
+    return result.data.products;
+  }, []);
 
   const loadProduct = useCallback(async () => {
     if (!productId) return;
     setLoading(true);
-    const result = await catalogRequest<ProductListResponse>("/catalog/products");
+    const products = await loadCatalog();
     setLoading(false);
-    if (!result.ok) {
-      setError(result.message);
-      return;
-    }
-    const found = result.data.products.find((row) => row.product_id === productId);
+    if (!products) return;
+    const found = products.find((row) => row.product_id === productId);
     if (!found) {
       setError("Produk tidak ditemukan.");
       return;
     }
     setProduct(found);
     setForm(formFromProduct(found));
+    if (found.parent_id) {
+      const parent = products.find((row) => row.product_id === found.parent_id);
+      setParentName(parent?.name ?? null);
+    }
     setError(null);
-  }, [productId]);
+  }, [loadCatalog, productId]);
 
   useEffect(() => {
-    void loadProduct();
-  }, [loadProduct]);
+    if (productId) {
+      void loadProduct();
+      return;
+    }
+    if (!parentId) {
+      setLoading(false);
+      return;
+    }
+    void (async () => {
+      setLoading(true);
+      const products = await loadCatalog();
+      setLoading(false);
+      if (!products) return;
+      const parent = products.find((row) => row.product_id === parentId);
+      if (parent) {
+        setParentName(parent.name);
+        setForm((f) => ({
+          ...f,
+          parentId,
+          category: parent.category_name ?? f.category,
+          brand: parent.brand_name ?? f.brand,
+          trackStock: parent.track_stock ?? f.trackStock,
+        }));
+      }
+    })();
+  }, [loadCatalog, loadProduct, parentId, productId]);
 
   const editingId = productId ?? null;
   const editingImages = product?.images ?? [];
+  const pricePreview = parseNonNegInt(form.price);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -343,340 +436,397 @@ export function ProductForm({
 
   if (loading) {
     return (
-      <div className="max-w-xl space-y-3">
-        <div className="h-10 w-48 animate-pulse rounded-md bg-muted" />
-        <div className="h-12 w-full animate-pulse rounded-md bg-muted" />
-        <div className="h-12 w-full animate-pulse rounded-md bg-muted" />
-        <div className="h-12 w-full animate-pulse rounded-md bg-muted" />
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+        <div className="space-y-4">
+          <Skeleton className="h-36 w-full" />
+          <Skeleton className="h-48 w-full" />
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-40 w-full" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
-      <div>
+    <form
+      onSubmit={(e) => void onSubmit(e)}
+      className="flex min-h-full flex-col gap-5"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/"
           scroll={false}
-          className="text-sm font-medium text-muted-foreground hover:text-foreground"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
         >
-          ← Daftar produk
+          <ArrowLeftIcon size={16} />
+          Daftar produk
         </Link>
-        <h2 className="mt-3 text-lg font-semibold tracking-tight text-foreground">
-          {editingId ? "Ubah produk" : "Tambah produk"}
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {editingId
-            ? "Perbarui nama, harga, atau stok lalu simpan."
-            : "Isi form untuk menambah produk baru ke katalog."}
-        </p>
+        {form.parentId ? (
+          <p className="rounded-md border border-border bg-secondary/50 px-3 py-1.5 text-xs text-muted-foreground">
+            Varian
+            {parentName ? (
+              <>
+                {" "}
+                dari <span className="font-medium text-foreground">{parentName}</span>
+              </>
+            ) : null}
+          </p>
+        ) : null}
       </div>
 
-      <form onSubmit={(e) => void onSubmit(e)} className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="name">Nama produk</Label>
-          <Input
-            id="name"
-            placeholder="contoh: Espresso"
-            value={form.name}
-            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            required
-            disabled={pending}
-          />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="price">Harga (Rp)</Label>
-            <Input
-              id="price"
-              inputMode="numeric"
-              placeholder="15000"
-              value={form.price}
-              onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
-              required
-              disabled={pending}
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="stock">Stok</Label>
-            <Input
-              id="stock"
-              inputMode="numeric"
-              placeholder="10"
-              value={form.stock}
-              onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
-              required
-              disabled={pending}
-            />
-          </div>
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="sku">SKU</Label>
-          <Input
-            id="sku"
-            value={form.sku}
-            onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))}
-            disabled={pending}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="barcode">Barcode</Label>
-          <Input
-            id="barcode"
-            value={form.barcode}
-            onChange={(e) => setForm((f) => ({ ...f, barcode: e.target.value }))}
-            disabled={pending}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="description">Deskripsi</Label>
-          <Input
-            id="description"
-            value={form.description}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, description: e.target.value }))
-            }
-            disabled={pending}
-          />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="category">Kategori</Label>
-            <Input
-              id="category"
-              value={form.category}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, category: e.target.value }))
-              }
-              disabled={pending}
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="brand">Merek</Label>
-            <Input
-              id="brand"
-              value={form.brand}
-              onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value }))}
-              disabled={pending}
-            />
-          </div>
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="cost">Harga modal (Rp)</Label>
-          <Input
-            id="cost"
-            inputMode="numeric"
-            value={form.cost}
-            onChange={(e) => setForm((f) => ({ ...f, cost: e.target.value }))}
-            disabled={pending}
-          />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="compareAt">Harga banding (Rp)</Label>
-            <Input
-              id="compareAt"
-              inputMode="numeric"
-              value={form.compareAt}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, compareAt: e.target.value }))
-              }
-              disabled={pending}
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="tags">Tag</Label>
-            <Input
-              id="tags"
-              placeholder="pisahkan dengan koma"
-              value={form.tags}
-              onChange={(e) => setForm((f) => ({ ...f, tags: e.target.value }))}
-              disabled={pending}
-            />
-          </div>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="minQty">Stok min</Label>
-            <Input
-              id="minQty"
-              inputMode="numeric"
-              value={form.minQty}
-              onChange={(e) => setForm((f) => ({ ...f, minQty: e.target.value }))}
-              disabled={pending}
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="maxQty">Stok max</Label>
-            <Input
-              id="maxQty"
-              inputMode="numeric"
-              value={form.maxQty}
-              onChange={(e) => setForm((f) => ({ ...f, maxQty: e.target.value }))}
-              disabled={pending}
-            />
-          </div>
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="status">Status</Label>
-          <select
-            id="status"
-            value={form.status}
-            onChange={(e) =>
-              setForm((f) => ({
-                ...f,
-                status: e.target.value as "active" | "inactive",
-              }))
-            }
-            disabled={pending}
-            className="h-12 min-h-12 rounded-md border border-input bg-background px-3 text-sm"
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
+        <div className="flex flex-col gap-4">
+          <Section
+            title="Produk"
+            description="Nama yang tampil di kasir. SKU dan barcode opsional."
           >
-            <option value="active">Aktif</option>
-            <option value="inactive">Nonaktif</option>
-          </select>
-        </div>
-        <label className="flex items-center gap-3 text-sm">
-          <input
-            id="trackStock"
-            type="checkbox"
-            checked={form.trackStock}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, trackStock: e.target.checked }))
-            }
-            disabled={pending}
-            className="size-4 rounded-sm"
-          />
-          Lacak stok
-        </label>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="parentId">ID induk (varian)</Label>
-          <Input
-            id="parentId"
-            placeholder="UUID produk induk, kosongkan jika produk biasa"
-            value={form.parentId}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, parentId: e.target.value }))
-            }
-            disabled={pending}
-          />
-        </div>
-        {editingId ? (
-          <div className="flex flex-col gap-3">
-            <Label htmlFor="productImage">Gambar produk</Label>
-            {form.status === "active" && !product?.has_primary_image ? (
-              <p
-                className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-200"
-                role="status"
+            <Field id="name" label="Nama" required>
+              <Input
+                id="name"
+                placeholder="contoh: Espresso"
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                required
+                disabled={pending}
+                className={inputClass}
+              />
+            </Field>
+            <Field id="description" label="Deskripsi" hint="Opsional. Tampil di katalog, bukan di Checkout.">
+              <textarea
+                id="description"
+                value={form.description}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, description: e.target.value }))
+                }
+                disabled={pending}
+                rows={3}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+              />
+            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field id="sku" label="SKU">
+                <Input
+                  id="sku"
+                  value={form.sku}
+                  onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))}
+                  disabled={pending}
+                  className={inputClass}
+                />
+              </Field>
+              <Field id="barcode" label="Barcode">
+                <Input
+                  id="barcode"
+                  value={form.barcode}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, barcode: e.target.value }))
+                  }
+                  disabled={pending}
+                  className={inputClass}
+                />
+              </Field>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field id="category" label="Kategori">
+                <Input
+                  id="category"
+                  placeholder="contoh: Minuman"
+                  value={form.category}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, category: e.target.value }))
+                  }
+                  disabled={pending}
+                  className={inputClass}
+                />
+              </Field>
+              <Field id="brand" label="Merek">
+                <Input
+                  id="brand"
+                  value={form.brand}
+                  onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value }))}
+                  disabled={pending}
+                  className={inputClass}
+                />
+              </Field>
+            </div>
+            <Field id="tags" label="Tag" hint="Pisahkan dengan koma.">
+              <Input
+                id="tags"
+                placeholder="kopi, hot, signature"
+                value={form.tags}
+                onChange={(e) => setForm((f) => ({ ...f, tags: e.target.value }))}
+                disabled={pending}
+                className={inputClass}
+              />
+            </Field>
+          </Section>
+
+          {editingId ? (
+            <Section
+              title="Gambar"
+              description="Gambar utama dipakai kasir setelah menyegarkan menu."
+            >
+              {form.status === "active" && !product?.has_primary_image ? (
+                <p
+                  className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-200"
+                  role="status"
+                >
+                  Produk aktif tanpa gambar utama. Kasir tetap bisa menjual.
+                </p>
+              ) : null}
+              <label
+                htmlFor="productImage"
+                className="flex cursor-pointer flex-col items-center justify-center rounded-md border border-dashed border-border bg-secondary/30 px-4 py-6 text-center text-sm text-muted-foreground hover:bg-secondary/50"
               >
-                Produk aktif tanpa gambar utama. Kasir tetap bisa menjual.
-              </p>
-            ) : null}
-            <Input
-              id="productImage"
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              disabled={pending}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                e.target.value = "";
-                if (file) void onUploadImage(file);
-              }}
-            />
-            {editingImages.length > 0 ? (
-              <ul className="grid gap-2">
-                {editingImages.map((image, index) => (
-                  <li
-                    key={image.image_id}
-                    className="flex items-center gap-3 rounded-md border border-border p-2"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={image.secure_url}
-                      alt={image.alt_text ?? product?.name ?? "gambar"}
-                      className="size-14 rounded-md object-cover"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">
+                <span className="font-medium text-foreground">Unggah gambar</span>
+                <span className="mt-1 text-xs">JPEG, PNG, WebP, atau GIF</span>
+                <input
+                  id="productImage"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  disabled={pending}
+                  className="sr-only"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = "";
+                    if (file) void onUploadImage(file);
+                  }}
+                />
+              </label>
+              {editingImages.length > 0 ? (
+                <ul className="grid gap-2">
+                  {editingImages.map((image, index) => (
+                    <li
+                      key={image.image_id}
+                      className="flex items-center gap-3 rounded-md border border-border p-2"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={image.secure_url}
+                        alt={image.alt_text ?? product?.name ?? "gambar"}
+                        className="size-14 rounded-md object-cover"
+                      />
+                      <p className="min-w-0 flex-1 text-sm font-medium">
                         {image.is_primary ? "Utama" : "Galeri"}
                       </p>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      <Button
-                        type="button"
-                        className="h-9 bg-secondary px-2 text-secondary-foreground hover:opacity-90"
-                        disabled={pending || index === 0}
-                        onClick={() => void onMoveImage(image.image_id, -1)}
-                      >
-                        Naik
-                      </Button>
-                      <Button
-                        type="button"
-                        className="h-9 bg-secondary px-2 text-secondary-foreground hover:opacity-90"
-                        disabled={pending || index === editingImages.length - 1}
-                        onClick={() => void onMoveImage(image.image_id, 1)}
-                      >
-                        Turun
-                      </Button>
-                      {!image.is_primary ? (
+                      <div className="flex flex-wrap gap-1">
                         <Button
                           type="button"
-                          className="h-9 bg-secondary px-2 text-secondary-foreground hover:opacity-90"
-                          disabled={pending}
-                          onClick={() => void onSetPrimary(image.image_id)}
+                          className="h-8 bg-secondary px-2 text-xs text-secondary-foreground hover:opacity-90"
+                          disabled={pending || index === 0}
+                          onClick={() => void onMoveImage(image.image_id, -1)}
                         >
-                          Utama
+                          Naik
                         </Button>
-                      ) : null}
-                      <Button
-                        type="button"
-                        className="h-9 bg-secondary px-2 text-secondary-foreground hover:opacity-90"
-                        disabled={pending}
-                        onClick={() => void onDeleteImage(image.image_id)}
-                      >
-                        Hapus
-                      </Button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        ) : null}
-        {editingId ? (
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="reason">Alasan</Label>
-            <Input
-              id="reason"
-              placeholder="contoh: koreksi hitung"
-              value={form.reason}
-              onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}
-              disabled={pending}
-            />
-            <p className="text-sm text-muted-foreground">Wajib saat mengubah stok.</p>
-          </div>
-        ) : null}
-        {error ? (
-          <div
-            className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
-            role="alert"
-          >
-            {error}
-          </div>
-        ) : null}
-        <div className="flex flex-wrap gap-2">
-          <Button type="submit" disabled={pending} className="min-w-28">
-            {pending ? "Menyimpan…" : "Simpan"}
-          </Button>
-          <Button
-            type="button"
-            className="bg-secondary text-secondary-foreground hover:opacity-90"
-            onClick={() => router.push("/")}
-            disabled={pending}
-          >
-            Batal
-          </Button>
+                        <Button
+                          type="button"
+                          className="h-8 bg-secondary px-2 text-xs text-secondary-foreground hover:opacity-90"
+                          disabled={pending || index === editingImages.length - 1}
+                          onClick={() => void onMoveImage(image.image_id, 1)}
+                        >
+                          Turun
+                        </Button>
+                        {!image.is_primary ? (
+                          <Button
+                            type="button"
+                            className="h-8 bg-secondary px-2 text-xs text-secondary-foreground hover:opacity-90"
+                            disabled={pending}
+                            onClick={() => void onSetPrimary(image.image_id)}
+                          >
+                            Utama
+                          </Button>
+                        ) : null}
+                        <Button
+                          type="button"
+                          className="h-8 bg-secondary px-2 text-xs text-secondary-foreground hover:opacity-90"
+                          disabled={pending}
+                          onClick={() => void onDeleteImage(image.image_id)}
+                        >
+                          Hapus
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </Section>
+          ) : null}
         </div>
-      </form>
-    </div>
+
+        <div className="flex flex-col gap-4">
+          <Section
+            title="Harga"
+            description="Angka utuh Rupiah. 15000 = Rp15.000."
+          >
+            <Field
+              id="price"
+              label="Harga jual"
+              required
+              hint={
+                pricePreview != null ? `Tampil sebagai ${formatIdr(pricePreview)}` : undefined
+              }
+            >
+              <Input
+                id="price"
+                inputMode="numeric"
+                placeholder="15000"
+                value={form.price}
+                onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
+                required
+                disabled={pending}
+                className={inputClass}
+              />
+            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field id="cost" label="Harga modal">
+                <Input
+                  id="cost"
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={form.cost}
+                  onChange={(e) => setForm((f) => ({ ...f, cost: e.target.value }))}
+                  disabled={pending}
+                  className={inputClass}
+                />
+              </Field>
+              <Field id="compareAt" label="Harga banding">
+                <Input
+                  id="compareAt"
+                  inputMode="numeric"
+                  value={form.compareAt}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, compareAt: e.target.value }))
+                  }
+                  disabled={pending}
+                  className={inputClass}
+                />
+              </Field>
+            </div>
+          </Section>
+
+          <Section title="Stok" description="Kasir tetap bisa menjual meski stok habis.">
+            <Field id="stock" label="Jumlah" required>
+              <Input
+                id="stock"
+                inputMode="numeric"
+                placeholder="10"
+                value={form.stock}
+                onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
+                required
+                disabled={pending}
+                className={inputClass}
+              />
+            </Field>
+            <label className="flex items-center gap-2.5 text-sm">
+              <input
+                id="trackStock"
+                type="checkbox"
+                checked={form.trackStock}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, trackStock: e.target.checked }))
+                }
+                disabled={pending}
+                className="size-4 rounded-sm"
+              />
+              Lacak stok di buku besar
+            </label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field id="minQty" label="Stok min" hint="Tandai rendah di ikhtisar.">
+                <Input
+                  id="minQty"
+                  inputMode="numeric"
+                  value={form.minQty}
+                  onChange={(e) => setForm((f) => ({ ...f, minQty: e.target.value }))}
+                  disabled={pending}
+                  className={inputClass}
+                />
+              </Field>
+              <Field id="maxQty" label="Stok max">
+                <Input
+                  id="maxQty"
+                  inputMode="numeric"
+                  value={form.maxQty}
+                  onChange={(e) => setForm((f) => ({ ...f, maxQty: e.target.value }))}
+                  disabled={pending}
+                  className={inputClass}
+                />
+              </Field>
+            </div>
+            {editingId ? (
+              <Field
+                id="reason"
+                label="Alasan ubah stok"
+                hint="Wajib hanya jika jumlah stok berubah."
+              >
+                <Input
+                  id="reason"
+                  placeholder="contoh: koreksi hitung"
+                  value={form.reason}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, reason: e.target.value }))
+                  }
+                  disabled={pending}
+                  className={inputClass}
+                />
+              </Field>
+            ) : null}
+          </Section>
+
+          <Section title="Status">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => setForm((f) => ({ ...f, status: "active" }))}
+                className={cn(
+                  "h-10 rounded-md text-sm font-medium transition-colors",
+                  form.status === "active"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-secondary-foreground hover:opacity-90",
+                )}
+              >
+                Aktif
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => setForm((f) => ({ ...f, status: "inactive" }))}
+                className={cn(
+                  "h-10 rounded-md text-sm font-medium transition-colors",
+                  form.status === "inactive"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-secondary-foreground hover:opacity-90",
+                )}
+              >
+                Nonaktif
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Produk nonaktif tetap di katalog Dashboard, tersembunyi dari menu kasir.
+            </p>
+          </Section>
+        </div>
+      </div>
+
+      <div className="sticky bottom-0 z-10 mt-auto flex flex-wrap items-center gap-2 border-t border-border bg-card/95 py-3 backdrop-blur">
+        {error ? (
+          <p className="w-full text-sm text-destructive" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <Button type="submit" disabled={pending} className="min-w-28">
+          {pending ? "Menyimpan…" : "Simpan"}
+        </Button>
+        <Button
+          type="button"
+          className="bg-secondary text-secondary-foreground hover:opacity-90"
+          onClick={() => router.push("/")}
+          disabled={pending}
+        >
+          Batal
+        </Button>
+      </div>
+    </form>
   );
 }

@@ -97,7 +97,7 @@ const PAGE_COPY: Record<string, { title: string; subtitle: string }> = {
   },
   "/products/new": {
     title: "Tambah produk",
-    subtitle: "Isi detail katalog. Harga dalam Rupiah penuh (mis. 15000 = Rp15.000).",
+    subtitle: "Isi nama dan harga dulu. Detail lain opsional.",
   },
 };
 
@@ -105,7 +105,7 @@ function pageCopy(pathname: string): { title: string; subtitle: string } {
   if (/^\/products\/[^/]+\/edit$/.test(pathname)) {
     return {
       title: "Ubah produk",
-      subtitle: "Perbarui nama, harga, stok, atau gambar, lalu simpan.",
+      subtitle: "Ubah harga, stok, atau gambar. Simpan di bagian bawah.",
     };
   }
   return PAGE_COPY[pathname] ?? { title: "Dashboard", subtitle: "" };
