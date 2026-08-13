@@ -4,11 +4,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
+export type NavChild = {
+  href: string;
+  label: string;
+};
+
 export type NavItem = {
   href: string;
   label: string;
   icon: React.ReactNode;
   match?: (pathname: string) => boolean;
+  children?: NavChild[];
 };
 
 /** Dashboard always uses sidebar (desktop + tablet + mobile). */
@@ -47,26 +53,57 @@ export function SideNav({
           const active = item.match
             ? item.match(pathname)
             : pathname === item.href;
+          const childActive = item.children?.some(
+            (child) => pathname === child.href || pathname.startsWith(`${child.href}/`),
+          );
+          const open = Boolean(!compact && item.children?.length);
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              scroll={false}
-              prefetch
-              title={item.label}
-              className={cn(
-                "flex shrink-0 items-center gap-3 rounded-md text-sm font-medium transition-colors",
-                compact ? "h-10 w-10 justify-center px-0" : "px-3 py-2.5",
-                active
-                  ? "bg-secondary text-foreground"
-                  : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
-              )}
-            >
-              <span className="inline-flex shrink-0 items-center justify-center" aria-hidden>
-                {item.icon}
-              </span>
-              {!compact ? <span>{item.label}</span> : null}
-            </Link>
+            <div key={item.href} className={cn("flex flex-col", compact && "items-center")}>
+              <Link
+                href={item.href}
+                scroll={false}
+                prefetch
+                title={item.label}
+                className={cn(
+                  "flex shrink-0 items-center gap-3 rounded-md text-sm font-medium transition-colors",
+                  compact ? "h-10 w-10 justify-center px-0" : "px-3 py-2.5",
+                  active || childActive
+                    ? "bg-secondary text-foreground"
+                    : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
+                )}
+              >
+                <span className="inline-flex shrink-0 items-center justify-center" aria-hidden>
+                  {item.icon}
+                </span>
+                {!compact ? (
+                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                ) : null}
+              </Link>
+              {open ? (
+                <div className="mb-1 ml-5 mt-0.5 flex flex-col border-l border-border pl-2">
+                  {item.children?.map((child) => {
+                    const childIsActive =
+                      pathname === child.href || pathname.startsWith(`${child.href}/`);
+                    return (
+                      <Link
+                        key={child.href}
+                        href={child.href}
+                        scroll={false}
+                        prefetch
+                        className={cn(
+                          "rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
+                          childIsActive
+                            ? "bg-secondary text-foreground"
+                            : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
+                        )}
+                      >
+                        {child.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
           );
         })}
       </nav>

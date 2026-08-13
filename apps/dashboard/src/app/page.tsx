@@ -1,12 +1,7 @@
 "use client";
 
-import { hasPermission } from "@pos-apps/types";
-import { useDashboardSession } from "@/components/dashboard-frame";
-import { ProductsPanel } from "./products-panel";
+import { BerandaPanel } from "./beranda-panel";
 
 export default function HomePage() {
-  const me = useDashboardSession();
-  return (
-    <ProductsPanel canMutate={hasPermission(me.permissions, "products", "update")} />
-  );
+  return <BerandaPanel />;
 }

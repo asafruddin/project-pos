@@ -306,7 +306,7 @@ export function ProductForm({
     }
 
     setPending(false);
-    router.push("/");
+    router.push("/products");
   }
 
   async function onUploadImage(file: File) {
@@ -381,7 +381,7 @@ export function ProductForm({
 
   if (!canMutate) {
     return (
-      <FormDenied href="/">
+      <FormDenied href="/products">
         Akun kasir hanya dapat melihat produk. Perubahan katalog memerlukan peran
         admin katalog.
       </FormDenied>
@@ -409,7 +409,7 @@ export function ProductForm({
       className="flex min-h-full flex-col gap-5"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <FormBackLink href="/">Daftar produk</FormBackLink>
+        <FormBackLink href="/products">Daftar produk</FormBackLink>
         {form.parentId ? (
           <p className="rounded-md border border-border bg-secondary/50 px-3 py-1.5 text-xs text-muted-foreground">
             Varian
@@ -759,7 +759,7 @@ export function ProductForm({
       <FormActions
         error={error}
         pending={pending}
-        cancelHref="/"
+        cancelHref="/products"
       />
     </form>
   );

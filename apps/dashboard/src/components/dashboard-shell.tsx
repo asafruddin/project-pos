@@ -7,6 +7,7 @@ import {
   ClipboardTextIcon,
   ClockCountdownIcon,
   CoffeeIcon,
+  HouseIcon,
   PackageIcon,
   PercentIcon,
   SignOutIcon,
@@ -27,6 +28,10 @@ import { clearSession } from "@/lib/auth-token";
 
 const PAGE_COPY: Record<string, { title: string; subtitle: string }> = {
   "/": {
+    title: "Beranda",
+    subtitle: "Ringkasan toko hari ini. Angka dari penjualan yang sudah tersinkron.",
+  },
+  "/products": {
     title: "Stok / Produk",
     subtitle:
       "Kelola katalog toko. Harga dalam Rupiah penuh (mis. 15000 = Rp15.000).",
@@ -64,6 +69,22 @@ const PAGE_COPY: Record<string, { title: string; subtitle: string }> = {
     title: "Laporan",
     subtitle:
       "Analitik online dari penjualan tersinkron. Kasir hanya melihat ringkasan terbatas dan kinerjanya sendiri. HPP memakai harga modal produk.",
+  },
+  "/reports/ringkasan": {
+    title: "Laporan · Ringkasan",
+    subtitle: "Pendapatan, transaksi, dan snapshot keuangan untuk rentang tanggal.",
+  },
+  "/reports/produk": {
+    title: "Laporan · Produk",
+    subtitle: "Produk terlaris dan lambat. Margin hanya untuk peran keuangan.",
+  },
+  "/reports/kasir": {
+    title: "Laporan · Kasir",
+    subtitle: "Kinerja kasir dan shift. Kasir hanya melihat datanya sendiri.",
+  },
+  "/reports/stok": {
+    title: "Laporan · Stok",
+    subtitle: "Nilai stok, pergerakan, opname, dan stok mati. Hanya peran keuangan.",
   },
   "/returns": {
     title: "Retur",
@@ -227,7 +248,7 @@ function pageCopy(pathname: string): { title: string; subtitle: string } {
 }
 
 function navMatches(href: string, pathname: string) {
-  if (href === "/") return pathname === "/" || pathname.startsWith("/products");
+  if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -268,13 +289,28 @@ export function DashboardShell({
     return true;
   }
 
+  const reportChildren = [
+    { href: "/reports/ringkasan", label: "Ringkasan" },
+    { href: "/reports/produk", label: "Produk" },
+    { href: "/reports/kasir", label: "Kasir" },
+    ...(can("reports", "view_financial")
+      ? [{ href: "/reports/stok", label: "Stok" }]
+      : []),
+  ];
+
   const nav = [
     {
       href: "/",
+      label: "Beranda",
+      icon: <HouseIcon size={20} weight="duotone" />,
+      show: true,
+      match: (pathname: string) => pathname === "/",
+    },
+    {
+      href: "/products",
       label: "Stok / Produk",
       icon: <PackageIcon size={20} weight="duotone" />,
       show: can("products", "view"),
-      match: (pathname: string) => navMatches("/", pathname),
     },
     {
       href: "/stock",
@@ -313,10 +349,12 @@ export function DashboardShell({
       show: can("sales", "view") || can("reports", "view"),
     },
     {
-      href: "/reports",
+      href: "/reports/ringkasan",
       label: "Laporan",
       icon: <ChartBarIcon size={20} weight="duotone" />,
       show: can("reports", "view"),
+      match: (pathname: string) => pathname === "/reports" || pathname.startsWith("/reports/"),
+      children: reportChildren,
     },
     {
       href: "/returns",
