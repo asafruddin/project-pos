@@ -1,5 +1,8 @@
 "use client";
 
+import { Button, Input, NativeSelect, Skeleton } from "@pos-apps/ui/atoms";
+import { FormField, formInputClass } from "@pos-apps/ui/molecules";
+import { FormActions, FormBackLink, FormSection } from "@pos-apps/ui/organisms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type {
@@ -8,17 +11,6 @@ import type {
   PurchaseOrderDetail,
   SupplierListResponse,
 } from "@pos-apps/types";
-import { Button } from "@/components/ui/button";
-import {
-  FormActions,
-  FormBackLink,
-  FormField,
-  FormSection,
-  formInputClass,
-  formSelectClass,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { authorizedFetch } from "@/lib/api-client";
 
 export function PurchaseOrderForm() {
@@ -133,9 +125,8 @@ export function PurchaseOrderForm() {
         description="Pilih pemasok dan item. Draf belum mengubah stok."
       >
         <FormField id="poSupplier" label="Pemasok" required>
-          <select
+          <NativeSelect
             id="poSupplier"
-            className={formSelectClass}
             value={poSupplierId}
             onChange={(e) => setPoSupplierId(e.target.value)}
             disabled={pending}
@@ -146,13 +137,12 @@ export function PurchaseOrderForm() {
                 {item.name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </FormField>
         {poLines.map((line, index) => (
           <div key={index} className="grid gap-3 sm:grid-cols-[1fr_6rem_8rem]">
             <FormField label="Produk">
-              <select
-                className={formSelectClass}
+              <NativeSelect
                 value={line.product_id}
                 onChange={(e) => {
                   const next = [...poLines];
@@ -167,7 +157,7 @@ export function PurchaseOrderForm() {
                     {p.name}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </FormField>
             <FormField label="Jumlah">
               <Input

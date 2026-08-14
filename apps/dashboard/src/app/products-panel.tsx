@@ -1,10 +1,10 @@
 "use client";
 
+import { TableSkeleton } from "@pos-apps/ui/molecules";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { PlusIcon } from "@phosphor-icons/react";
 import type { Product, ProductListResponse } from "@pos-apps/types";
-import { TableSkeleton } from "@/components/ui/skeleton";
 import { catalogRequest } from "@/lib/catalog-request";
 import { formatIdr } from "@/lib/format-money";
 import { cn } from "@/lib/utils";
@@ -94,7 +94,7 @@ export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
             {products.map((p) => (
               <li
                 key={p.product_id}
-                className="rounded-md border border-border bg-background/70 p-4"
+                className="rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-card)]"
               >
                 <p className="font-medium text-foreground">{displayName(p)}</p>
                 <p className="mt-1 text-sm text-muted-foreground">
@@ -123,7 +123,7 @@ export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
             ))}
           </ul>
 
-          <div className="hidden overflow-hidden rounded-md border border-border bg-background/70 sm:block">
+          <div className="hidden overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-card)] sm:block">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[28rem] border-collapse text-left text-sm">
                 <thead>

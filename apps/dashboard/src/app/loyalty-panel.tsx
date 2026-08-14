@@ -1,5 +1,7 @@
 "use client";
 
+import { NativeSelect } from "@pos-apps/ui/atoms";
+import { RowLink } from "@pos-apps/ui/organisms";
 import { useCallback, useEffect, useState } from "react";
 import type {
   ApiErrorBody,
@@ -7,7 +9,6 @@ import type {
   LoyaltyAccount,
   LoyaltyProgram,
 } from "@pos-apps/types";
-import { RowLink, formSelectClass } from "@/components/ui/form";
 import { authorizedFetch } from "@/lib/api-client";
 import { getAccessToken, isAccessTokenExpired, logoutToLogin } from "@/lib/auth-token";
 import { formatIdr } from "@/lib/format-money";
@@ -106,8 +107,7 @@ export function LoyaltyPanel({ canEdit }: { canEdit: boolean }) {
         </p>
       ) : null}
 
-      <select
-        className={formSelectClass}
+      <NativeSelect
         value={customerId}
         onChange={(e) => void loadAccount(e.target.value)}
         aria-label="Pilih pelanggan"
@@ -118,7 +118,7 @@ export function LoyaltyPanel({ canEdit }: { canEdit: boolean }) {
             {row.name} · {row.loyalty_points} poin
           </option>
         ))}
-      </select>
+      </NativeSelect>
       {account ? (
         <div className="space-y-2 rounded-md border border-border p-4">
           <p className="text-sm text-muted-foreground">

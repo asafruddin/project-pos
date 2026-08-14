@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { PrefBootstrap } from "@/components/pref-bootstrap";
-import { CartProvider } from "@/components/cart-context";
-import { SessionGuard } from "@/components/session-guard";
+import { Toaster } from "@pos-apps/ui/molecules/sonner";
+import { TooltipProvider } from "@pos-apps/ui/molecules/tooltip";
+import { PrefBootstrap } from "@/components/providers/pref-bootstrap";
+import { CartProvider } from "@/components/providers/cart-context";
+import { SessionGuard } from "@/components/providers/session-guard";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -49,11 +51,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <PrefBootstrap>
-          <SessionGuard>
-            <CartProvider>{children}</CartProvider>
-          </SessionGuard>
-        </PrefBootstrap>
+        <TooltipProvider>
+          <PrefBootstrap>
+            <SessionGuard>
+              <CartProvider>{children}</CartProvider>
+            </SessionGuard>
+          </PrefBootstrap>
+          <Toaster />
+        </TooltipProvider>
       </body>
     </html>
   );

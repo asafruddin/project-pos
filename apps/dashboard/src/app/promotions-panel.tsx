@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@pos-apps/ui/atoms";
+import { CreateLink } from "@pos-apps/ui/organisms";
 import { useCallback, useEffect, useState } from "react";
 import type {
   ApiErrorBody,
@@ -8,7 +10,6 @@ import type {
   Voucher,
   VoucherListResponse,
 } from "@pos-apps/types";
-import { CreateLink } from "@/components/ui/form";
 import { authorizedFetch } from "@/lib/api-client";
 import { getAccessToken, isAccessTokenExpired, logoutToLogin } from "@/lib/auth-token";
 import { formatIdr } from "@/lib/format-money";
@@ -91,13 +92,14 @@ export function PromotionsPanel({ canEdit }: { canEdit: boolean }) {
                 {row.enabled ? "" : " · nonaktif"}
               </span>
               {canEdit ? (
-                <button
+                <Button
                   type="button"
-                  className="text-destructive"
+                  variant="ghost"
+                  className="h-auto px-2 text-destructive hover:text-destructive"
                   onClick={() => void removePromo(row.promotion_id)}
                 >
                   Hapus
-                </button>
+                </Button>
               ) : null}
             </li>
           ))}

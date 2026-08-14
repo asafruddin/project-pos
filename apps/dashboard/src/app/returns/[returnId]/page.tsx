@@ -2,7 +2,7 @@
 
 import { use } from "react";
 import { hasPermission } from "@pos-apps/types";
-import { useDashboardSession } from "@/components/dashboard-frame";
+import { useDashboardSession } from "@/components/templates/dashboard-frame";
 import { ReturnForm } from "../../return-form";
 
 export default function ReturnDetailPage({

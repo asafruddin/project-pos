@@ -1,13 +1,14 @@
 "use client";
 
+import { AuthSplitShell } from "@pos-apps/ui/organisms";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { AuthSplitShell } from "@/components/auth-shell";
 import {
   clearSession,
   getAccessToken,
   isAccessTokenExpired,
 } from "@/lib/auth-token";
+import { ThemeToggle } from "@/components/molecules/theme-toggle";
 import { LoginForm } from "./login-form";
 
 export default function LoginPage() {
@@ -30,7 +31,7 @@ export default function LoginPage() {
       brandSubtitle="Dashboard"
       heading="Masuk"
       description="Masuk dengan akun katalog atau kasir untuk mengelola toko."
-      quoteBy="Dashboard"
+      topRight={<ThemeToggle />}
     >
       <LoginForm />
     </AuthSplitShell>

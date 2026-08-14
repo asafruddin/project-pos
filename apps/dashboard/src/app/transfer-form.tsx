@@ -1,5 +1,8 @@
 "use client";
 
+import { FormField, formInputClass } from "@pos-apps/ui/molecules";
+import { FormActions, FormBackLink, FormDenied, FormSection } from "@pos-apps/ui/organisms";
+import { Input, NativeSelect, Skeleton } from "@pos-apps/ui/atoms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type {
@@ -9,17 +12,6 @@ import type {
   StoreRecord,
 } from "@pos-apps/types";
 import { STORE_1_ID } from "@pos-apps/types";
-import {
-  FormActions,
-  FormBackLink,
-  FormDenied,
-  FormField,
-  FormSection,
-  formInputClass,
-  formSelectClass,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { authorizedFetch } from "@/lib/api-client";
 
 function errorMessage(res: Response, body: unknown): string {
@@ -122,9 +114,8 @@ export function TransferForm({ canCreate }: { canCreate: boolean }) {
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField id="from-store" label="Dari" required>
-            <select
+            <NativeSelect
               id="from-store"
-              className={formSelectClass}
               value={fromStore}
               disabled={pending}
               onChange={(e) => {
@@ -141,12 +132,11 @@ export function TransferForm({ canCreate }: { canCreate: boolean }) {
                   {store.name}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </FormField>
           <FormField id="to-store" label="Ke" required>
-            <select
+            <NativeSelect
               id="to-store"
-              className={formSelectClass}
               value={toStore}
               disabled={pending}
               onChange={(e) => setToStore(e.target.value)}
@@ -158,13 +148,12 @@ export function TransferForm({ canCreate }: { canCreate: boolean }) {
                     {store.name}
                   </option>
                 ))}
-            </select>
+            </NativeSelect>
           </FormField>
         </div>
         <FormField id="tr-product" label="Produk" required>
-          <select
+          <NativeSelect
             id="tr-product"
-            className={formSelectClass}
             value={productId}
             disabled={pending}
             onChange={(e) => setProductId(e.target.value)}
@@ -175,7 +164,7 @@ export function TransferForm({ canCreate }: { canCreate: boolean }) {
                 {product.name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </FormField>
         <FormField id="tr-qty" label="Qty" required>
           <Input

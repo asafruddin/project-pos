@@ -1,5 +1,7 @@
 "use client";
 
+import { AuthLoadingShell } from "@pos-apps/ui/organisms";
+import { Button, Checkbox, Label } from "@pos-apps/ui/atoms";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -7,9 +9,7 @@ import {
   getDayCloseSummary,
   type DayCloseSummary,
 } from "@pos-apps/local-db";
-import { AppShell } from "@/components/app-shell";
-import { AuthLoadingShell } from "@/components/auth-shell";
-import { Button } from "@/components/ui/button";
+import { AppShell } from "@/components/templates/app-shell";
 import { clearSession } from "@/lib/auth-token";
 import { formatIdr } from "@/lib/money";
 import { clearPinUnlock, isPinUnlocked } from "@/lib/pin-session";
@@ -176,20 +176,19 @@ export default function DayClosePage() {
               <p className="text-sm font-medium text-destructive" role="alert">
                 {pending} {t.dayCloseSyncPending}
               </p>
-              <label className="flex min-h-12 cursor-pointer items-start gap-3 text-sm">
-                <input
-                  type="checkbox"
-                  className="mt-1 h-5 w-5 shrink-0"
+              <Label className="flex min-h-12 cursor-pointer items-start gap-3 font-normal">
+                <Checkbox
+                  className="mt-1"
                   checked={ack}
-                  onChange={(e) => {
-                    setAck(e.target.checked);
+                  onCheckedChange={(checked) => {
+                    setAck(checked === true);
                     setAckError(null);
                   }}
                 />
                 <span>
                   {t.dayCloseAckLabel.replace("{count}", String(pending))}
                 </span>
-              </label>
+              </Label>
               {ackError ? (
                 <p className="text-sm text-destructive" role="alert">
                   {ackError}

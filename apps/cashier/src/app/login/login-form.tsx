@@ -1,13 +1,11 @@
 "use client";
 
+import { Button, Input, Label } from "@pos-apps/ui/atoms";
 import { EyeIcon, EyeSlashIcon } from "@phosphor-icons/react";
 import { FormEvent, useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ApiErrorBody, LoginResponse } from "@pos-apps/types";
 import { hasPermission } from "@pos-apps/types";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { saveSession } from "@/lib/auth-token";
 import { copy, type LangPref } from "@/lib/preferences";
 
@@ -111,9 +109,11 @@ export function LoginForm({ lang }: { lang: LangPref }) {
             className="pr-12"
             aria-invalid={error ? true : undefined}
           />
-          <button
+          <Button
             type="button"
-            className="absolute inset-y-0 right-1 my-1 inline-flex min-h-10 min-w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+            variant="ghost"
+            size="icon"
+            className="absolute inset-y-0 right-1 my-1 h-10 w-10 text-muted-foreground"
             onClick={() => setShowPassword((v) => !v)}
             disabled={pending}
             aria-pressed={showPassword}
@@ -124,7 +124,7 @@ export function LoginForm({ lang }: { lang: LangPref }) {
             ) : (
               <EyeIcon size={18} weight="bold" />
             )}
-          </button>
+          </Button>
         </div>
       </div>
 

@@ -1,9 +1,9 @@
 "use client";
 
+import { CreateLink, RowLink } from "@pos-apps/ui/organisms";
 import { useCallback, useEffect, useState } from "react";
 import type { ApiErrorBody, StoreListResponse, StoreRecord } from "@pos-apps/types";
 import { STORE_1_ID } from "@pos-apps/types";
-import { CreateLink, RowLink } from "@/components/ui/form";
 import { authorizedFetch } from "@/lib/api-client";
 
 function errorMessage(res: Response, body: unknown): string {

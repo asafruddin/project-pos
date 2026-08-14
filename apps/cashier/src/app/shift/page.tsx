@@ -1,5 +1,7 @@
 "use client";
 
+import { AuthLoadingShell } from "@pos-apps/ui/organisms";
+import { Button, Input, Label } from "@pos-apps/ui/atoms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ShiftDetailResponse, ShiftExpectedCash } from "@pos-apps/types";
@@ -11,10 +13,7 @@ import {
   recordLocalCashMovement,
   type LocalShiftRecord,
 } from "@pos-apps/local-db";
-import { AppShell } from "@/components/app-shell";
-import { AuthLoadingShell } from "@/components/auth-shell";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { AppShell } from "@/components/templates/app-shell";
 import { flushSalesAndVoids } from "@/lib/flush-sync";
 import { authorizedFetch } from "@/lib/api-client";
 import { formatIdr } from "@/lib/money";
@@ -262,9 +261,7 @@ export default function ShiftPage() {
             className="space-y-2 rounded-2xl border border-border p-3"
             onSubmit={(e) => void onClose(e)}
           >
-            <label className="block text-sm font-medium" htmlFor="counted-cash">
-              {t.shiftCounted}
-            </label>
+            <Label htmlFor="counted-cash">{t.shiftCounted}</Label>
             <Input
               id="counted-cash"
               inputMode="numeric"
@@ -306,9 +303,7 @@ export default function ShiftPage() {
               {status}
             </p>
           ) : null}
-          <label className="block text-sm font-medium" htmlFor="opening-cash">
-            {t.shiftOpeningCash}
-          </label>
+          <Label htmlFor="opening-cash">{t.shiftOpeningCash}</Label>
           <Input
             id="opening-cash"
             inputMode="numeric"

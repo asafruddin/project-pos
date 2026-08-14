@@ -1,5 +1,7 @@
 "use client";
 
+import { AuthLoadingShell } from "@pos-apps/ui/organisms";
+import { Button, Input, NativeSelect } from "@pos-apps/ui/atoms";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type {
@@ -9,9 +11,7 @@ import type {
   ReturnDetail,
   SaleLookupResponse,
 } from "@pos-apps/types";
-import { AppShell } from "@/components/app-shell";
-import { AuthLoadingShell } from "@/components/auth-shell";
-import { Button } from "@/components/ui/button";
+import { AppShell } from "@/components/templates/app-shell";
 import { authorizedFetch } from "@/lib/api-client";
 import { getAccessToken, isAccessTokenExpired } from "@/lib/auth-token";
 import { formatIdr } from "@/lib/money";
@@ -171,8 +171,8 @@ export default function ReturnsPage() {
       <form onSubmit={(e) => void lookup(e)} className="mb-6 flex flex-col gap-3 sm:flex-row">
         <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
           {t.returnSaleId}
-          <input
-            className="min-h-12 rounded-2xl border border-border bg-background px-3"
+          <Input
+            className="h-12 min-h-12 rounded-2xl"
             value={saleId}
             onChange={(e) => setSaleId(e.target.value)}
             placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -212,8 +212,8 @@ export default function ReturnsPage() {
                       <div className="mt-2 flex flex-wrap gap-2">
                         <label className="text-sm">
                           {t.returnQty}
-                          <input
-                            className="ml-2 w-16 min-h-12 rounded-xl border border-border bg-background px-2"
+                          <Input
+                            className="ml-2 h-12 w-16"
                             inputMode="numeric"
                             value={row?.qty ?? "0"}
                             onChange={(e) => {
@@ -225,8 +225,8 @@ export default function ReturnsPage() {
                         </label>
                         <label className="text-sm">
                           {t.returnDecision}
-                          <select
-                            className="ml-2 min-h-12 rounded-xl border border-border bg-background px-2"
+                          <NativeSelect
+                            className="ml-2 min-h-12 w-auto"
                             value={row?.decision ?? "resellable"}
                             onChange={(e) => {
                               const next = [...draft];
@@ -240,7 +240,7 @@ export default function ReturnsPage() {
                             <option value="resellable">{t.returnResellable}</option>
                             <option value="damaged">{t.returnDamaged}</option>
                             <option value="warranty">{t.returnWarranty}</option>
-                          </select>
+                          </NativeSelect>
                         </label>
                       </div>
                     )}
@@ -250,8 +250,8 @@ export default function ReturnsPage() {
             </ul>
             <label className="flex flex-col gap-1 text-sm">
               {t.returnReason}
-              <input
-                className="min-h-12 rounded-2xl border border-border bg-background px-3"
+              <Input
+                className="h-12 min-h-12 rounded-2xl"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder={t.returnReasonPh}
@@ -259,8 +259,8 @@ export default function ReturnsPage() {
             </label>
             <label className="flex flex-col gap-1 text-sm">
               {t.returnExchange}
-              <input
-                className="min-h-12 rounded-2xl border border-border bg-background px-3"
+              <Input
+                className="h-12 min-h-12 rounded-2xl"
                 value={exchangeId}
                 onChange={(e) => setExchangeId(e.target.value)}
               />

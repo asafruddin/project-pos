@@ -1,10 +1,10 @@
 "use client";
 
+import { TableSkeleton } from "@pos-apps/ui/molecules";
 import { Suspense, use } from "react";
 import { hasPermission } from "@pos-apps/types";
-import { useDashboardSession } from "@/components/dashboard-frame";
+import { useDashboardSession } from "@/components/templates/dashboard-frame";
 import { StockDamageForm } from "../../../stock-damage-form";
-import { TableSkeleton } from "@/components/ui/skeleton";
 
 function DamageFormBody({ productId }: { productId: string }) {
   const me = useDashboardSession();

@@ -1,5 +1,8 @@
 "use client";
 
+import { FormField, formInputClass } from "@pos-apps/ui/molecules";
+import { FormActions, FormBackLink, FormSection } from "@pos-apps/ui/organisms";
+import { Checkbox, Input, Skeleton } from "@pos-apps/ui/atoms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type {
@@ -7,15 +10,6 @@ import type {
   ProductListResponse,
   Supplier,
 } from "@pos-apps/types";
-import {
-  FormActions,
-  FormBackLink,
-  FormField,
-  FormSection,
-  formInputClass,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { authorizedFetch } from "@/lib/api-client";
 
 export function SupplierForm({ supplierId }: { supplierId?: string }) {
@@ -211,13 +205,12 @@ export function SupplierForm({ supplierId }: { supplierId?: string }) {
                 key={p.product_id}
                 className="flex items-center gap-2 py-1 text-sm"
               >
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={suppliedIds.has(p.product_id)}
-                  onChange={(e) => {
+                  onCheckedChange={(checked) => {
                     setSuppliedIds((prev) => {
                       const next = new Set(prev);
-                      if (e.target.checked) next.add(p.product_id);
+                      if (checked === true) next.add(p.product_id);
                       else next.delete(p.product_id);
                       return next;
                     });

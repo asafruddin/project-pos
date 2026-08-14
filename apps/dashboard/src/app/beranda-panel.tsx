@@ -1,7 +1,17 @@
 "use client";
 
+import { StatCard, SurfaceCard } from "@pos-apps/ui/molecules";
+import { HBarChart, VBarChart } from "@pos-apps/ui/organisms";
+import { Skeleton } from "@pos-apps/ui/atoms";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import {
+  CurrencyCircleDollarIcon,
+  PackageIcon,
+  ReceiptIcon,
+  TrendUpIcon,
+  WarehouseIcon,
+} from "@phosphor-icons/react";
 import type {
   ProductListResponse,
   ReportCashiersResponse,
@@ -10,13 +20,10 @@ import type {
   ReportSummary,
 } from "@pos-apps/types";
 import { hasPermission } from "@pos-apps/types";
-import { useDashboardSession } from "@/components/dashboard-frame";
-import { StatCard, SurfaceCard } from "@/components/ui/brand";
-import { HBarChart, VBarChart } from "@/components/ui/simple-chart";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useDashboardSession } from "@/components/templates/dashboard-frame";
 import { authorizedFetch } from "@/lib/api-client";
 import { formatIdr } from "@/lib/format-money";
-import { todayUtc } from "@/components/report-toolbar";
+import { todayUtc } from "@/components/organisms/report-toolbar";
 
 export function BerandaPanel() {
   const me = useDashboardSession();
@@ -150,14 +157,30 @@ export function BerandaPanel() {
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {canViewReports ? (
             <>
-              <StatCard label="Pendapatan hari ini" value={formatIdr(summary?.revenue_minor ?? 0)} />
-              <StatCard label="Transaksi" value={summary?.txn_count ?? 0} />
-              <StatCard label="Unit terjual" value={summary?.units ?? 0} />
+              <StatCard
+                label="Pendapatan hari ini"
+                value={formatIdr(summary?.revenue_minor ?? 0)}
+                hint="Hari ini (UTC)"
+                icon={<CurrencyCircleDollarIcon size={20} weight="bold" />}
+              />
+              <StatCard
+                label="Transaksi"
+                value={summary?.txn_count ?? 0}
+                hint="Tersinkron"
+                icon={<ReceiptIcon size={20} weight="bold" />}
+              />
+              <StatCard
+                label="Unit terjual"
+                value={summary?.units ?? 0}
+                hint="Hari ini (UTC)"
+                icon={<PackageIcon size={20} weight="bold" />}
+              />
               <StatCard
                 label="Bersih"
                 value={formatIdr(summary?.net_minor ?? 0)}
                 hint="Pendapatan dikurangi refund"
                 tone="success"
+                icon={<TrendUpIcon size={20} weight="bold" />}
               />
             </>
           ) : (
@@ -168,12 +191,19 @@ export function BerandaPanel() {
             />
           )}
           {catalogCount != null ? (
-            <StatCard label="Produk katalog" value={catalogCount} />
+            <StatCard
+              label="Produk katalog"
+              value={catalogCount}
+              hint="Aktif di katalog"
+              icon={<PackageIcon size={20} weight="bold" />}
+            />
           ) : null}
           {isAdmin && inventory ? (
             <StatCard
               label="Nilai stok (modal)"
               value={formatIdr(inventory.stock_value_minor)}
+              hint="Harga modal produk"
+              icon={<WarehouseIcon size={20} weight="bold" />}
             />
           ) : null}
         </div>
@@ -182,23 +212,23 @@ export function BerandaPanel() {
       {canViewReports ? (
         <>
           <div className="grid gap-4 lg:grid-cols-2">
-            <SurfaceCard className="p-4 sm:p-5">
-              <h2 className="text-sm font-semibold">Bauran hari ini</h2>
+            <SurfaceCard className="p-5 sm:p-6">
+              <h2 className="text-base font-semibold">Bauran hari ini</h2>
               <p className="mt-0.5 mb-4 text-xs text-muted-foreground">
                 Perbandingan pendapatan, diskon, refund, dan bersih.
               </p>
               <VBarChart data={mix} empty="Belum ada penjualan hari ini." />
             </SurfaceCard>
-            <SurfaceCard className="p-4 sm:p-5">
-              <h2 className="text-sm font-semibold">Produk terlaris</h2>
+            <SurfaceCard className="p-5 sm:p-6">
+              <h2 className="text-base font-semibold">Produk terlaris</h2>
               <p className="mt-0.5 mb-4 text-xs text-muted-foreground">
                 Unit terjual hari ini.
               </p>
               <HBarChart data={topBars} empty="Belum ada penjualan produk hari ini." />
             </SurfaceCard>
           </div>
-          <SurfaceCard className="p-4 sm:p-5">
-            <h2 className="text-sm font-semibold">Kinerja kasir</h2>
+          <SurfaceCard className="p-5 sm:p-6">
+            <h2 className="text-base font-semibold">Kinerja kasir</h2>
             <p className="mt-0.5 mb-4 text-xs text-muted-foreground">
               Omzet per kasir/shift hari ini.
             </p>

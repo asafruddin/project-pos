@@ -1,12 +1,12 @@
 "use client";
 
+import { StatCard } from "@pos-apps/ui/molecules";
+import { FormDenied } from "@pos-apps/ui/organisms";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReportInventoryResponse } from "@pos-apps/types";
 import { hasPermission } from "@pos-apps/types";
-import { useDashboardSession } from "@/components/dashboard-frame";
-import { ReportToolbar, reportQs, todayUtc } from "@/components/report-toolbar";
-import { StatCard } from "@/components/ui/brand";
-import { FormDenied } from "@/components/ui/form";
+import { useDashboardSession } from "@/components/templates/dashboard-frame";
+import { ReportToolbar, reportQs, todayUtc } from "@/components/organisms/report-toolbar";
 import { authorizedFetch } from "@/lib/api-client";
 import { formatIdr } from "@/lib/format-money";
 import { ReportNote } from "../report-shared";
@@ -101,7 +101,7 @@ export default function ReportStockPage() {
           label="Nilai stok jual (modal)"
           value={formatIdr(inventory?.stock_value_minor ?? 0)}
         />
-        <div className="overflow-x-auto rounded-md border border-border">
+        <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-[var(--shadow-card)]">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-border text-muted-foreground">
@@ -127,7 +127,7 @@ export default function ReportStockPage() {
             </tbody>
           </table>
         </div>
-        <div className="overflow-x-auto rounded-md border border-border">
+        <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-[var(--shadow-card)]">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-border text-muted-foreground">
@@ -153,7 +153,7 @@ export default function ReportStockPage() {
             </tbody>
           </table>
         </div>
-        <div className="overflow-x-auto rounded-md border border-border">
+        <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-[var(--shadow-card)]">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-border text-muted-foreground">

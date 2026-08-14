@@ -1,5 +1,8 @@
 "use client";
 
+import { FormField, formInputClass } from "@pos-apps/ui/molecules";
+import { FormActions, FormBackLink, FormDenied, FormSection } from "@pos-apps/ui/organisms";
+import { Checkbox, Input, Label, NativeSelect, Skeleton } from "@pos-apps/ui/atoms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type {
@@ -15,17 +18,6 @@ import {
   STORE_1_ID,
   hasPermission,
 } from "@pos-apps/types";
-import {
-  FormActions,
-  FormBackLink,
-  FormDenied,
-  FormField,
-  FormSection,
-  formInputClass,
-  formSelectClass,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { authorizedFetch } from "@/lib/api-client";
 
 export function assignableRoles(actorRole: Role): Role[] {
@@ -246,9 +238,8 @@ export function EmployeeForm({
         </FormField>
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField id="emp-role" label="Peran" required>
-            <select
+            <NativeSelect
               id="emp-role"
-              className={formSelectClass}
               value={role}
               onChange={(e) => setRole(e.target.value as Role)}
               disabled={pending}
@@ -258,12 +249,11 @@ export function EmployeeForm({
                   {ROLE_LABELS[r]}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </FormField>
           <FormField id="emp-store" label="Toko" required>
-            <select
+            <NativeSelect
               id="emp-store"
-              className={formSelectClass}
               value={storeId}
               onChange={(e) => setStoreId(e.target.value)}
               disabled={pending}
@@ -274,19 +264,21 @@ export function EmployeeForm({
                   {store.store_id === STORE_1_ID ? " · Store #1" : ""}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </FormField>
         </div>
         {userId ? (
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="emp-active"
               checked={active}
               disabled={pending}
-              onChange={(e) => setActive(e.target.checked)}
+              onCheckedChange={(checked) => setActive(checked === true)}
             />
-            Akun aktif
-          </label>
+            <Label htmlFor="emp-active" className="font-normal">
+              Akun aktif
+            </Label>
+          </div>
         ) : null}
       </FormSection>
       <FormActions

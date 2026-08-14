@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReportCashiersResponse } from "@pos-apps/types";
 import { hasPermission } from "@pos-apps/types";
-import { useDashboardSession } from "@/components/dashboard-frame";
-import { ReportToolbar, reportQs, todayUtc } from "@/components/report-toolbar";
+import { useDashboardSession } from "@/components/templates/dashboard-frame";
+import { ReportToolbar, reportQs, todayUtc } from "@/components/organisms/report-toolbar";
 import { authorizedFetch } from "@/lib/api-client";
 import { formatIdr } from "@/lib/format-money";
 import { Bar, ReportNote } from "../report-shared";
@@ -93,7 +93,7 @@ export default function ReportCashiersPage() {
             Hanya menampilkan penjualan dan refund milik Anda.
           </p>
         ) : null}
-        <div className="overflow-x-auto rounded-md border border-border">
+        <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-[var(--shadow-card)]">
           <table className="w-full min-w-[20rem] text-left text-sm">
             <thead>
               <tr className="border-b border-border text-muted-foreground">

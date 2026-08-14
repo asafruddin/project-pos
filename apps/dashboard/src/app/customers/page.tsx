@@ -1,7 +1,7 @@
 "use client";
 
 import { hasPermission } from "@pos-apps/types";
-import { useDashboardSession } from "@/components/dashboard-frame";
+import { useDashboardSession } from "@/components/templates/dashboard-frame";
 import { CustomersPanel } from "../customers-panel";
 
 export default function CustomersPage() {

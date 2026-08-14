@@ -2,7 +2,7 @@
 
 import { use } from "react";
 import { hasPermission } from "@pos-apps/types";
-import { useDashboardSession } from "@/components/dashboard-frame";
+import { useDashboardSession } from "@/components/templates/dashboard-frame";
 import { ProductForm } from "../../../product-form";
 
 export default function EditProductPage({

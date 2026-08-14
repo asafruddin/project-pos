@@ -1,5 +1,7 @@
 "use client";
 
+import { AuthLoadingShell } from "@pos-apps/ui/organisms";
+import { Button, Input } from "@pos-apps/ui/atoms";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CustomerHistoryResponse } from "@pos-apps/types";
@@ -10,9 +12,7 @@ import {
   type CachedCustomerRecord,
   type LocalSaleRecord,
 } from "@pos-apps/local-db";
-import { AppShell } from "@/components/app-shell";
-import { AuthLoadingShell } from "@/components/auth-shell";
-import { Input } from "@/components/ui/input";
+import { AppShell } from "@/components/templates/app-shell";
 import { authorizedFetch } from "@/lib/api-client";
 import { formatIdr } from "@/lib/money";
 import { isPinUnlocked } from "@/lib/pin-session";
@@ -91,9 +91,10 @@ export default function CustomersPage() {
       <ul className="mt-3 space-y-2">
         {shown.map((row) => (
           <li key={row.customerId}>
-            <button
+            <Button
               type="button"
-              className="w-full rounded-2xl border border-border px-3 py-3 text-left hover:bg-secondary/60"
+              variant="outline"
+              className="h-auto w-full flex-col items-start rounded-2xl px-3 py-3 text-left whitespace-normal"
               onClick={() => void select(row)}
             >
               <p className="font-medium">{row.name}</p>
@@ -105,7 +106,7 @@ export default function CustomersPage() {
                   ? ` · ${t.loyaltyPoints} ${row.loyaltyPoints}`
                   : ""}
               </p>
-            </button>
+            </Button>
           </li>
         ))}
       </ul>

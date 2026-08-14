@@ -1,8 +1,8 @@
 "use client";
 
+import { Button } from "@pos-apps/ui/atoms";
 import { useCallback, useEffect, useState } from "react";
 import type { ApiErrorBody, Shift, ShiftListResponse } from "@pos-apps/types";
-import { Button } from "@/components/ui/button";
 import { authorizedFetch } from "@/lib/api-client";
 import { getAccessToken, isAccessTokenExpired, logoutToLogin } from "@/lib/auth-token";
 import { formatIdr } from "@/lib/format-money";

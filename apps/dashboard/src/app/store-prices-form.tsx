@@ -1,5 +1,8 @@
 "use client";
 
+import { FormField, formInputClass } from "@pos-apps/ui/molecules";
+import { FormActions, FormBackLink, FormDenied, FormSection } from "@pos-apps/ui/organisms";
+import { Input, NativeSelect, Skeleton } from "@pos-apps/ui/atoms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type {
@@ -9,17 +12,6 @@ import type {
   StoreRecord,
 } from "@pos-apps/types";
 import { STORE_1_ID } from "@pos-apps/types";
-import {
-  FormActions,
-  FormBackLink,
-  FormDenied,
-  FormField,
-  FormSection,
-  formInputClass,
-  formSelectClass,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { authorizedFetch } from "@/lib/api-client";
 
 function errorMessage(res: Response, body: unknown): string {
@@ -119,9 +111,8 @@ export function StorePricesForm({ canEdit }: { canEdit: boolean }) {
         description="Kosongkan harga untuk kembali ke harga katalog. Berlaku setelah kasir menyegarkan menu."
       >
         <FormField id="price-store" label="Toko" required>
-          <select
+          <NativeSelect
             id="price-store"
-            className={formSelectClass}
             value={priceStore}
             disabled={pending}
             onChange={(e) => setPriceStore(e.target.value)}
@@ -131,12 +122,11 @@ export function StorePricesForm({ canEdit }: { canEdit: boolean }) {
                 {store.name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </FormField>
         <FormField id="price-product" label="Produk" required>
-          <select
+          <NativeSelect
             id="price-product"
-            className={formSelectClass}
             value={priceProduct}
             disabled={pending}
             onChange={(e) => setPriceProduct(e.target.value)}
@@ -147,7 +137,7 @@ export function StorePricesForm({ canEdit }: { canEdit: boolean }) {
                 {product.name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </FormField>
         <FormField
           id="price-minor"

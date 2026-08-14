@@ -1,5 +1,8 @@
 "use client";
 
+import { Button, Input, Skeleton } from "@pos-apps/ui/atoms";
+import { FormField, formInputClass } from "@pos-apps/ui/molecules";
+import { FormActions, FormBackLink, FormSection } from "@pos-apps/ui/organisms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type {
@@ -9,16 +12,6 @@ import type {
   CustomerGroupListResponse,
   ProductListResponse,
 } from "@pos-apps/types";
-import { Button } from "@/components/ui/button";
-import {
-  FormActions,
-  FormBackLink,
-  FormField,
-  FormSection,
-  formInputClass,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { authorizedFetch } from "@/lib/api-client";
 import { formatIdr } from "@/lib/format-money";
 

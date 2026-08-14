@@ -1,5 +1,7 @@
 "use client";
 
+import { AuthLoadingShell } from "@pos-apps/ui/organisms";
+import { Button } from "@pos-apps/ui/atoms";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -11,10 +13,8 @@ import {
   voidCompleteSale,
   type LocalSaleRecord,
 } from "@pos-apps/local-db";
-import { AppShell } from "@/components/app-shell";
-import { AuthLoadingShell } from "@/components/auth-shell";
-import { PinPad } from "@/components/pin-pad";
-import { Button } from "@/components/ui/button";
+import { AppShell } from "@/components/templates/app-shell";
+import { PinPad } from "@/components/organisms/pin-pad";
 import { getSession } from "@/lib/auth-token";
 import { flushSalesAndVoids } from "@/lib/flush-sync";
 import { formatIdr } from "@/lib/money";
@@ -214,10 +214,11 @@ export default function VoidPage() {
                 pasteHint={t.pinPasteHint}
               />
             </div>
-            <button
+            <Button
               type="button"
+              variant="ghost"
               disabled={busy}
-              className="mt-4 min-h-12 w-full text-sm text-muted-foreground"
+              className="mt-4 h-12 min-h-12 w-full text-sm text-muted-foreground"
               onClick={() => {
                 setPinMode(null);
                 setTarget(null);
@@ -226,7 +227,7 @@ export default function VoidPage() {
               }}
             >
               {t.voidPinCancel}
-            </button>
+            </Button>
           </div>
         </div>
       ) : null}

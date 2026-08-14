@@ -1,13 +1,12 @@
 "use client";
 
+import { Button, Input } from "@pos-apps/ui/atoms";
+import { FormField } from "@pos-apps/ui/molecules";
 import { useRouter } from "next/navigation";
 import { EyeIcon, EyeSlashIcon } from "@phosphor-icons/react";
 import { FormEvent, useId, useState } from "react";
 import type { ApiErrorBody, LoginResponse } from "@pos-apps/types";
 import { ACCOUNT_ROLES } from "@pos-apps/types";
-import { Button } from "@/components/ui/button";
-import { FormField } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { saveSession } from "@/lib/auth-token";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
@@ -105,9 +104,11 @@ export function LoginForm() {
             className="h-12 min-h-12 pr-12 text-base sm:text-sm"
             aria-invalid={error ? true : undefined}
           />
-          <button
+          <Button
             type="button"
-            className="absolute inset-y-0 right-1 my-1 inline-flex min-h-10 min-w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+            variant="ghost"
+            size="icon"
+            className="absolute inset-y-0 right-1 my-1 h-10 w-10 text-muted-foreground"
             onClick={() => setShowPassword((v) => !v)}
             disabled={pending}
             aria-pressed={showPassword}
@@ -118,7 +119,7 @@ export function LoginForm() {
             ) : (
               <EyeIcon size={18} weight="bold" />
             )}
-          </button>
+          </Button>
         </div>
       </FormField>
 
@@ -135,7 +136,7 @@ export function LoginForm() {
       <Button
         type="submit"
         disabled={pending || !login.trim() || !password}
-        className="mt-1 h-12 min-h-12 w-full rounded-md bg-accent text-base text-accent-foreground hover:opacity-90 sm:text-sm"
+        className="mt-1 h-12 min-h-12 w-full rounded-xl bg-primary text-base text-primary-foreground hover:opacity-90 sm:text-sm"
       >
         {pending ? "Memproses…" : "Masuk"}
       </Button>

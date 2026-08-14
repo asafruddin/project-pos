@@ -1,5 +1,7 @@
 "use client";
 
+import { AuthLoadingShell } from "@pos-apps/ui/organisms";
+import { Button } from "@pos-apps/ui/atoms";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -16,12 +18,10 @@ import {
   type LocalSaleRecord,
 } from "@pos-apps/local-db";
 import type { ApiErrorBody, CustomerListResponse, LoyaltyProgram, ProductListResponse, PromotionListResponse } from "@pos-apps/types";
-import { AppShell } from "@/components/app-shell";
-import { AuthLoadingShell } from "@/components/auth-shell";
-import { Button } from "@/components/ui/button";
-import { CartPanel } from "@/components/cart-panel";
-import { CatalogProductThumb } from "@/components/catalog-product-thumb";
-import { useCart } from "@/components/cart-context";
+import { AppShell } from "@/components/templates/app-shell";
+import { CartPanel } from "@/components/organisms/cart-panel";
+import { CatalogProductThumb } from "@/components/molecules/catalog-product-thumb";
+import { useCart } from "@/components/providers/cart-context";
 import { getAccessToken, isAccessTokenExpired } from "@/lib/auth-token";
 import { authorizedFetch } from "@/lib/api-client";
 import { formatIdr } from "@/lib/money";
@@ -269,11 +269,12 @@ export default function MenuPage() {
             const sellable = isValidSellablePrice(p.priceMinor) && p.stockQty > 0;
             return (
               <li key={p.productId}>
-                <button
+                <Button
                   type="button"
                   disabled={!sellable}
+                  variant="outline"
                   onClick={() => add(p)}
-                  className="flex min-h-[4.5rem] w-full flex-col items-start justify-center gap-1 rounded-2xl border border-border bg-background/60 px-4 py-3 text-left transition-colors hover:bg-secondary/60 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-auto min-h-[4.5rem] w-full flex-col items-start justify-center gap-1 rounded-2xl px-4 py-3 text-left whitespace-normal"
                   title={
                     sellable
                       ? undefined
@@ -292,7 +293,7 @@ export default function MenuPage() {
                         : t.catalogBlockedPrice}
                     {` · ${t.stock}: ${p.stockQty}`}
                   </span>
-                </button>
+                </Button>
               </li>
             );
           })}

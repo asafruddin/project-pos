@@ -1,9 +1,9 @@
 "use client";
 
+import { AuthSplitShell } from "@pos-apps/ui/organisms";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AuthSplitShell } from "@/components/auth-shell";
-import { PrefControls } from "@/components/settings-menu";
+import { PrefControls } from "@/components/molecules/settings-menu";
 import {
   clearSession,
   getAccessToken,

@@ -1,5 +1,8 @@
 "use client";
 
+import { Button, Label, NativeSelect } from "@pos-apps/ui/atoms";
+import { RowLink } from "@pos-apps/ui/organisms";
+import { TableSkeleton } from "@pos-apps/ui/molecules";
 import { useCallback, useEffect, useState } from "react";
 import type {
   ApiErrorBody,
@@ -9,10 +12,6 @@ import type {
   StoreRecord,
 } from "@pos-apps/types";
 import { STORE_1_ID } from "@pos-apps/types";
-import { Button } from "@/components/ui/button";
-import { RowLink } from "@/components/ui/form";
-import { Label } from "@/components/ui/label";
-import { TableSkeleton } from "@/components/ui/skeleton";
 import { authorizedFetch } from "@/lib/api-client";
 import { getAccessToken, isAccessTokenExpired, logoutToLogin } from "@/lib/auth-token";
 
@@ -87,9 +86,9 @@ export function StockOverviewPanel({ canMutate }: { canMutate: boolean }) {
         {stores.length > 1 ? (
           <div>
             <Label htmlFor="overview-store">Toko</Label>
-            <select
+            <NativeSelect
               id="overview-store"
-              className="flex h-10 rounded-lg border border-border bg-background px-3 text-sm"
+              className="h-10"
               value={storeId}
               onChange={(e) => setStoreId(e.target.value)}
             >
@@ -99,7 +98,7 @@ export function StockOverviewPanel({ canMutate }: { canMutate: boolean }) {
                   {store.store_id === STORE_1_ID ? " · Store #1" : ""}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </div>
         ) : null}
         {filters.map((item) => (

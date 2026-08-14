@@ -1,5 +1,6 @@
 "use client";
 
+import { StatCard } from "@pos-apps/ui/molecules";
 import {
   ChartLineUpIcon,
   CheckCircleIcon,
@@ -8,7 +9,6 @@ import {
 } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import type { SalesListResponse } from "@pos-apps/types";
-import { StatCard } from "@/components/ui/brand";
 import { authorizedFetch } from "@/lib/api-client";
 import { formatIdr } from "@/lib/format-money";
 
@@ -78,12 +78,12 @@ export default function SalesPage() {
       ) : null}
 
       {!data || data.sales.length === 0 ? (
-        <div className="rounded-md border border-dashed border-border bg-secondary/40 px-4 py-8 text-sm text-muted-foreground">
+        <div className="rounded-xl border border-dashed border-border bg-card px-4 py-8 text-sm text-muted-foreground shadow-[var(--shadow-card)]">
           Belum ada penjualan tersinkron. Daftar ini terisi setelah kasir
           mengunggah penjualan selesai — bukan mode offline kasir.
         </div>
       ) : (
-        <div className="overflow-hidden rounded-md border border-border bg-background/70">
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-card)]">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[20rem] border-collapse text-left text-sm">
               <thead>

@@ -1,5 +1,8 @@
 "use client";
 
+import { Button, Input } from "@pos-apps/ui/atoms";
+import { FormField, formInputClass, TableSkeleton } from "@pos-apps/ui/molecules";
+import { CreateLink, RowLink } from "@pos-apps/ui/organisms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import type {
   ApiErrorBody,
@@ -7,10 +10,6 @@ import type {
   CustomerHistoryResponse,
   CustomerListResponse,
 } from "@pos-apps/types";
-import { Button } from "@/components/ui/button";
-import { CreateLink, FormField, RowLink, formInputClass } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { TableSkeleton } from "@/components/ui/skeleton";
 import { authorizedFetch } from "@/lib/api-client";
 import { getAccessToken, isAccessTokenExpired, logoutToLogin } from "@/lib/auth-token";
 import { formatIdr } from "@/lib/format-money";
@@ -129,9 +128,10 @@ export function CustomersPanel({ canDelete }: { canDelete: boolean }) {
               className="rounded-md border border-border bg-background/70 p-4"
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
-                <button
+                <Button
                   type="button"
-                  className="min-w-0 flex-1 text-left"
+                  variant="ghost"
+                  className="h-auto min-w-0 flex-1 flex-col items-start justify-start px-0 py-0 text-left whitespace-normal"
                   onClick={() => void openHistory(row)}
                 >
                   <p className="font-medium">{row.name}</p>
@@ -143,7 +143,7 @@ export function CustomersPanel({ canDelete }: { canDelete: boolean }) {
                       ? ` · poin ${row.loyalty_points ?? 0}${row.loyalty_tier ? ` (${row.loyalty_tier})` : ""}`
                       : ""}
                   </p>
-                </button>
+                </Button>
                 <RowLink href={`/customers/${row.customer_id}/edit`}>Ubah</RowLink>
               </div>
               {historyFor === row.customer_id && history ? (

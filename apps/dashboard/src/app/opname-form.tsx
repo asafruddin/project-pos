@@ -1,5 +1,7 @@
 "use client";
 
+import { FormActions, FormBackLink, FormDenied, FormSection } from "@pos-apps/ui/organisms";
+import { Checkbox, Skeleton } from "@pos-apps/ui/atoms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type {
@@ -7,13 +9,6 @@ import type {
   OpnameDetail,
   StockOverviewResponse,
 } from "@pos-apps/types";
-import {
-  FormActions,
-  FormBackLink,
-  FormDenied,
-  FormSection,
-} from "@/components/ui/form";
-import { Skeleton } from "@/components/ui/skeleton";
 import { authorizedFetch } from "@/lib/api-client";
 
 export function OpnameForm({ canMutate }: { canMutate: boolean }) {
@@ -120,13 +115,12 @@ export function OpnameForm({ canMutate }: { canMutate: boolean }) {
                 key={row.product_id}
                 className="flex items-center gap-2 py-1 text-sm"
               >
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={picked.has(row.product_id)}
-                  onChange={(e) => {
+                  onCheckedChange={(checked) => {
                     setPicked((prev) => {
                       const next = new Set(prev);
-                      if (e.target.checked) next.add(row.product_id);
+                      if (checked === true) next.add(row.product_id);
                       else next.delete(row.product_id);
                       return next;
                     });

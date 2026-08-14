@@ -1,19 +1,12 @@
 "use client";
 
+import { FormField } from "@pos-apps/ui/molecules";
+import { FormActions, FormBackLink, FormDenied, FormSection } from "@pos-apps/ui/organisms";
+import { NativeSelect, Skeleton, Textarea } from "@pos-apps/ui/atoms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ApiErrorBody, Role, RolePermissionsResponse } from "@pos-apps/types";
 import { ACCOUNT_ROLES, ROLE_LABELS, hasPermission } from "@pos-apps/types";
-import {
-  FormActions,
-  FormBackLink,
-  FormDenied,
-  FormField,
-  FormSection,
-  formSelectClass,
-  formTextareaClass,
-} from "@/components/ui/form";
-import { Skeleton } from "@/components/ui/skeleton";
 import { authorizedFetch } from "@/lib/api-client";
 
 function errorMessage(res: Response, body: unknown): string {
@@ -133,9 +126,8 @@ export function EmployeeRolesForm({
         description={`Satu izin per baris (resource:action). Berlaku pada permintaan API berikutnya — bukan hanya hide/show UI. Peran: ${ROLE_LABELS[actorRole]}.`}
       >
         <FormField id="matrix-role" label="Peran" required>
-          <select
+          <NativeSelect
             id="matrix-role"
-            className={formSelectClass}
             value={matrixRole}
             disabled={pending}
             onChange={(e) => {
@@ -151,12 +143,12 @@ export function EmployeeRolesForm({
                 {ROLE_LABELS[r]}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </FormField>
         <FormField id="matrix-text" label="Izin">
-          <textarea
+          <Textarea
             id="matrix-text"
-            className={`${formTextareaClass} min-h-48 font-mono text-xs`}
+            className="min-h-48 font-mono text-xs"
             value={matrixText}
             disabled={pending}
             onChange={(e) => setMatrixText(e.target.value)}

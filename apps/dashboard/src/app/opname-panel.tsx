@@ -1,13 +1,13 @@
 "use client";
 
+import { CreateLink, RowLink } from "@pos-apps/ui/organisms";
+import { TableSkeleton } from "@pos-apps/ui/molecules";
 import { useCallback, useEffect, useState } from "react";
 import type {
   ApiErrorBody,
   OpnameListResponse,
   OpnameStatus,
 } from "@pos-apps/types";
-import { CreateLink, RowLink } from "@/components/ui/form";
-import { TableSkeleton } from "@/components/ui/skeleton";
 import { authorizedFetch } from "@/lib/api-client";
 import { getAccessToken, isAccessTokenExpired, logoutToLogin } from "@/lib/auth-token";
 

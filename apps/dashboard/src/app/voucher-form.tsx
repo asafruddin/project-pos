@@ -1,17 +1,11 @@
 "use client";
 
+import { FormField, formInputClass } from "@pos-apps/ui/molecules";
+import { FormActions, FormBackLink, FormDenied, FormSection } from "@pos-apps/ui/organisms";
+import { Input } from "@pos-apps/ui/atoms";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ApiErrorBody, Voucher } from "@pos-apps/types";
-import {
-  FormActions,
-  FormBackLink,
-  FormDenied,
-  FormField,
-  FormSection,
-  formInputClass,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { authorizedFetch } from "@/lib/api-client";
 
 export function VoucherForm({ canEdit }: { canEdit: boolean }) {

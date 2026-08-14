@@ -9,8 +9,8 @@ import { cn } from "@/lib/utils";
 export function Bar({ value, max }: { value: number; max: number }) {
   const pct = max <= 0 ? 0 : Math.min(100, Math.round((value / max) * 100));
   return (
-    <div className="h-2 overflow-hidden rounded-sm bg-secondary">
-      <div className="h-2 rounded-sm bg-primary" style={{ width: `${pct}%` }} />
+    <div className="h-2 overflow-hidden rounded-full bg-secondary">
+      <div className="h-2 rounded-full bg-primary" style={{ width: `${pct}%` }} />
     </div>
   );
 }
@@ -29,7 +29,7 @@ export function ProductTable({
     );
   }
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-[var(--shadow-card)]">
       <table className="w-full min-w-[20rem] border-collapse text-left text-sm">
         <thead>
           <tr className="border-b border-border text-muted-foreground">
@@ -92,7 +92,7 @@ export function ReportSubnav({ showStock }: { showStock: boolean }) {
             href={item.href}
             scroll={false}
             className={cn(
-              "inline-flex h-9 items-center rounded-md px-3 text-sm font-medium transition-colors",
+              "inline-flex h-9 items-center rounded-xl px-3 text-sm font-medium transition-colors",
               active
                 ? "bg-primary text-primary-foreground"
                 : "bg-secondary text-secondary-foreground hover:opacity-90",

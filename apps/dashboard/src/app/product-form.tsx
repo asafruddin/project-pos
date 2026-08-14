@@ -1,23 +1,13 @@
 "use client";
 
+import { Button, Checkbox, Input, Label, Skeleton, Textarea } from "@pos-apps/ui/atoms";
+import { FormField, formInputClass } from "@pos-apps/ui/molecules";
+import { FormActions, FormBackLink, FormDenied, FormSection } from "@pos-apps/ui/organisms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Product, ProductImage, ProductListResponse } from "@pos-apps/types";
-import { Button } from "@/components/ui/button";
-import {
-  FormActions,
-  FormBackLink,
-  FormDenied,
-  FormField,
-  FormSection,
-  formInputClass,
-  formTextareaClass,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { catalogRequest } from "@/lib/catalog-request";
 import { formatIdr } from "@/lib/format-money";
-import { cn } from "@/lib/utils";
 
 type FormState = {
   name: string;
@@ -441,7 +431,7 @@ export function ProductForm({
               />
             </FormField>
             <FormField id="description" label="Deskripsi" hint="Opsional. Tampil di katalog, bukan di Checkout.">
-              <textarea
+              <Textarea
                 id="description"
                 value={form.description}
                 onChange={(e) =>
@@ -449,7 +439,6 @@ export function ProductForm({
                 }
                 disabled={pending}
                 rows={3}
-                className={formTextareaClass}
               />
             </FormField>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -528,7 +517,7 @@ export function ProductForm({
               >
                 <span className="font-medium text-foreground">Unggah gambar</span>
                 <span className="mt-1 text-xs">JPEG, PNG, WebP, atau GIF</span>
-                <input
+                <Input
                   id="productImage"
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/gif"
@@ -665,19 +654,19 @@ export function ProductForm({
                 className={formInputClass}
               />
             </FormField>
-            <label className="flex items-center gap-2.5 text-sm">
-              <input
+            <div className="flex items-center gap-2.5">
+              <Checkbox
                 id="trackStock"
-                type="checkbox"
                 checked={form.trackStock}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, trackStock: e.target.checked }))
+                onCheckedChange={(checked) =>
+                  setForm((f) => ({ ...f, trackStock: checked === true }))
                 }
                 disabled={pending}
-                className="size-4 rounded-sm"
               />
-              Lacak stok di buku besar
-            </label>
+              <Label htmlFor="trackStock" className="font-normal">
+                Lacak stok di buku besar
+              </Label>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField id="minQty" label="Stok min" hint="Tandai rendah di ikhtisar.">
                 <Input
@@ -722,32 +711,22 @@ export function ProductForm({
 
           <FormSection title="Status">
             <div className="grid grid-cols-2 gap-2">
-              <button
+              <Button
                 type="button"
+                variant={form.status === "active" ? "default" : "secondary"}
                 disabled={pending}
                 onClick={() => setForm((f) => ({ ...f, status: "active" }))}
-                className={cn(
-                  "h-10 rounded-md text-sm font-medium transition-colors",
-                  form.status === "active"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-secondary-foreground hover:opacity-90",
-                )}
               >
                 Aktif
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant={form.status === "inactive" ? "default" : "secondary"}
                 disabled={pending}
                 onClick={() => setForm((f) => ({ ...f, status: "inactive" }))}
-                className={cn(
-                  "h-10 rounded-md text-sm font-medium transition-colors",
-                  form.status === "inactive"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-secondary-foreground hover:opacity-90",
-                )}
               >
                 Nonaktif
-              </button>
+              </Button>
             </div>
             <p className="text-xs text-muted-foreground">
               Produk nonaktif tetap di katalog Dashboard, tersembunyi dari menu kasir.

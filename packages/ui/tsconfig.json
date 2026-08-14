@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "paths": {
+      "@pos-apps/ui/atoms": ["./src/atoms/index.ts"],
+      "@pos-apps/ui/atoms/*": ["./src/atoms/*"],
+      "@pos-apps/ui/molecules": ["./src/molecules/index.ts"],
+      "@pos-apps/ui/molecules/*": ["./src/molecules/*"],
+      "@pos-apps/ui/organisms": ["./src/organisms/index.ts"],
+      "@pos-apps/ui/organisms/*": ["./src/organisms/*"],
+      "@pos-apps/ui/hooks": ["./src/hooks/index.ts"],
+      "@pos-apps/ui/hooks/*": ["./src/hooks/*"],
+      "@pos-apps/ui/lib": ["./src/lib/index.ts"],
+      "@pos-apps/ui/lib/*": ["./src/lib/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}

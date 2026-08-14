@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { hasPermission } from "@pos-apps/types";
-import { useDashboardSession } from "@/components/dashboard-frame";
+import { useDashboardSession } from "@/components/templates/dashboard-frame";
 import { ReportSubnav } from "./report-shared";
 
 export default function ReportsLayout({ children }: { children: ReactNode }) {

@@ -1,18 +1,11 @@
 "use client";
 
+import { FormField, formInputClass } from "@pos-apps/ui/molecules";
+import { FormActions, FormBackLink, FormDenied, FormSection } from "@pos-apps/ui/organisms";
+import { Checkbox, Input, Label, NativeSelect } from "@pos-apps/ui/atoms";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ApiErrorBody, Promotion } from "@pos-apps/types";
-import {
-  FormActions,
-  FormBackLink,
-  FormDenied,
-  FormField,
-  FormSection,
-  formInputClass,
-  formSelectClass,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { authorizedFetch } from "@/lib/api-client";
 
 export function PromotionForm({ canEdit }: { canEdit: boolean }) {
@@ -84,16 +77,15 @@ export function PromotionForm({ canEdit }: { canEdit: boolean }) {
           />
         </FormField>
         <FormField id="promo-kind" label="Jenis" required>
-          <select
+          <NativeSelect
             id="promo-kind"
-            className={formSelectClass}
             value={kind}
             disabled={pending}
             onChange={(e) => setKind(e.target.value as "percent" | "fixed")}
           >
             <option value="percent">Persen (bps, 1000 = 10%)</option>
             <option value="fixed">Nominal tetap</option>
-          </select>
+          </NativeSelect>
         </FormField>
         {kind === "percent" ? (
           <FormField id="promo-bps" label="Persen (bps)" required>
@@ -160,15 +152,17 @@ export function PromotionForm({ canEdit }: { canEdit: boolean }) {
             />
           </FormField>
         </div>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="promo-exclusive"
             checked={exclusive}
             disabled={pending}
-            onChange={(e) => setExclusive(e.target.checked)}
+            onCheckedChange={(checked) => setExclusive(checked === true)}
           />
-          Eksklusif (tidak ditumpuk)
-        </label>
+          <Label htmlFor="promo-exclusive" className="font-normal">
+            Eksklusif (tidak ditumpuk)
+          </Label>
+        </div>
       </FormSection>
       <FormActions
         error={error}

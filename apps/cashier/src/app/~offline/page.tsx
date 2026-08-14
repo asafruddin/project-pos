@@ -1,5 +1,4 @@
-import { AuthSplitShell } from "@/components/auth-shell";
-
+import { AuthSplitShell } from "@pos-apps/ui/organisms";
 export default function OfflineFallbackPage() {
   return (
     <AuthSplitShell

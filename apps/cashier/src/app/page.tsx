@@ -1,8 +1,8 @@
 "use client";
 
+import { AuthLoadingShell } from "@pos-apps/ui/organisms";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { AuthLoadingShell } from "@/components/auth-shell";
 import { getAccessToken, isShiftAuthorized } from "@/lib/auth-token";
 import { isPinUnlocked } from "@/lib/pin-session";
 import { applyTheme, getLang } from "@/lib/preferences";

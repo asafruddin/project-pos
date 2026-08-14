@@ -1,12 +1,12 @@
 "use client";
 
+import { StatCard } from "@pos-apps/ui/molecules";
+import { Button } from "@pos-apps/ui/atoms";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReportSummary } from "@pos-apps/types";
 import { hasPermission } from "@pos-apps/types";
-import { useDashboardSession } from "@/components/dashboard-frame";
-import { ReportToolbar, reportQs, todayUtc } from "@/components/report-toolbar";
-import { StatCard } from "@/components/ui/brand";
-import { Button } from "@/components/ui/button";
+import { useDashboardSession } from "@/components/templates/dashboard-frame";
+import { ReportToolbar, reportQs, todayUtc } from "@/components/organisms/report-toolbar";
 import { authorizedFetch } from "@/lib/api-client";
 import { formatIdr } from "@/lib/format-money";
 import { ReportNote } from "../report-shared";

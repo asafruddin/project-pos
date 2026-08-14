@@ -1,6 +1,6 @@
 "use client";
 
-import { useDashboardSession } from "@/components/dashboard-frame";
+import { useDashboardSession } from "@/components/templates/dashboard-frame";
 import { EmployeeRolesForm } from "../../employee-roles-form";
 
 export default function EmployeeRolesPage() {

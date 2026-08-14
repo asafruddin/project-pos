@@ -1,5 +1,7 @@
 "use client";
 
+import { AuthLoadingShell, AuthSplitShell } from "@pos-apps/ui/organisms";
+import { Button } from "@pos-apps/ui/atoms";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -8,10 +10,8 @@ import {
   hasPinMaterial,
   verifyPin,
 } from "@pos-apps/local-db";
-import { AuthLoadingShell, AuthSplitShell } from "@/components/auth-shell";
-import { PinPad } from "@/components/pin-pad";
-import { Button } from "@/components/ui/button";
-import { PrefControls } from "@/components/settings-menu";
+import { PinPad } from "@/components/organisms/pin-pad";
+import { PrefControls } from "@/components/molecules/settings-menu";
 import { clearSession, getAccessToken, getSession, isShiftAuthorized } from "@/lib/auth-token";
 import { clearPinUnlock, isPinUnlocked, setPinUnlocked } from "@/lib/pin-session";
 import { applyTheme, copy, getLang } from "@/lib/preferences";
@@ -195,21 +195,23 @@ export default function PinPage() {
         </Button>
 
         {getAccessToken() ? (
-          <button
+          <Button
             type="button"
-            className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+            variant="link"
+            className="text-muted-foreground"
             onClick={logout}
           >
             {t.logout}
-          </button>
+          </Button>
         ) : (
-          <button
+          <Button
             type="button"
-            className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+            variant="link"
+            className="text-muted-foreground"
             onClick={() => router.replace("/login")}
           >
             {t.title}
-          </button>
+          </Button>
         )}
       </div>
     </AuthSplitShell>

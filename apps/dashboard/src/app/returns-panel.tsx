@@ -1,12 +1,12 @@
 "use client";
 
+import { RowLink } from "@pos-apps/ui/organisms";
 import { useCallback, useEffect, useState } from "react";
 import type {
   ApiErrorBody,
   ReturnDetail,
   ReturnListResponse,
 } from "@pos-apps/types";
-import { RowLink } from "@/components/ui/form";
 import { authorizedFetch } from "@/lib/api-client";
 import { getAccessToken, isAccessTokenExpired, logoutToLogin } from "@/lib/auth-token";
 import { formatIdr } from "@/lib/format-money";

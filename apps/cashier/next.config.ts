@@ -17,9 +17,9 @@ const nextConfig: NextConfig = {
   // Serwist injects a webpack plugin; Next 16 Turbopack `dev` needs an explicit
   // turbopack key (empty is fine — SW is disabled outside production).
   turbopack: {},
-  transpilePackages: ["@pos-apps/types", "@pos-apps/local-db"],
+  transpilePackages: ["@pos-apps/types", "@pos-apps/local-db", "@pos-apps/ui"],
   experimental: {
-    optimizePackageImports: ["@phosphor-icons/react"],
+    optimizePackageImports: ["@phosphor-icons/react", "@pos-apps/ui"],
   },
 };
 
