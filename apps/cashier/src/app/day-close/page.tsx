@@ -163,7 +163,7 @@ export default function DayClosePage() {
               </p>
               <Button
                 type="button"
-                className="min-h-12 rounded-2xl bg-accent text-accent-foreground"
+                className="h-12 min-h-12 rounded-xl"
                 onClick={() => router.push("/shift")}
               >
                 {t.dayCloseGoShift}
@@ -206,7 +206,7 @@ export default function DayClosePage() {
           <div className="flex flex-wrap gap-3">
             <Button
               type="button"
-              className="min-h-14 rounded-2xl bg-accent text-accent-foreground hover:opacity-90"
+              className="h-12 min-h-12 rounded-xl"
               disabled={!canContinue}
               onClick={goToReport}
             >
@@ -296,7 +296,7 @@ export default function DayClosePage() {
           <div className="flex flex-wrap gap-3">
             <Button
               type="button"
-              className="min-h-14 rounded-2xl bg-accent text-accent-foreground hover:opacity-90"
+              className="h-12 min-h-12 rounded-xl"
               disabled={!canContinue || finishing}
               onClick={finishDayClose}
             >

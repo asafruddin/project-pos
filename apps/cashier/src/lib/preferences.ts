@@ -32,14 +32,12 @@ export function setLang(lang: LangPref): void {
 
 export function applyTheme(theme: ThemePref = getTheme()): void {
   if (typeof document === "undefined") return;
-  const root = document.documentElement;
-  root.classList.remove("light", "dark");
-  if (theme === "system") {
-    const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    root.classList.add(dark ? "dark" : "light");
-  } else {
-    root.classList.add(theme);
-  }
+  const dark =
+    theme === "dark" ||
+    (theme !== "light" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches);
+  document.documentElement.classList.toggle("dark", dark);
+  document.documentElement.classList.remove("light");
 }
 
 export function copy(lang: LangPref) {

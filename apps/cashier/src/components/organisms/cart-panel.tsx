@@ -478,10 +478,10 @@ export function CartPanel({ lang, onCompleted }: Props) {
   return (
     <aside
       id="cart-panel"
-      className="fixed inset-x-3 bottom-24 z-30 max-h-[55vh] overflow-y-auto rounded-3xl border border-border bg-card/95 p-4 shadow-xl backdrop-blur-sm md:static md:inset-auto md:bottom-auto md:z-auto md:h-full md:max-h-none md:shadow-sm md:backdrop-blur-none"
+      className="fixed inset-x-3 bottom-3 z-30 max-h-[50vh] overflow-y-auto rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-card)] md:static md:inset-auto md:bottom-auto md:z-auto md:h-full md:max-h-none"
     >
       <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-foreground">
-        <ShoppingCartIcon size={22} weight="duotone" className="text-accent" />
+        <ShoppingCartIcon size={22} weight="duotone" className="text-primary" />
         {t.cart}
       </h2>
       {receipt ? (
@@ -655,7 +655,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
           ) : null}
           <p className="text-sm text-muted-foreground">{t.receiptHint}</p>
           <Button
-            className="min-h-14 w-full rounded-2xl bg-accent text-accent-foreground hover:opacity-90"
+            className="h-12 min-h-12 w-full rounded-xl"
             disabled={busy}
             onClick={() => void confirmReceipt()}
           >
@@ -779,7 +779,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
                 </p>
               ) : null}
               <Button
-                className="mt-4 min-h-14 w-full rounded-2xl bg-accent text-accent-foreground hover:opacity-90"
+                className="mt-4 h-12 min-h-12 w-full rounded-xl"
                 disabled={busy || !lines.length || !shiftOpen}
                 onClick={() => void startCheckout()}
               >

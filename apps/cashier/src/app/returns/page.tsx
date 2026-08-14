@@ -268,7 +268,7 @@ export default function ReturnsPage() {
             <Button
               type="button"
               disabled={busy}
-              className="min-h-14 w-full rounded-2xl bg-accent text-accent-foreground"
+              className="h-12 min-h-12 w-full rounded-xl"
               onClick={() => void submit()}
             >
               {t.returnSubmit}

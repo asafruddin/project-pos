@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono, Inter } from "next/font/google";
 import { Toaster } from "@pos-apps/ui/molecules/sonner";
 import { TooltipProvider } from "@pos-apps/ui/molecules/tooltip";
 import { PrefBootstrap } from "@/components/providers/pref-bootstrap";
@@ -7,9 +7,10 @@ import { CartProvider } from "@/components/providers/cart-context";
 import { SessionGuard } from "@/components/providers/session-guard";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
@@ -21,6 +22,8 @@ const APP_NAME = "POS Apps Cashier";
 const APP_DEFAULT_TITLE = "POS Apps Cashier";
 const APP_TITLE_TEMPLATE = "%s · POS Apps Cashier";
 const APP_DESCRIPTION = "Coffee-shop POS cashier scaffold";
+
+const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem("pos_cashier_theme");var d=t==="dark"||((t==null||t==="system")&&window.matchMedia("(prefers-color-scheme: dark)").matches);if(d)document.documentElement.classList.add("dark");}catch(e){}})();`;
 
 export const metadata: Metadata = {
   applicationName: APP_NAME,
@@ -41,16 +44,20 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1D4ED8",
+  themeColor: "#f97316",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="id"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
+      <body className="flex h-full min-h-full flex-col bg-background font-sans text-foreground">
         <TooltipProvider>
           <PrefBootstrap>
             <SessionGuard>

@@ -141,7 +141,7 @@ export default function PinPage() {
       >
         <Button
           type="button"
-          className="w-full rounded-2xl bg-accent text-accent-foreground hover:opacity-90"
+          className="h-12 min-h-12 w-full rounded-xl"
           onClick={() => router.replace("/login")}
         >
           {t.title}
@@ -187,7 +187,7 @@ export default function PinPage() {
 
         <Button
           type="button"
-          className="w-full rounded-2xl bg-accent text-base text-accent-foreground hover:opacity-90"
+          className="h-12 min-h-12 w-full rounded-xl"
           disabled={pending || pin.length !== 6}
           onClick={() => void submitPin(pin)}
         >

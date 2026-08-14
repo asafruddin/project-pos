@@ -88,7 +88,7 @@ export function PrefControls({
             variant="outline"
             size="icon"
             onClick={cycleTheme}
-            className="h-11 w-11 rounded-2xl"
+            className="size-9"
             aria-label={themeTip}
           >
             {themeIcon(theme)}
@@ -102,7 +102,7 @@ export function PrefControls({
             type="button"
             variant="outline"
             onClick={toggleLang}
-            className="h-11 rounded-2xl px-2.5"
+            className="h-9 px-2.5"
             aria-label={langTip}
           >
             <TranslateIcon size={18} weight="duotone" />

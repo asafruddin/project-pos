@@ -276,7 +276,7 @@ export default function ShiftPage() {
             <Button
               type="submit"
               disabled={busy}
-              className="min-h-12 w-full rounded-2xl bg-accent text-accent-foreground"
+              className="h-12 min-h-12 w-full rounded-xl"
             >
               {t.shiftClose}
             </Button>
@@ -318,7 +318,7 @@ export default function ShiftPage() {
           <Button
             type="submit"
             disabled={busy}
-            className="min-h-12 w-full rounded-2xl bg-accent text-accent-foreground"
+            className="h-12 min-h-12 w-full rounded-xl"
           >
             {t.shiftOpen}
           </Button>

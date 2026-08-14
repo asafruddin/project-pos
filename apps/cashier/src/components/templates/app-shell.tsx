@@ -9,15 +9,18 @@ import {
   CoffeeIcon,
   HouseIcon,
   ShoppingCartIcon,
+  SignOutIcon,
   UserCircleIcon,
 } from "@phosphor-icons/react";
 import { usePathname, useRouter } from "next/navigation";
-import { BottomNav, SideNav } from "@/components/organisms/pos-nav";
+import { useEffect, useState } from "react";
+import { SideNav, type NavSection } from "@/components/organisms/pos-nav";
 import { PrefControls } from "@/components/molecules/settings-menu";
-import { clearSession } from "@/lib/auth-token";
+import { clearSession, getSession } from "@/lib/auth-token";
 import { clearPinUnlock } from "@/lib/pin-session";
 import { copy, getLang, type LangPref } from "@/lib/preferences";
 import { cn } from "@/lib/utils";
+import { ROLE_LABELS, type Role } from "@pos-apps/types";
 
 type AppShellProps = {
   title: string;
@@ -47,6 +50,20 @@ export function AppShell({
   const t = copy(lang);
   const router = useRouter();
   const pathname = usePathname();
+  const [roleLabel, setRoleLabel] = useState(t.brand);
+
+  useEffect(() => {
+    const session = getSession();
+    if (session && session.role in ROLE_LABELS) {
+      setRoleLabel(ROLE_LABELS[session.role as Role]);
+    }
+  }, [t.brand]);
+  const initials = roleLabel
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
 
   function logout() {
     clearSession();
@@ -54,144 +71,192 @@ export function AppShell({
     router.replace("/login");
   }
 
-  const navItems = [
+  const groups =
+    lang === "en"
+      ? { cashier: "Cashier", sales: "Sales", store: "Store" }
+      : { cashier: "Kasir", sales: "Transaksi", store: "Toko" };
+
+  const sections: NavSection[] = [
     {
-      href: "/menu",
-      label: t.menuTitle,
-      icon: <HouseIcon size={20} weight="duotone" />,
-      match: (p: string) => p === "/menu" || p === "/",
+      label: groups.cashier,
+      items: [
+        {
+          href: "/menu",
+          label: t.menuTitle,
+          icon: <HouseIcon size={20} weight="duotone" />,
+          match: (p) => p === "/menu" || p === "/",
+        },
+        {
+          href: "/shift",
+          label: t.shiftTitle,
+          icon: <ClockCountdownIcon size={20} weight="duotone" />,
+          match: (p) => p.startsWith("/shift"),
+        },
+      ],
     },
     {
-      href: "/shift",
-      label: t.shiftTitle,
-      icon: <ClockCountdownIcon size={20} weight="duotone" />,
-      match: (p: string) => p.startsWith("/shift"),
+      label: groups.sales,
+      items: [
+        {
+          href: "/void",
+          label: t.voidTitle,
+          icon: <ArrowUUpLeftIcon size={20} weight="duotone" />,
+          match: (p) => p.startsWith("/void"),
+        },
+        {
+          href: "/returns",
+          label: t.returnTitle,
+          icon: <ArrowUDownLeftIcon size={20} weight="duotone" />,
+          match: (p) => p.startsWith("/returns"),
+        },
+      ],
     },
     {
-      href: "/void",
-      label: t.voidTitle,
-      icon: <ArrowUUpLeftIcon size={20} weight="duotone" />,
-      match: (p: string) => p.startsWith("/void"),
-    },
-    {
-      href: "/returns",
-      label: t.returnTitle,
-      icon: <ArrowUDownLeftIcon size={20} weight="duotone" />,
-      match: (p: string) => p.startsWith("/returns"),
-    },
-    {
-      href: "/customers",
-      label: t.customerTitle,
-      icon: <UserCircleIcon size={20} weight="duotone" />,
-      match: (p: string) => p.startsWith("/customers"),
-    },
-    {
-      href: "/day-close",
-      label: t.dayClose,
-      icon: <CalendarCheckIcon size={20} weight="duotone" />,
-      match: (p: string) => p.startsWith("/day-close"),
+      label: groups.store,
+      items: [
+        {
+          href: "/customers",
+          label: t.customerTitle,
+          icon: <UserCircleIcon size={20} weight="duotone" />,
+          match: (p) => p.startsWith("/customers"),
+        },
+        {
+          href: "/day-close",
+          label: t.dayClose,
+          icon: <CalendarCheckIcon size={20} weight="duotone" />,
+          match: (p) => p.startsWith("/day-close"),
+        },
+      ],
     },
   ];
 
+  const brand = (
+    <div className="flex items-center gap-3">
+      <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+        <CoffeeIcon size={22} weight="fill" />
+      </div>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold text-foreground">POS Apps</p>
+        <p className="truncate text-xs text-muted-foreground">{t.brand}</p>
+      </div>
+    </div>
+  );
+
   return (
-    <div className={cn("relative flex min-h-dvh flex-1 bg-background", className)}>
-      <div className="mx-auto flex w-full max-w-[90rem] flex-1 gap-4 p-3 pb-28 sm:p-4 sm:pb-28 lg:gap-5 lg:p-6 lg:pb-6">
-        <div className="hidden lg:flex">
-          <SideNav
-            items={navItems}
-            brand={
-              <div className="flex items-center gap-3">
-                <div className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-secondary text-accent">
-                  <CoffeeIcon size={22} weight="fill" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold tracking-[0.16em] text-foreground uppercase">
-                    POS Apps
-                  </p>
-                  <p className="text-sm text-muted-foreground">{t.brand}</p>
-                </div>
-              </div>
-            }
-            footer={
-              <>
-                <PrefControls
-                  onLangChange={onLangChange}
-                  className="w-full justify-between"
-                />
-                <Button
-                  type="button"
-                  className="w-full bg-secondary text-secondary-foreground hover:opacity-90"
-                  onClick={logout}
-                >
-                  {t.logout}
-                </Button>
-              </>
-            }
-          />
-        </div>
+    <div className={cn("flex h-dvh overflow-hidden bg-background", className)}>
+      <SideNav
+        className="hidden h-full lg:flex"
+        sections={sections}
+        brand={brand}
+        footer={
+          <div className="space-y-2">
+            <PrefControls onLangChange={onLangChange} className="w-full justify-between px-1" />
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-auto w-full justify-start gap-3 rounded-xl px-3 py-2.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={logout}
+            >
+              <SignOutIcon size={18} weight="bold" />
+              {t.logout}
+            </Button>
+          </div>
+        }
+      />
 
-        <div className="flex min-w-0 flex-1 flex-col gap-4">
-          <header className="flex items-start justify-between gap-3 rounded-3xl border border-border bg-card px-4 py-4 shadow-sm sm:px-5">
-            <div className="min-w-0">
-              <p className="text-sm text-muted-foreground lg:hidden">
-                {t.brand}
-              </p>
-              <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-                {title}
-              </h1>
-              {subtitle ? (
-                <div className="mt-1 text-sm text-muted-foreground">
-                  {subtitle}
-                </div>
-              ) : null}
+      <SideNav
+        compact
+        className="flex h-full lg:hidden"
+        sections={sections}
+        brand={
+          <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <CoffeeIcon size={22} weight="fill" />
+          </div>
+        }
+        footer={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="mx-auto h-10 w-10 rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={logout}
+            aria-label={t.logout}
+            title={t.logout}
+          >
+            <SignOutIcon size={18} weight="bold" />
+          </Button>
+        }
+      />
+
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="flex shrink-0 flex-col gap-3 border-b border-border bg-card px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:gap-6">
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+              {title}
+            </h1>
+            {subtitle ? (
+              <div className="mt-0.5 hidden max-w-2xl text-sm text-muted-foreground md:block">
+                {subtitle}
+              </div>
+            ) : null}
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            {headerActions}
+            {aside ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="lg:hidden"
+                aria-label={t.cart}
+                onClick={() => {
+                  if (pathname !== "/menu") {
+                    router.push("/menu");
+                    return;
+                  }
+                  document
+                    .getElementById(cartAnchorId)
+                    ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                }}
+              >
+                <ShoppingCartIcon size={18} weight="bold" />
+              </Button>
+            ) : null}
+            <div className="lg:hidden">
+              <PrefControls onLangChange={onLangChange} tooltipSide="bottom" />
             </div>
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-              {headerActions}
-              <div className="lg:hidden">
-                <PrefControls
-                  onLangChange={onLangChange}
-                  tooltipSide="bottom"
-                />
+            <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/50 py-1 pr-3 pl-1">
+              <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-xs font-semibold text-primary-foreground">
+                {initials || "POS"}
+              </div>
+              <div className="hidden min-w-0 sm:block">
+                <p className="truncate text-sm leading-tight font-medium">POS Apps</p>
+                <p className="truncate text-xs text-muted-foreground">{roleLabel}</p>
               </div>
             </div>
-          </header>
+          </div>
+        </header>
 
+        <section className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
           <div
             className={cn(
-              "grid flex-1 gap-4",
+              "mx-auto grid w-full max-w-[90rem] gap-5 sm:gap-6",
               aside
                 ? "md:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)] lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]"
                 : "",
             )}
           >
-            <section className="min-w-0 rounded-3xl border border-border bg-card p-4 shadow-sm sm:p-5">
+            <div className="min-w-0 rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-card)] sm:p-5">
               {children}
-            </section>
+            </div>
             {aside ? (
-              <aside className="min-w-0 max-md:contents md:sticky md:top-4 md:self-start">
+              <aside className="min-w-0 max-md:contents md:sticky md:top-0 md:self-start">
                 {aside}
               </aside>
             ) : null}
           </div>
-        </div>
+        </section>
       </div>
-
-      <BottomNav
-        items={navItems}
-        fab={{
-          label: t.cart,
-          icon: <ShoppingCartIcon size={24} weight="fill" />,
-          onClick: () => {
-            if (pathname !== "/menu") {
-              router.push("/menu");
-              return;
-            }
-            document
-              .getElementById(cartAnchorId)
-              ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-          },
-        }}
-      />
     </div>
   );
 }

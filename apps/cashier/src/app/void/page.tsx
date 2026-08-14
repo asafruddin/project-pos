@@ -195,7 +195,7 @@ export default function VoidPage() {
           aria-modal="true"
           aria-label={t.voidNeedPin}
         >
-          <div className="w-full max-w-sm rounded-3xl border border-border bg-card p-5 shadow-xl">
+          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-5 shadow-[var(--shadow-card)]">
             <p className="font-medium">{t.voidNeedPin}</p>
             <p className="mt-1 text-sm text-muted-foreground">
               {pinMode === "enroll" ? t.voidPinEnroll : t.voidPinUnlock}

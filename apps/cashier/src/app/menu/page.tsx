@@ -221,7 +221,7 @@ export default function MenuPage() {
           type="button"
           disabled={pulling || !online}
           onClick={() => void pullCatalog()}
-          className="rounded-2xl bg-secondary text-secondary-foreground hover:opacity-90"
+          className="rounded-xl"
         >
           {pulling ? t.catalogPulling : t.catalogPull}
         </Button>
@@ -274,7 +274,7 @@ export default function MenuPage() {
                   disabled={!sellable}
                   variant="outline"
                   onClick={() => add(p)}
-                  className="flex h-auto min-h-[4.5rem] w-full flex-col items-start justify-center gap-1 rounded-2xl px-4 py-3 text-left whitespace-normal"
+                  className="flex h-auto min-h-[4.5rem] w-full flex-col items-start justify-center gap-1 rounded-xl px-4 py-3 text-left whitespace-normal"
                   title={
                     sellable
                       ? undefined
