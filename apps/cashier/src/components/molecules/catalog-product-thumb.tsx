@@ -1,14 +1,18 @@
 "use client";
 
+import { ImageSquareIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { getCatalogImageRecord } from "@pos-apps/local-db";
+import { cn } from "@/lib/utils";
 
 export function CatalogProductThumb({
   productId,
   alt,
+  className,
 }: {
   productId: string;
   alt: string;
+  className?: string;
 }) {
   const [src, setSrc] = useState<string | null>(null);
 
@@ -31,22 +35,29 @@ export function CatalogProductThumb({
     };
   }, [productId]);
 
+  const frame = cn("aspect-[4/3] w-full overflow-hidden bg-muted", className);
+
   if (!src) {
     return (
       <span
-        className="mb-2 block h-24 w-full rounded-xl bg-secondary/80"
+        className={cn(
+          frame,
+          "flex items-center justify-center bg-gradient-to-br from-muted to-secondary",
+        )}
         aria-hidden
-      />
+      >
+        <ImageSquareIcon
+          size={40}
+          weight="duotone"
+          className="text-muted-foreground/55"
+        />
+      </span>
     );
   }
 
   return (
     // Cached IndexedDB bytes — never a Cloudinary URL (FR-41).
     // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={src}
-      alt={alt}
-      className="mb-2 h-24 w-full rounded-xl object-cover"
-    />
+    <img src={src} alt={alt} className={cn(frame, "object-cover")} />
   );
 }

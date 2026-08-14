@@ -88,6 +88,7 @@ export function LoginForm({ lang }: { lang: LangPref }) {
           required
           autoFocus
           disabled={pending}
+          className="h-12 min-h-12 text-base sm:text-sm"
           aria-invalid={error ? true : undefined}
         />
       </div>
@@ -106,14 +107,14 @@ export function LoginForm({ lang }: { lang: LangPref }) {
             onChange={(e) => setPassword(e.target.value)}
             required
             disabled={pending}
-            className="pr-12"
+            className="h-12 min-h-12 pr-11 text-base sm:text-sm"
             aria-invalid={error ? true : undefined}
           />
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="absolute inset-y-0 right-1 my-1 h-10 w-10 text-muted-foreground"
+            className="absolute top-1/2 right-1.5 size-9 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             onClick={() => setShowPassword((v) => !v)}
             disabled={pending}
             aria-pressed={showPassword}

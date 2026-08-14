@@ -38,7 +38,7 @@ import { CustomerAttach, restoreCartCustomer } from "@/components/organisms/cust
 import { authorizedFetch } from "@/lib/api-client";
 import { formatIdr } from "@/lib/money";
 import { copy, type LangPref } from "@/lib/preferences";
-import Link from "next/link";
+import { SHIFT_CHANGED_EVENT } from "@/lib/shift-events";
 
 type Props = {
   lang: LangPref;
@@ -182,7 +182,12 @@ export function CartPanel({ lang, onCompleted }: Props) {
 
   useEffect(() => {
     void refreshParked();
-    void getOpenShift().then((row) => setShiftOpen(Boolean(row)));
+    function syncShift() {
+      void getOpenShift().then((row) => setShiftOpen(Boolean(row)));
+    }
+    syncShift();
+    window.addEventListener(SHIFT_CHANGED_EVENT, syncShift);
+    return () => window.removeEventListener(SHIFT_CHANGED_EVENT, syncShift);
   }, []);
 
   async function startCheckout() {
@@ -478,27 +483,28 @@ export function CartPanel({ lang, onCompleted }: Props) {
   return (
     <aside
       id="cart-panel"
-      className="fixed inset-x-3 bottom-3 z-30 max-h-[50vh] overflow-y-auto rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-card)] md:static md:inset-auto md:bottom-auto md:z-auto md:h-full md:max-h-none"
+      className="fixed inset-x-3 bottom-3 z-30 flex max-h-[min(70dvh,36rem)] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-card)] md:static md:inset-auto md:bottom-auto md:z-auto md:h-full md:max-h-none md:min-h-0"
     >
-      <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-foreground">
+      <h2 className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-3 text-lg font-semibold tracking-tight text-foreground sm:px-5">
         <ShoppingCartIcon size={22} weight="duotone" className="text-primary" />
         {t.cart}
       </h2>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 sm:p-5">
       {receipt ? (
-        <p className="mt-3 rounded-2xl border border-border bg-secondary/70 p-3 text-sm" role="status">
+        <p className="mb-3 rounded-2xl border border-border bg-secondary/70 p-3 text-sm" role="status">
           {receipt}
         </p>
       ) : null}
       {error ? (
         <p
-          className="mt-3 rounded-2xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          className="mb-3 rounded-2xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
           role="alert"
         >
           {error}
         </p>
       ) : null}
       {sale ? (
-        <div className="mt-4 space-y-3">
+        <div className="mt-1 space-y-3">
           <p className="font-medium">
             {appliedCredit > 0 ? t.storeCredit : t.cashPayment}{" "}
             {formatIdr(payable, lang)}
@@ -672,7 +678,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
           </Button>
         </div>
       ) : (
-        <>
+        <div className="flex min-h-0 flex-1 flex-col">
           {parked.length ? (
             <div className="mt-3 space-y-2">
               <p className="text-sm font-medium text-muted-foreground">{t.parked}</p>
@@ -718,7 +724,14 @@ export function CartPanel({ lang, onCompleted }: Props) {
           ) : null}
           <CustomerAttach lang={lang} disabled={busy} />
           {lines.length === 0 ? (
-            <p className="mt-3 text-sm text-muted-foreground">{t.cartEmpty}</p>
+            <div className="flex min-h-40 flex-1 flex-col items-center justify-center gap-2 py-8 text-center">
+              <ShoppingCartIcon
+                size={40}
+                weight="duotone"
+                className="text-muted-foreground/50"
+              />
+              <p className="text-sm text-muted-foreground">{t.cartEmpty}</p>
+            </div>
           ) : (
             <>
               <ul className="mt-3 space-y-3">
@@ -772,10 +785,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
               </p>
               {!shiftOpen ? (
                 <p className="mt-3 text-sm text-muted-foreground">
-                  {t.shiftNeedOpen}{" "}
-                  <Link href="/shift" className="underline underline-offset-4">
-                    {t.shiftOpen}
-                  </Link>
+                  {t.shiftNeedOpen}
                 </p>
               ) : null}
               <Button
@@ -797,8 +807,9 @@ export function CartPanel({ lang, onCompleted }: Props) {
               </Button>
             </>
           )}
-        </>
+        </div>
       )}
+      </div>
     </aside>
   );
 }

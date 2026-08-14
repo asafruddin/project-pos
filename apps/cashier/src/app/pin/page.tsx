@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   enrollPin,
-  getOpenShift,
   hasPinMaterial,
   verifyPin,
 } from "@pos-apps/local-db";
@@ -80,7 +79,7 @@ export default function PinPage() {
         }
         await enrollPin(session.userId, digits);
         setPinUnlocked(true);
-        router.replace((await getOpenShift()) ? "/menu" : "/shift");
+        router.replace("/menu");
         return;
       }
 
@@ -97,7 +96,7 @@ export default function PinPage() {
           return;
         }
         setPinUnlocked(true);
-        router.replace((await getOpenShift()) ? "/menu" : "/shift");
+        router.replace("/menu");
         return;
       }
 

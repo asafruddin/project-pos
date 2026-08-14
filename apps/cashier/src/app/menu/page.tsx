@@ -264,7 +264,7 @@ export default function MenuPage() {
           {!online ? <p className="mt-2 text-sm">{t.catalogEmptyOffline}</p> : null}
         </div>
       ) : (
-        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-3 pb-36 sm:grid-cols-2 md:pb-0 xl:grid-cols-3">
           {products.map((p) => {
             const sellable = isValidSellablePrice(p.priceMinor) && p.stockQty > 0;
             return (
@@ -274,7 +274,7 @@ export default function MenuPage() {
                   disabled={!sellable}
                   variant="outline"
                   onClick={() => add(p)}
-                  className="flex h-auto min-h-[4.5rem] w-full flex-col items-start justify-center gap-1 rounded-xl px-4 py-3 text-left whitespace-normal"
+                  className="flex h-auto w-full flex-col items-stretch gap-0 overflow-hidden rounded-xl p-0 text-left whitespace-normal"
                   title={
                     sellable
                       ? undefined
@@ -284,8 +284,10 @@ export default function MenuPage() {
                   }
                 >
                   <CatalogProductThumb productId={p.productId} alt="" />
-                  <span className="font-medium text-foreground">{p.name}</span>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="px-3 pt-2.5 font-medium text-foreground">
+                    {p.name}
+                  </span>
+                  <span className="px-3 pb-3 text-sm text-muted-foreground">
                     {sellable
                       ? formatIdr(p.priceMinor, lang)
                       : p.stockQty <= 0

@@ -9,7 +9,6 @@ import {
   closeLocalShift,
   computeLocalExpectedCash,
   getOpenShift,
-  openLocalShift,
   recordLocalCashMovement,
   type LocalShiftRecord,
 } from "@pos-apps/local-db";
@@ -19,6 +18,7 @@ import { authorizedFetch } from "@/lib/api-client";
 import { formatIdr } from "@/lib/money";
 import { isPinUnlocked } from "@/lib/pin-session";
 import { applyTheme, copy, getLang } from "@/lib/preferences";
+import { notifyShiftChanged } from "@/lib/shift-events";
 
 function parseRp(raw: string): number {
   return Number.parseInt(raw.replace(/\D/g, ""), 10);
@@ -31,7 +31,6 @@ export default function ShiftPage() {
   const [ready, setReady] = useState(false);
   const [current, setCurrent] = useState<LocalShiftRecord | null>(null);
   const [expected, setExpected] = useState<ShiftExpectedCash | null>(null);
-  const [cash, setCash] = useState("0");
   const [inAmount, setInAmount] = useState("");
   const [inReason, setInReason] = useState("");
   const [outAmount, setOutAmount] = useState("");
@@ -39,7 +38,6 @@ export default function ShiftPage() {
   const [refundsMinor, setRefundsMinor] = useState(0);
   const [counted, setCounted] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -70,30 +68,13 @@ export default function ShiftPage() {
       router.replace("/pin");
       return;
     }
-    void refresh();
+    void (async () => {
+      await refresh();
+      if (!(await getOpenShift())) {
+        router.replace("/menu");
+      }
+    })();
   }, [router, refresh]);
-
-  async function onOpen(e: FormEvent) {
-    e.preventDefault();
-    if (busy) return;
-    setBusy(true);
-    setError(null);
-    setStatus(null);
-    const opening = parseRp(cash);
-    try {
-      const row = await openLocalShift(Number.isFinite(opening) ? opening : NaN);
-      setCurrent(row);
-      setExpected(await computeLocalExpectedCash(row, 0));
-      setRefundsMinor(0);
-      await flushSalesAndVoids();
-    } catch (err) {
-      const code = err instanceof Error ? err.message : "";
-      if (code === "SHIFT_ALREADY_OPEN") setError(t.shiftAlready);
-      else setError(t.shiftOpenFail);
-    } finally {
-      setBusy(false);
-    }
-  }
 
   async function onCash(
     kind: "in" | "out",
@@ -103,7 +84,6 @@ export default function ShiftPage() {
     if (busy) return;
     setBusy(true);
     setError(null);
-    setStatus(null);
     const amount = parseRp(amountRaw);
     try {
       await recordLocalCashMovement({
@@ -142,9 +122,10 @@ export default function ShiftPage() {
     try {
       await closeLocalShift(countedMinor, { cashRefundsMinor: refundsMinor });
       setCounted("");
-      setStatus(t.shiftClosed);
       await refresh();
       await flushSalesAndVoids();
+      notifyShiftChanged();
+      router.replace("/day-close");
     } catch {
       setError(t.shiftCloseFail);
     } finally {
@@ -152,7 +133,7 @@ export default function ShiftPage() {
     }
   }
 
-  if (!ready) {
+  if (!ready || !current || !expected) {
     return <AuthLoadingShell message={t.loading} />;
   }
 
@@ -166,10 +147,9 @@ export default function ShiftPage() {
       title={t.shiftTitle}
       lang={lang}
       onLangChange={() => setLang(getLang())}
-      subtitle={current ? t.shiftActive : t.shiftOpeningHint}
+      subtitle={t.shiftActive}
     >
-      {current && expected ? (
-        <div className="max-w-lg space-y-5">
+      <div className="max-w-lg space-y-5">
           <dl className="grid grid-cols-2 gap-2 rounded-2xl border border-border bg-secondary/50 p-3 text-sm">
             <dt className="text-muted-foreground">{t.shiftOpening}</dt>
             <dd className="text-right font-medium">
@@ -296,34 +276,6 @@ export default function ShiftPage() {
             {t.shiftToMenu}
           </Button>
         </div>
-      ) : (
-        <form className="max-w-sm space-y-3" onSubmit={(e) => void onOpen(e)}>
-          {status ? (
-            <p className="rounded-2xl border border-border bg-secondary/50 px-3 py-2 text-sm">
-              {status}
-            </p>
-          ) : null}
-          <Label htmlFor="opening-cash">{t.shiftOpeningCash}</Label>
-          <Input
-            id="opening-cash"
-            inputMode="numeric"
-            value={cash}
-            onChange={(e) => setCash(e.target.value)}
-          />
-          {error ? (
-            <p className="text-sm text-destructive" role="alert">
-              {error}
-            </p>
-          ) : null}
-          <Button
-            type="submit"
-            disabled={busy}
-            className="h-12 min-h-12 w-full rounded-xl"
-          >
-            {t.shiftOpen}
-          </Button>
-        </form>
-      )}
     </AppShell>
   );
 }

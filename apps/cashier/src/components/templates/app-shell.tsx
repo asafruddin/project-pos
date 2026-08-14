@@ -5,7 +5,6 @@ import {
   ArrowUDownLeftIcon,
   ArrowUUpLeftIcon,
   CalendarCheckIcon,
-  ClockCountdownIcon,
   CoffeeIcon,
   HouseIcon,
   ShoppingCartIcon,
@@ -15,12 +14,15 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { SideNav, type NavSection } from "@/components/organisms/pos-nav";
+import { OpenShiftDialog } from "@/components/organisms/open-shift-dialog";
 import { PrefControls } from "@/components/molecules/settings-menu";
 import { clearSession, getSession } from "@/lib/auth-token";
 import { clearPinUnlock } from "@/lib/pin-session";
 import { copy, getLang, type LangPref } from "@/lib/preferences";
+import { SHIFT_CHANGED_EVENT } from "@/lib/shift-events";
 import { cn } from "@/lib/utils";
 import { ROLE_LABELS, type Role } from "@pos-apps/types";
+import { getOpenShift } from "@pos-apps/local-db";
 
 type AppShellProps = {
   title: string;
@@ -51,6 +53,7 @@ export function AppShell({
   const router = useRouter();
   const pathname = usePathname();
   const [roleLabel, setRoleLabel] = useState(t.brand);
+  const [needsOpenShift, setNeedsOpenShift] = useState(false);
 
   useEffect(() => {
     const session = getSession();
@@ -58,6 +61,29 @@ export function AppShell({
       setRoleLabel(ROLE_LABELS[session.role as Role]);
     }
   }, [t.brand]);
+
+  useEffect(() => {
+    const skip =
+      pathname.startsWith("/shift") || pathname.startsWith("/day-close");
+    if (skip) {
+      setNeedsOpenShift(false);
+      return;
+    }
+    let cancelled = false;
+    async function check() {
+      const open = await getOpenShift();
+      if (!cancelled) setNeedsOpenShift(!open);
+    }
+    void check();
+    function onChanged() {
+      void check();
+    }
+    window.addEventListener(SHIFT_CHANGED_EVENT, onChanged);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(SHIFT_CHANGED_EVENT, onChanged);
+    };
+  }, [pathname]);
   const initials = roleLabel
     .split(" ")
     .filter(Boolean)
@@ -85,12 +111,6 @@ export function AppShell({
           label: t.menuTitle,
           icon: <HouseIcon size={20} weight="duotone" />,
           match: (p) => p === "/menu" || p === "/",
-        },
-        {
-          href: "/shift",
-          label: t.shiftTitle,
-          icon: <ClockCountdownIcon size={20} weight="duotone" />,
-          match: (p) => p.startsWith("/shift"),
         },
       ],
     },
@@ -237,26 +257,39 @@ export function AppShell({
           </div>
         </header>
 
-        <section className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+        <section
+          className={cn(
+            "min-h-0 flex-1 p-4 sm:p-6",
+            aside ? "overflow-hidden" : "overflow-y-auto",
+          )}
+        >
           <div
             className={cn(
               "mx-auto grid w-full max-w-[90rem] gap-5 sm:gap-6",
               aside
-                ? "md:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)] lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]"
+                ? "h-full min-h-0 md:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)] lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)]"
                 : "",
             )}
           >
-            <div className="min-w-0 rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-card)] sm:p-5">
+            <div
+              className={cn(
+                "min-w-0 rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-card)] sm:p-5",
+                aside && "min-h-0 overflow-y-auto",
+              )}
+            >
               {children}
             </div>
             {aside ? (
-              <aside className="min-w-0 max-md:contents md:sticky md:top-0 md:self-start">
+              <aside className="min-h-0 min-w-0 max-md:contents md:flex md:h-full md:flex-col">
                 {aside}
               </aside>
             ) : null}
           </div>
         </section>
       </div>
+      {needsOpenShift ? (
+        <OpenShiftDialog lang={lang} onOpened={() => setNeedsOpenShift(false)} />
+      ) : null}
     </div>
   );
 }
