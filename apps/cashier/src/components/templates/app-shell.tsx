@@ -2,11 +2,10 @@
 
 import { Button } from "@pos-apps/ui/atoms";
 import {
-  ArrowUDownLeftIcon,
-  ArrowUUpLeftIcon,
   CalendarCheckIcon,
   CoffeeIcon,
   HouseIcon,
+  ReceiptIcon,
   ShoppingCartIcon,
   SignOutIcon,
   UserCircleIcon,
@@ -118,16 +117,13 @@ export function AppShell({
       label: groups.sales,
       items: [
         {
-          href: "/void",
-          label: t.voidTitle,
-          icon: <ArrowUUpLeftIcon size={20} weight="duotone" />,
-          match: (p) => p.startsWith("/void"),
-        },
-        {
-          href: "/returns",
-          label: t.returnTitle,
-          icon: <ArrowUDownLeftIcon size={20} weight="duotone" />,
-          match: (p) => p.startsWith("/returns"),
+          href: "/transactions",
+          label: t.txTitle,
+          icon: <ReceiptIcon size={20} weight="duotone" />,
+          match: (p) =>
+            p.startsWith("/transactions") ||
+            p.startsWith("/void") ||
+            p.startsWith("/returns"),
         },
       ],
     },

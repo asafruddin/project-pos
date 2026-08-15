@@ -489,22 +489,21 @@ export function CartPanel({ lang, onCompleted }: Props) {
         <ShoppingCartIcon size={22} weight="duotone" className="text-primary" />
         {t.cart}
       </h2>
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 sm:p-5">
       {receipt ? (
-        <p className="mb-3 rounded-2xl border border-border bg-secondary/70 p-3 text-sm" role="status">
+        <p className="shrink-0 border-b border-border px-4 py-3 text-sm sm:px-5" role="status">
           {receipt}
         </p>
       ) : null}
       {error ? (
         <p
-          className="mb-3 rounded-2xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          className="mx-4 mt-3 shrink-0 rounded-2xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive sm:mx-5"
           role="alert"
         >
           {error}
         </p>
       ) : null}
       {sale ? (
-        <div className="mt-1 space-y-3">
+        <div className="mt-1 min-h-0 flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
           <p className="font-medium">
             {appliedCredit > 0 ? t.storeCredit : t.cashPayment}{" "}
             {formatIdr(payable, lang)}
@@ -679,8 +678,9 @@ export function CartPanel({ lang, onCompleted }: Props) {
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col">
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pt-4 sm:px-5 sm:pt-5">
           {parked.length ? (
-            <div className="mt-3 space-y-2">
+            <div className="space-y-2">
               <p className="text-sm font-medium text-muted-foreground">{t.parked}</p>
               <ul className="space-y-2">
                 {parked.map((row) => (
@@ -733,53 +733,56 @@ export function CartPanel({ lang, onCompleted }: Props) {
               <p className="text-sm text-muted-foreground">{t.cartEmpty}</p>
             </div>
           ) : (
-            <>
-              <ul className="mt-3 space-y-3">
-                {lines.map((line) => (
-                  <li key={line.productId} className="border-b border-border pb-3">
-                    <p className="font-medium">{line.name}</p>
-                    <div className="mt-2 flex items-center justify-between gap-2">
-                      <span className="text-sm">
-                        {formatIdr(line.priceMinor * line.qty, lang)}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          className="h-12 w-12 rounded-2xl"
-                          aria-label={`${t.qtyDown} ${line.name}`}
-                          onClick={() => setQty(line.productId, line.qty - 1)}
-                        >
-                          <MinusIcon size={18} weight="bold" />
-                        </Button>
-                        <span className="min-w-8 text-center">{line.qty}</span>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          className="h-12 w-12 rounded-2xl"
-                          aria-label={`${t.qtyUp} ${line.name}`}
-                          onClick={() => setQty(line.productId, line.qty + 1)}
-                        >
-                          <PlusIcon size={18} weight="bold" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-12 w-12 rounded-2xl text-destructive hover:text-destructive"
-                          aria-label={`${t.removeLine} ${line.name}`}
-                          onClick={() => setQty(line.productId, 0)}
-                        >
-                          <XIcon size={18} weight="bold" />
-                        </Button>
-                      </div>
+            <ul className="mt-3 space-y-3">
+              {lines.map((line) => (
+                <li key={line.productId} className="border-b border-border pb-3">
+                  <p className="font-medium">{line.name}</p>
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <span className="text-sm">
+                      {formatIdr(line.priceMinor * line.qty, lang)}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-12 w-12 rounded-2xl"
+                        aria-label={`${t.qtyDown} ${line.name}`}
+                        onClick={() => setQty(line.productId, line.qty - 1)}
+                      >
+                        <MinusIcon size={18} weight="bold" />
+                      </Button>
+                      <span className="min-w-8 text-center">{line.qty}</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-12 w-12 rounded-2xl"
+                        aria-label={`${t.qtyUp} ${line.name}`}
+                        onClick={() => setQty(line.productId, line.qty + 1)}
+                      >
+                        <PlusIcon size={18} weight="bold" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-12 w-12 rounded-2xl text-destructive hover:text-destructive"
+                        aria-label={`${t.removeLine} ${line.name}`}
+                        onClick={() => setQty(line.productId, 0)}
+                      >
+                        <XIcon size={18} weight="bold" />
+                      </Button>
                     </div>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-4 flex justify-between font-semibold">
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          </div>
+          {lines.length > 0 ? (
+            <div className="shrink-0 border-t border-border px-4 py-4 sm:px-5">
+              <p className="flex justify-between font-semibold">
                 <span>{t.total}</span>
                 <span>{formatIdr(payable, lang)}</span>
               </p>
@@ -790,7 +793,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
               ) : null}
               <Button
                 className="mt-4 h-12 min-h-12 w-full rounded-xl"
-                disabled={busy || !lines.length || !shiftOpen}
+                disabled={busy || !shiftOpen}
                 onClick={() => void startCheckout()}
               >
                 {busy ? t.pending : t.pay}
@@ -798,18 +801,17 @@ export function CartPanel({ lang, onCompleted }: Props) {
               <Button
                 type="button"
                 variant="ghost"
-                disabled={busy || !lines.length}
+                disabled={busy}
                 className="mt-2 h-12 min-h-12 w-full text-sm text-muted-foreground"
                 onClick={() => void holdCart()}
               >
                 <PauseIcon size={16} weight="bold" />
                 {t.hold}
               </Button>
-            </>
-          )}
+            </div>
+          ) : null}
         </div>
       )}
-      </div>
     </aside>
   );
 }
