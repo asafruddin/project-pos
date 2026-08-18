@@ -13,6 +13,7 @@ import type {
 } from "@pos-apps/types";
 import { authorizedFetch } from "@/lib/api-client";
 import { getAccessToken, isAccessTokenExpired, logoutToLogin } from "@/lib/auth-token";
+import { parseGroupedInt } from "@/lib/format-money";
 
 function emptyTier(): LoyaltyTierRule {
   return { name: "", min_lifetime_points: 0, earn_multiplier_bps: 10000 };
@@ -71,9 +72,9 @@ export function LoyaltyProgramForm({ canEdit }: { canEdit: boolean }) {
     if (!canEdit || pending) return;
     setPending(true);
     setError(null);
-    const earn = Number.parseInt(earnPerMinor, 10);
-    const value = Number.parseInt(pointValueMinor, 10);
-    const expire = expireDays.trim() ? Number.parseInt(expireDays, 10) : null;
+    const earn = parseGroupedInt(earnPerMinor);
+    const value = parseGroupedInt(pointValueMinor);
+    const expire = expireDays.trim() ? parseGroupedInt(expireDays) : null;
     const body: UpdateLoyaltyProgramRequest = {
       enabled,
       earn_per_minor: earn,
@@ -222,7 +223,7 @@ export function LoyaltyProgramForm({ canEdit }: { canEdit: boolean }) {
                   const next = [...tiers];
                   next[index] = {
                     ...tier,
-                    min_lifetime_points: Number.parseInt(e.target.value, 10) || 0,
+                    min_lifetime_points: parseGroupedInt(e.target.value) || 0,
                   };
                   setTiers(next);
                 }}
@@ -241,7 +242,7 @@ export function LoyaltyProgramForm({ canEdit }: { canEdit: boolean }) {
                   const next = [...tiers];
                   next[index] = {
                     ...tier,
-                    earn_multiplier_bps: Number.parseInt(e.target.value, 10) || 0,
+                    earn_multiplier_bps: parseGroupedInt(e.target.value) || 0,
                   };
                   setTiers(next);
                 }}

@@ -13,6 +13,7 @@ import type {
 } from "@pos-apps/types";
 import { STORE_1_ID } from "@pos-apps/types";
 import { authorizedFetch } from "@/lib/api-client";
+import { parseGroupedInt } from "@/lib/format-money";
 
 function errorMessage(res: Response, body: unknown): string {
   return (body as ApiErrorBody)?.message ?? `Gagal (${res.status})`;
@@ -76,7 +77,7 @@ export function TransferForm({ canCreate }: { canCreate: boolean }) {
         body: JSON.stringify({
           from_store_id: fromStore,
           to_store_id: toStore,
-          lines: [{ product_id: productId, qty: Number(qty) }],
+          lines: [{ product_id: productId, qty: parseGroupedInt(qty) }],
         }),
       });
       if (!res.ok) {

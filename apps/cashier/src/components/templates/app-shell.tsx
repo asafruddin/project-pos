@@ -15,8 +15,8 @@ import { useEffect, useState } from "react";
 import { SideNav, type NavSection } from "@/components/organisms/pos-nav";
 import { OpenShiftDialog } from "@/components/organisms/open-shift-dialog";
 import { PrefControls } from "@/components/molecules/settings-menu";
-import { clearSession, getSession } from "@/lib/auth-token";
-import { clearPinUnlock } from "@/lib/pin-session";
+import { getSession } from "@/lib/auth-token";
+import { requestLogout } from "@/lib/logout";
 import { copy, getLang, type LangPref } from "@/lib/preferences";
 import { SHIFT_CHANGED_EVENT } from "@/lib/shift-events";
 import { cn } from "@/lib/utils";
@@ -91,9 +91,7 @@ export function AppShell({
     .join("");
 
   function logout() {
-    clearSession();
-    clearPinUnlock();
-    router.replace("/login");
+    void requestLogout(router);
   }
 
   const groups =

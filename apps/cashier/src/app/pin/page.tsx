@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   enrollPin,
+  getOpenShift,
   hasPinMaterial,
   verifyPin,
 } from "@pos-apps/local-db";
@@ -14,6 +15,13 @@ import { PrefControls } from "@/components/molecules/settings-menu";
 import { clearSession, getAccessToken, getSession, isShiftAuthorized } from "@/lib/auth-token";
 import { clearPinUnlock, isPinUnlocked, setPinUnlocked } from "@/lib/pin-session";
 import { applyTheme, copy, getLang } from "@/lib/preferences";
+
+async function routeAfterPinUnlock(
+  router: { replace: (href: string) => void },
+): Promise<void> {
+  const open = await getOpenShift();
+  router.replace(open ? "/shift?intent=close-then-open" : "/menu");
+}
 
 export default function PinPage() {
   const router = useRouter();
@@ -34,7 +42,7 @@ export default function PinPage() {
 
     async function gate() {
       if (isPinUnlocked()) {
-        router.replace("/menu");
+        await routeAfterPinUnlock(router);
         return;
       }
       const session = getSession();
@@ -79,7 +87,7 @@ export default function PinPage() {
         }
         await enrollPin(session.userId, digits);
         setPinUnlocked(true);
-        router.replace("/menu");
+        await routeAfterPinUnlock(router);
         return;
       }
 
@@ -96,7 +104,7 @@ export default function PinPage() {
           return;
         }
         setPinUnlocked(true);
-        router.replace("/menu");
+        await routeAfterPinUnlock(router);
         return;
       }
 

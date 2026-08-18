@@ -13,7 +13,7 @@ import type {
   ProductListResponse,
 } from "@pos-apps/types";
 import { authorizedFetch } from "@/lib/api-client";
-import { formatIdr } from "@/lib/format-money";
+import { formatIdr, parseGroupedInt } from "@/lib/format-money";
 
 function productLabel(
   products: ProductListResponse["products"],
@@ -120,7 +120,7 @@ export function CustomerForm({
         notes: notes || null,
         group_name: canDelete ? groupName || null : undefined,
         store_credit_minor: canDelete
-          ? Number.parseInt(storeCredit, 10) || 0
+          ? parseGroupedInt(storeCredit) || 0
           : undefined,
       };
       const res = customerId
@@ -171,7 +171,8 @@ export function CustomerForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           product_id: priceProductId,
-          price_minor: priceMinor.trim() === "" ? null : Number.parseInt(priceMinor, 10),
+          price_minor:
+            priceMinor.trim() === "" ? null : parseGroupedInt(priceMinor),
         }),
       });
       const data = (await res.json()) as Customer | ApiErrorBody;
@@ -201,7 +202,7 @@ export function CustomerForm({
           price_minor:
             groupPriceMinor.trim() === ""
               ? null
-              : Number.parseInt(groupPriceMinor, 10),
+              : parseGroupedInt(groupPriceMinor),
         }),
       });
       const data = (await res.json()) as ApiErrorBody | { price_minor: number | null };

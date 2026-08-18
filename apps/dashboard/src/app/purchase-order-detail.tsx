@@ -11,7 +11,7 @@ import type {
   PurchaseOrderStatus,
 } from "@pos-apps/types";
 import { authorizedFetch } from "@/lib/api-client";
-import { formatIdr } from "@/lib/format-money";
+import { formatIdr, parseGroupedInt } from "@/lib/format-money";
 
 function statusLabel(status: PurchaseOrderStatus): string {
   if (status === "draft") return "Draf";
@@ -115,7 +115,7 @@ export function PurchaseOrderDetailForm({ poId }: { poId: string }) {
     const lines = selectedPo.lines
       .map((line) => ({
         product_id: line.product_id,
-        qty: Number(receiveQty[line.product_id] ?? "0"),
+        qty: parseGroupedInt(receiveQty[line.product_id] ?? "0"),
       }))
       .filter((line) => Number.isInteger(line.qty) && line.qty > 0);
     if (!lines.length) {

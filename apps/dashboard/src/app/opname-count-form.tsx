@@ -7,6 +7,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ApiErrorBody, OpnameDetail, OpnameStatus } from "@pos-apps/types";
 import { authorizedFetch } from "@/lib/api-client";
+import { parseGroupedInt } from "@/lib/format-money";
 
 function statusLabel(status: OpnameStatus): string {
   if (status === "draft") return "Draf";
@@ -76,7 +77,7 @@ export function OpnameCountForm({
     for (const line of selected.lines) {
       const raw = counts[line.product_id] ?? "";
       if (!raw.trim()) continue;
-      const n = Number(raw);
+      const n = parseGroupedInt(raw);
       if (!Number.isInteger(n) || n < 0) {
         setError("Jumlah hitung harus bilangan bulat ≥ 0.");
         return;
@@ -191,7 +192,7 @@ export function OpnameCountForm({
             <tbody>
               {selected.lines.map((line) => {
                 const raw = counts[line.product_id] ?? "";
-                const n = raw.trim() === "" ? null : Number(raw);
+                const n = raw.trim() === "" ? null : parseGroupedInt(raw);
                 const variance =
                   n != null && Number.isInteger(n)
                     ? n - line.system_qty

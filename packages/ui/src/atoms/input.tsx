@@ -1,8 +1,9 @@
 import * as React from "react"
 
+import { formatGroupedIntInput } from "@pos-apps/ui/lib/grouped-int"
 import { cn } from "@pos-apps/ui/lib/utils"
 
-function isNumericAmountInput(
+function isGroupedIntegerInput(
   type: React.HTMLInputTypeAttribute | undefined,
   inputMode: React.HTMLAttributes<HTMLInputElement>["inputMode"],
   maxLength: number | undefined,
@@ -13,15 +14,27 @@ function isNumericAmountInput(
     type === "email" ||
     type === "tel" ||
     type === "search" ||
-    type === "hidden"
+    type === "hidden" ||
+    type === "checkbox" ||
+    type === "radio" ||
+    type === "date" ||
+    type === "time" ||
+    type === "datetime-local" ||
+    type === "month" ||
+    type === "week" ||
+    type === "color" ||
+    type === "range"
   ) {
     return false
   }
+  // PIN / short codes keep raw digits (no thousand grouping).
   if (typeof maxLength === "number") return false
-  return type === "number" || inputMode === "numeric" || inputMode === "decimal"
+  // Decimal fields keep a real decimal point (not id-ID thousand sep).
+  if (inputMode === "decimal") return false
+  return type === "number" || inputMode === "numeric"
 }
 
-/** Drop extra leading zeros ("05" → "5") while keeping "0", "0.5", and "-0.5". */
+/** Drop extra leading zeros for decimal-style values ("05" → "5"). */
 function stripLeadingZeros(raw: string) {
   if (raw === "" || raw === "-" || raw === "." || raw === "-.") return raw
   const negative = raw.startsWith("-")
@@ -38,11 +51,40 @@ function Input({
   type,
   inputMode,
   maxLength,
+  value,
+  defaultValue,
   onChange,
   ...props
 }: React.ComponentProps<"input">) {
+  const grouped = isGroupedIntegerInput(type, inputMode, maxLength)
+  const resolvedType = grouped ? "text" : type
+  const resolvedInputMode = grouped ? (inputMode ?? "numeric") : inputMode
+
+  const resolvedValue =
+    grouped && value !== undefined && value !== null
+      ? String(value) === ""
+        ? ""
+        : formatGroupedIntInput(String(value))
+      : value
+
+  const resolvedDefaultValue =
+    grouped && defaultValue !== undefined && defaultValue !== null
+      ? String(defaultValue) === ""
+        ? ""
+        : formatGroupedIntInput(String(defaultValue))
+      : defaultValue
+
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
-    if (isNumericAmountInput(type, inputMode, maxLength)) {
+    if (grouped) {
+      const next = formatGroupedIntInput(event.target.value)
+      if (next !== event.target.value) {
+        event.target.value = next
+      }
+    } else if (
+      type === "number" ||
+      inputMode === "numeric" ||
+      inputMode === "decimal"
+    ) {
       const next = stripLeadingZeros(event.target.value)
       if (next !== event.target.value) {
         event.target.value = next
@@ -53,8 +95,8 @@ function Input({
 
   return (
     <input
-      type={type}
-      inputMode={inputMode}
+      type={resolvedType}
+      inputMode={resolvedInputMode}
       maxLength={maxLength}
       data-slot="input"
       className={cn(
@@ -64,6 +106,11 @@ function Input({
         className
       )}
       {...props}
+      {...(value !== undefined
+        ? { value: resolvedValue }
+        : defaultValue !== undefined
+          ? { defaultValue: resolvedDefaultValue }
+          : {})}
       onChange={handleChange}
     />
   )

@@ -11,6 +11,7 @@ import type {
   StockOverviewResponse,
 } from "@pos-apps/types";
 import { authorizedFetch } from "@/lib/api-client";
+import { parseGroupedInt } from "@/lib/format-money";
 
 export function StockDamageForm({
   productId,
@@ -74,7 +75,7 @@ export function StockDamageForm({
 
   async function onMarkDamaged(e: FormEvent) {
     e.preventDefault();
-    const n = Number(qty);
+    const n = parseGroupedInt(qty);
     if (!Number.isInteger(n) || n < 1) {
       setError("Jumlah rusak harus bilangan bulat ≥ 1.");
       return;

@@ -38,7 +38,7 @@ import { useCart } from "@/components/providers/cart-context";
 import { CustomerAttach, restoreCartCustomer } from "@/components/organisms/customer-attach";
 import { UnpackConfirmDialog } from "@/components/organisms/unpack-confirm-dialog";
 import { authorizedFetch } from "@/lib/api-client";
-import { formatIdr } from "@/lib/money";
+import { formatIdr, parseGroupedInt } from "@/lib/money";
 import { copy, type LangPref } from "@/lib/preferences";
 import { SHIFT_CHANGED_EVENT } from "@/lib/shift-events";
 import { canOfferUnpack, performUnpack } from "@/lib/unpack";
@@ -625,7 +625,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
                 disabled={busy}
                 className="h-8 w-32 text-right"
                 onChange={(e) => {
-                  const next = Number.parseInt(e.target.value, 10);
+                  const next = parseGroupedInt(e.target.value);
                   setManagerMinor(Number.isInteger(next) ? Math.max(0, next) : 0);
                 }}
               />
@@ -664,7 +664,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
                     disabled={busy || maxRedeem <= 0}
                     className="h-8 w-32 text-right"
                     onChange={(e) => {
-                      const next = Number.parseInt(e.target.value, 10);
+                      const next = parseGroupedInt(e.target.value);
                       setRedeemInput(
                         Number.isInteger(next)
                           ? Math.min(Math.max(0, next), maxRedeem)
@@ -696,7 +696,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
                   disabled={busy || maxCredit <= 0}
                   className="h-8 w-32 text-right"
                   onChange={(e) => {
-                    const next = Number.parseInt(e.target.value, 10);
+                    const next = parseGroupedInt(e.target.value);
                     setCreditMinor(
                       Number.isInteger(next)
                         ? Math.min(Math.max(0, next), maxCredit)

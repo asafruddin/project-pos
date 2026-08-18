@@ -1,9 +1,15 @@
 "use client";
 
-import { AuthLoadingShell } from "@pos-apps/ui/organisms";
-import { Button, Input, Label } from "@pos-apps/ui/atoms";
-import { FormEvent, useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Button, Input, Label, Skeleton } from "@pos-apps/ui/atoms";
+import {
+  FormEvent,
+  Suspense,
+  useCallback,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { ShiftDetailResponse, ShiftExpectedCash } from "@pos-apps/types";
 import {
   closeLocalShift,
@@ -15,17 +21,59 @@ import {
 import { AppShell } from "@/components/templates/app-shell";
 import { flushSalesAndVoids } from "@/lib/flush-sync";
 import { authorizedFetch } from "@/lib/api-client";
-import { formatIdr } from "@/lib/money";
-import { isPinUnlocked } from "@/lib/pin-session";
-import { applyTheme, copy, getLang } from "@/lib/preferences";
+import { clearSession } from "@/lib/auth-token";
+import { formatIdr, parseGroupedInt } from "@/lib/money";
+import { clearPinUnlock, isPinUnlocked } from "@/lib/pin-session";
+import { applyTheme, copy, getLang, type LangPref } from "@/lib/preferences";
 import { notifyShiftChanged } from "@/lib/shift-events";
 
-function parseRp(raw: string): number {
-  return Number.parseInt(raw.replace(/\D/g, ""), 10);
+type ShiftIntent = "logout" | "close-then-open" | null;
+
+function parseIntent(raw: string | null): ShiftIntent {
+  if (raw === "logout" || raw === "close-then-open") return raw;
+  return null;
 }
 
-export default function ShiftPage() {
+function ShiftLoadingContent({ message }: { message: string }) {
+  return (
+    <div className="max-w-lg space-y-4" aria-busy="true" aria-live="polite">
+      <p className="text-sm text-muted-foreground">{message}</p>
+      <Skeleton className="h-40 w-full rounded-2xl" />
+      <Skeleton className="h-28 w-full rounded-2xl" />
+      <Skeleton className="h-28 w-full rounded-2xl" />
+      <Skeleton className="h-24 w-full rounded-2xl" />
+    </div>
+  );
+}
+
+function ShiftShell({
+  lang,
+  onLangChange,
+  subtitle,
+  children,
+}: {
+  lang: LangPref;
+  onLangChange: () => void;
+  subtitle?: string;
+  children: ReactNode;
+}) {
+  const t = copy(lang);
+  return (
+    <AppShell
+      title={t.shiftTitle}
+      lang={lang}
+      onLangChange={onLangChange}
+      subtitle={subtitle ?? t.loading}
+    >
+      {children}
+    </AppShell>
+  );
+}
+
+function ShiftPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const intent = parseIntent(searchParams.get("intent"));
   const [lang, setLang] = useState(getLang());
   const t = copy(lang);
   const [ready, setReady] = useState(false);
@@ -71,10 +119,16 @@ export default function ShiftPage() {
     void (async () => {
       await refresh();
       if (!(await getOpenShift())) {
+        if (intent === "logout") {
+          clearSession();
+          clearPinUnlock();
+          router.replace("/login");
+          return;
+        }
         router.replace("/menu");
       }
     })();
-  }, [router, refresh]);
+  }, [router, refresh, intent]);
 
   async function onCash(
     kind: "in" | "out",
@@ -84,7 +138,7 @@ export default function ShiftPage() {
     if (busy) return;
     setBusy(true);
     setError(null);
-    const amount = parseRp(amountRaw);
+    const amount = parseGroupedInt(amountRaw);
     try {
       await recordLocalCashMovement({
         kind,
@@ -110,7 +164,7 @@ export default function ShiftPage() {
   async function onClose(e: FormEvent) {
     e.preventDefault();
     if (busy || !expected) return;
-    const countedMinor = parseRp(counted);
+    const countedMinor = parseGroupedInt(counted);
     if (!Number.isInteger(countedMinor) || countedMinor < 0) {
       setError(t.shiftCloseFail);
       return;
@@ -122,9 +176,19 @@ export default function ShiftPage() {
     try {
       await closeLocalShift(countedMinor, { cashRefundsMinor: refundsMinor });
       setCounted("");
-      await refresh();
       await flushSalesAndVoids();
       notifyShiftChanged();
+      if (intent === "logout") {
+        clearSession();
+        clearPinUnlock();
+        router.replace("/login");
+        return;
+      }
+      if (intent === "close-then-open") {
+        router.replace("/menu");
+        return;
+      }
+      await refresh();
       router.replace("/day-close");
     } catch {
       setError(t.shiftCloseFail);
@@ -134,20 +198,37 @@ export default function ShiftPage() {
   }
 
   if (!ready || !current || !expected) {
-    return <AuthLoadingShell message={t.loading} />;
+    return (
+      <ShiftShell lang={lang} onLangChange={() => setLang(getLang())}>
+        <ShiftLoadingContent message={t.loading} />
+      </ShiftShell>
+    );
   }
 
   const difference =
-    expected && Number.isInteger(parseRp(counted))
-      ? parseRp(counted) - expected.expected_cash_minor
+    expected && Number.isInteger(parseGroupedInt(counted))
+      ? parseGroupedInt(counted) - expected.expected_cash_minor
       : null;
 
+  const subtitle =
+    intent === "logout"
+      ? t.shiftLogoutHint
+      : intent === "close-then-open"
+        ? t.shiftResumeHint
+        : t.shiftActive;
+
+  const closeLabel =
+    intent === "logout"
+      ? t.shiftLogoutClose
+      : intent === "close-then-open"
+        ? t.shiftResumeClose
+        : t.shiftClose;
+
   return (
-    <AppShell
-      title={t.shiftTitle}
+    <ShiftShell
       lang={lang}
       onLangChange={() => setLang(getLang())}
-      subtitle={t.shiftActive}
+      subtitle={subtitle}
     >
       <div className="max-w-lg space-y-5">
           <dl className="grid grid-cols-2 gap-2 rounded-2xl border border-border bg-secondary/50 p-3 text-sm">
@@ -258,7 +339,7 @@ export default function ShiftPage() {
               disabled={busy}
               className="h-12 min-h-12 w-full rounded-xl"
             >
-              {t.shiftClose}
+              {busy ? t.pending : closeLabel}
             </Button>
           </form>
 
@@ -268,14 +349,32 @@ export default function ShiftPage() {
             </p>
           ) : null}
 
-          <Button
-            type="button"
-            className="min-h-12 w-full rounded-2xl bg-secondary text-secondary-foreground"
-            onClick={() => router.push("/menu")}
-          >
-            {t.shiftToMenu}
-          </Button>
+          {intent ? null : (
+            <Button
+              type="button"
+              className="min-h-12 w-full rounded-2xl bg-secondary text-secondary-foreground"
+              onClick={() => router.push("/menu")}
+            >
+              {t.shiftToMenu}
+            </Button>
+          )}
         </div>
-    </AppShell>
+    </ShiftShell>
+  );
+}
+
+export default function ShiftPage() {
+  const [lang, setLang] = useState(getLang());
+  const t = copy(lang);
+  return (
+    <Suspense
+      fallback={
+        <ShiftShell lang={lang} onLangChange={() => setLang(getLang())}>
+          <ShiftLoadingContent message={t.loading} />
+        </ShiftShell>
+      }
+    >
+      <ShiftPageInner />
+    </Suspense>
   );
 }

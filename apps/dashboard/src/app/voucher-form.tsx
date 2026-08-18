@@ -7,6 +7,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ApiErrorBody, Voucher } from "@pos-apps/types";
 import { authorizedFetch } from "@/lib/api-client";
+import { parseGroupedInt } from "@/lib/format-money";
 
 export function VoucherForm({ canEdit }: { canEdit: boolean }) {
   const router = useRouter();
@@ -26,7 +27,7 @@ export function VoucherForm({ canEdit }: { canEdit: boolean }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code: voucherCode,
-          remaining_minor: Number.parseInt(voucherRemaining, 10),
+          remaining_minor: parseGroupedInt(voucherRemaining),
         }),
       });
       const data = (await res.json()) as Voucher | ApiErrorBody;

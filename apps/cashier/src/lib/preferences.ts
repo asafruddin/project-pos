@@ -265,6 +265,12 @@ export function copy(lang: LangPref) {
         "Counted cash does not match expected. Close anyway? The difference will be recorded.",
       shiftCloseFail: "Could not close the shift.",
       shiftClosed: "Shift closed. Open a new one to keep selling.",
+      shiftLogoutHint:
+        "Close this shift to sign out. Enter the counted drawer cash below.",
+      shiftLogoutClose: "Close shift and sign out",
+      shiftResumeHint:
+        "A previous shift is still open. Close it before opening a new one.",
+      shiftResumeClose: "Close previous shift",
     };
   }
   return {
@@ -493,5 +499,11 @@ export function copy(lang: LangPref) {
       "Hitungan laci tidak sama dengan kas diharapkan. Tetap tutup? Selisih akan dicatat.",
     shiftCloseFail: "Tidak dapat menutup shift.",
     shiftClosed: "Shift ditutup. Buka yang baru untuk lanjut menjual.",
+    shiftLogoutHint:
+      "Tutup shift ini untuk keluar. Masukkan hitungan uang di laci di bawah.",
+    shiftLogoutClose: "Tutup shift dan keluar",
+    shiftResumeHint:
+      "Shift sebelumnya masih terbuka. Tutup dulu sebelum membuka shift baru.",
+    shiftResumeClose: "Tutup shift sebelumnya",
   };
 }

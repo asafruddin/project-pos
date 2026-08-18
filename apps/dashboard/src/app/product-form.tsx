@@ -63,17 +63,18 @@ const emptyForm: FormState = {
 };
 
 function parseNonNegInt(raw: string): number | null {
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  const n = Number(trimmed);
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return null;
+  const n = Number.parseInt(digits, 10);
   if (!Number.isInteger(n) || n < 0 || n > INT32_MAX) return null;
   return n;
 }
 
 function parseIntQty(raw: string): number | null {
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  const n = Number(trimmed);
+  const negative = raw.trim().startsWith("-");
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return null;
+  const n = Number.parseInt(digits, 10) * (negative ? -1 : 1);
   if (!Number.isInteger(n) || n < INT32_MIN || n > INT32_MAX) return null;
   return n;
 }

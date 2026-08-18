@@ -7,6 +7,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ApiErrorBody, Promotion } from "@pos-apps/types";
 import { authorizedFetch } from "@/lib/api-client";
+import { parseGroupedInt } from "@/lib/format-money";
 
 export function PromotionForm({ canEdit }: { canEdit: boolean }) {
   const router = useRouter();
@@ -33,12 +34,12 @@ export function PromotionForm({ canEdit }: { canEdit: boolean }) {
         body: JSON.stringify({
           name,
           kind,
-          percent_bps: kind === "percent" ? Number.parseInt(percentBps, 10) : null,
-          fixed_minor: kind === "fixed" ? Number.parseInt(fixedMinor, 10) : null,
+          percent_bps: kind === "percent" ? parseGroupedInt(percentBps) : null,
+          fixed_minor: kind === "fixed" ? parseGroupedInt(fixedMinor) : null,
           coupon_code: coupon.trim() || null,
           exclusive,
-          hour_start: hourStart.trim() ? Number.parseInt(hourStart, 10) : null,
-          hour_end: hourEnd.trim() ? Number.parseInt(hourEnd, 10) : null,
+          hour_start: hourStart.trim() ? parseGroupedInt(hourStart) : null,
+          hour_end: hourEnd.trim() ? parseGroupedInt(hourEnd) : null,
         }),
       });
       const data = (await res.json()) as Promotion | ApiErrorBody;

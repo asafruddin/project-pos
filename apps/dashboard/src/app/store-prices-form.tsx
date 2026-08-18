@@ -13,6 +13,7 @@ import type {
 } from "@pos-apps/types";
 import { STORE_1_ID } from "@pos-apps/types";
 import { authorizedFetch } from "@/lib/api-client";
+import { parseGroupedInt } from "@/lib/format-money";
 
 function errorMessage(res: Response, body: unknown): string {
   return (body as ApiErrorBody)?.message ?? `Gagal (${res.status})`;
@@ -74,7 +75,8 @@ export function StorePricesForm({ canEdit }: { canEdit: boolean }) {
         body: JSON.stringify({
           store_id: priceStore,
           product_id: priceProduct,
-          price_minor: trimmed === "" ? null : Number(trimmed),
+          price_minor:
+            trimmed === "" ? null : parseGroupedInt(trimmed),
         }),
       });
       if (!res.ok) {

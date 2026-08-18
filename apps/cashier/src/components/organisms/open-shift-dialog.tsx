@@ -13,14 +13,10 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { openLocalShift } from "@pos-apps/local-db";
 import { flushSalesAndVoids } from "@/lib/flush-sync";
-import { clearSession } from "@/lib/auth-token";
-import { clearPinUnlock } from "@/lib/pin-session";
+import { requestLogout } from "@/lib/logout";
 import { copy, type LangPref } from "@/lib/preferences";
+import { parseGroupedInt } from "@/lib/money";
 import { notifyShiftChanged } from "@/lib/shift-events";
-
-function parseRp(raw: string): number {
-  return Number.parseInt(raw.replace(/\D/g, ""), 10);
-}
 
 export function OpenShiftDialog({
   lang,
@@ -38,7 +34,7 @@ export function OpenShiftDialog({
   async function onOpen(e: FormEvent) {
     e.preventDefault();
     if (busy) return;
-    const opening = parseRp(cash);
+    const opening = parseGroupedInt(cash);
     if (cash.trim() === "" || !Number.isInteger(opening) || opening < 0) {
       setError(t.shiftOpeningRequired);
       return;
@@ -64,9 +60,7 @@ export function OpenShiftDialog({
   }
 
   function logout() {
-    clearSession();
-    clearPinUnlock();
-    router.replace("/login");
+    void requestLogout(router);
   }
 
   return (

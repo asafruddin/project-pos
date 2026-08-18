@@ -12,6 +12,7 @@ import type {
   SupplierListResponse,
 } from "@pos-apps/types";
 import { authorizedFetch } from "@/lib/api-client";
+import { parseGroupedInt } from "@/lib/format-money";
 
 export function PurchaseOrderForm() {
   const router = useRouter();
@@ -71,8 +72,8 @@ export function PurchaseOrderForm() {
       .filter((line) => line.product_id)
       .map((line) => ({
         product_id: line.product_id,
-        qty: Number(line.qty),
-        cost_minor: Number(line.cost_minor),
+        qty: parseGroupedInt(line.qty),
+        cost_minor: parseGroupedInt(line.cost_minor),
       }));
     setPending(true);
     try {
