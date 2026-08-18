@@ -2,7 +2,7 @@
 
 import { Button, Input, NativeSelect, Skeleton } from "@pos-apps/ui/atoms";
 import { FormField, formInputClass } from "@pos-apps/ui/molecules";
-import { FormActions, FormBackLink, FormSection } from "@pos-apps/ui/organisms";
+import { FormActions, FormBackLink, FormSection, FormBody, formPageClassName } from "@pos-apps/ui/organisms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type {
@@ -116,8 +116,9 @@ export function PurchaseOrderForm() {
   return (
     <form
       onSubmit={(e) => void onCreatePo(e)}
-      className="flex min-h-full flex-col gap-5"
+      className={formPageClassName}
     >
+      <FormBody>
       <FormBackLink href="/purchasing">Daftar pembelian</FormBackLink>
 
       <FormSection
@@ -204,6 +205,7 @@ export function PurchaseOrderForm() {
         </Button>
       </FormSection>
 
+      </FormBody>
       <FormActions
         error={error}
         pending={pending}

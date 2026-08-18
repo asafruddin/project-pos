@@ -68,13 +68,20 @@ export const registers = pgTable("registers", {
     .defaultNow(),
 });
 
-export const categories = pgTable("categories", {
-  categoryId: uuid("category_id").primaryKey().defaultRandom(),
-  name: text("name").notNull().unique(),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const categories = pgTable(
+  "categories",
+  {
+    categoryId: uuid("category_id").primaryKey().defaultRandom(),
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => stores.storeId),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [uniqueIndex("categories_store_name_unique").on(t.storeId, t.name)],
+);
 
 export const brands = pgTable("brands", {
   brandId: uuid("brand_id").primaryKey().defaultRandom(),
@@ -83,6 +90,22 @@ export const brands = pgTable("brands", {
     .notNull()
     .defaultNow(),
 });
+
+/** Store-scoped sell unit (pcs, kg, slop) — not report quantity sold. */
+export const units = pgTable(
+  "units",
+  {
+    unitId: uuid("unit_id").primaryKey().defaultRandom(),
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => stores.storeId),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [uniqueIndex("units_store_name_unique").on(t.storeId, t.name)],
+);
 
 /** Catalog products — `stock_qty` is a cached ledger projection (AD-4 / AD-13). */
 export const products = pgTable(
@@ -107,6 +130,7 @@ export const products = pgTable(
     parentId: uuid("parent_id"),
     categoryId: uuid("category_id").references(() => categories.categoryId),
     brandId: uuid("brand_id").references(() => brands.brandId),
+    unitId: uuid("unit_id").references(() => units.unitId),
     tags: text("tags").array().notNull().default(sql`'{}'`),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -132,6 +156,48 @@ export const products = pgTable(
       foreignColumns: [t.productId],
       name: "products_parent_id_products_product_id_fk",
     }),
+  ],
+);
+
+/**
+ * Explicit Pack→pcs (or similar) link between two sellable SKUs.
+ * `from` is the larger unit (pack); `to` is the smaller (pcs).
+ * Factor: `from_qty` of from → `to_qty` of to (typically 1 pack = N pcs).
+ */
+export const productUnitConversions = pgTable(
+  "product_unit_conversions",
+  {
+    conversionId: uuid("conversion_id").primaryKey().defaultRandom(),
+    fromProductId: uuid("from_product_id")
+      .notNull()
+      .references(() => products.productId),
+    toProductId: uuid("to_product_id")
+      .notNull()
+      .references(() => products.productId),
+    fromQty: integer("from_qty").notNull().default(1),
+    toQty: integer("to_qty").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("product_unit_conversions_to_product_unique").on(t.toProductId),
+    uniqueIndex("product_unit_conversions_pair_unique").on(
+      t.fromProductId,
+      t.toProductId,
+    ),
+    check(
+      "product_unit_conversions_from_qty_pos",
+      sql`${t.fromQty} > 0`,
+    ),
+    check("product_unit_conversions_to_qty_pos", sql`${t.toQty} > 0`),
+    check(
+      "product_unit_conversions_not_self",
+      sql`${t.fromProductId} <> ${t.toProductId}`,
+    ),
   ],
 );
 
@@ -248,6 +314,7 @@ export type UserRow = typeof users.$inferSelect;
 export type ProductRow = typeof products.$inferSelect;
 export type CategoryRow = typeof categories.$inferSelect;
 export type BrandRow = typeof brands.$inferSelect;
+export type UnitRow = typeof units.$inferSelect;
 export type ProductImageRow = typeof productImages.$inferSelect;
 export type MediaDeleteRetryRow = typeof mediaDeleteRetries.$inferSelect;
 export type StoreRow = typeof stores.$inferSelect;

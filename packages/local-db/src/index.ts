@@ -54,6 +54,7 @@ export {
   getCatalogImageRecord,
   isSellableCatalogRow,
   primaryCatalogImage,
+  patchCatalogStocks,
 } from "./catalog.js";
 export {
   completeSale,

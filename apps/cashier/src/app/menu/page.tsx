@@ -21,6 +21,7 @@ import type { ApiErrorBody, CustomerListResponse, LoyaltyProgram, ProductListRes
 import { AppShell } from "@/components/templates/app-shell";
 import { CartPanel } from "@/components/organisms/cart-panel";
 import { CatalogProductThumb } from "@/components/molecules/catalog-product-thumb";
+import { UnpackConfirmDialog } from "@/components/organisms/unpack-confirm-dialog";
 import { useCart } from "@/components/providers/cart-context";
 import { getAccessToken, isAccessTokenExpired } from "@/lib/auth-token";
 import { authorizedFetch } from "@/lib/api-client";
@@ -28,6 +29,7 @@ import { formatIdr } from "@/lib/money";
 import { isPinUnlocked } from "@/lib/pin-session";
 import { applyTheme, copy, getLang } from "@/lib/preferences";
 import { flushSalesAndVoids } from "@/lib/flush-sync";
+import { canOfferUnpack, performUnpack, withLivePackStock } from "@/lib/unpack";
 
 export default function MenuPage() {
   const router = useRouter();
@@ -42,10 +44,16 @@ export default function MenuPage() {
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
   const [syncStatus, setSyncStatus] = useState<"idle" | "pending" | "synced">("idle");
   const [syncError, setSyncError] = useState<string | null>(null);
-  const { add, pruneToSellable } = useCart();
+  const { add, pruneToSellable, raiseStockCap } = useCart();
+  const [unpackTarget, setUnpackTarget] = useState<CatalogProductRecord | null>(
+    null,
+  );
+  const [unpackBusy, setUnpackBusy] = useState(false);
+  const [unpackError, setUnpackError] = useState<string | null>(null);
 
   const refreshLocal = useCallback(async () => {
-    setProducts(await listCatalogProducts());
+    const rows = withLivePackStock(await listCatalogProducts());
+    setProducts(rows);
     setPulledAt(await getCatalogPulledAt());
   }, []);
 
@@ -156,7 +164,7 @@ export default function MenuPage() {
       } catch {
         /* catalog rows already saved; missing images never block sell */
       }
-      const sellable = await listCatalogProducts();
+      const sellable = withLivePackStock(await listCatalogProducts());
       setProducts(sellable);
       setPulledAt(await getCatalogPulledAt());
       pruneToSellable(sellable);
@@ -266,17 +274,30 @@ export default function MenuPage() {
       ) : (
         <ul className="grid grid-cols-1 gap-3 pb-36 sm:grid-cols-2 md:pb-0 xl:grid-cols-3">
           {products.map((p) => {
-            const sellable = isValidSellablePrice(p.priceMinor) && p.stockQty > 0;
+            const priceOk = isValidSellablePrice(p.priceMinor);
+            const inStock = priceOk && p.stockQty > 0;
+            const unpackable =
+              priceOk && p.stockQty <= 0 && canOfferUnpack(p, online, products);
+            const clickable = inStock || unpackable;
             return (
               <li key={p.productId}>
                 <Button
                   type="button"
-                  disabled={!sellable}
+                  disabled={!clickable}
                   variant="outline"
-                  onClick={() => add(p)}
+                  onClick={() => {
+                    if (inStock) {
+                      add(p);
+                      return;
+                    }
+                    if (unpackable) {
+                      setUnpackError(null);
+                      setUnpackTarget(p);
+                    }
+                  }}
                   className="flex h-auto w-full flex-col items-stretch gap-0 overflow-hidden rounded-xl p-0 text-left whitespace-normal"
                   title={
-                    sellable
+                    clickable
                       ? undefined
                       : p.stockQty <= 0
                         ? t.stockOut
@@ -286,14 +307,21 @@ export default function MenuPage() {
                   <CatalogProductThumb productId={p.productId} alt="" />
                   <span className="px-3 pt-2.5 font-medium text-foreground">
                     {p.name}
+                    {p.unitName ? (
+                      <span className="font-normal text-muted-foreground">
+                        {" "}
+                        · {p.unitName}
+                      </span>
+                    ) : null}
                   </span>
                   <span className="px-3 pb-3 text-sm text-muted-foreground">
-                    {sellable
+                    {inStock || unpackable
                       ? formatIdr(p.priceMinor, lang)
                       : p.stockQty <= 0
                         ? t.stockOut
                         : t.catalogBlockedPrice}
                     {` · ${t.stock}: ${p.stockQty}`}
+                    {unpackable ? ` · ${t.unpackTitle}` : ""}
                   </span>
                 </Button>
               </li>
@@ -301,6 +329,39 @@ export default function MenuPage() {
           })}
         </ul>
       )}
+      <UnpackConfirmDialog
+        lang={lang}
+        product={unpackTarget}
+        open={Boolean(unpackTarget)}
+        busy={unpackBusy}
+        error={unpackError}
+        onCancel={() => {
+          if (unpackBusy) return;
+          setUnpackTarget(null);
+          setUnpackError(null);
+        }}
+        onConfirm={() => {
+          if (!unpackTarget || unpackBusy) return;
+          void (async () => {
+            setUnpackBusy(true);
+            setUnpackError(null);
+            const result = await performUnpack(unpackTarget);
+            if (!result.ok) {
+              setUnpackError(
+                result.message === "network" ? t.unpackFail : result.message,
+              );
+              setUnpackBusy(false);
+              await refreshLocal();
+              return;
+            }
+            raiseStockCap(result.product.productId, result.product.stockQty);
+            add(result.product);
+            setUnpackBusy(false);
+            setUnpackTarget(null);
+            await refreshLocal();
+          })();
+        }}
+      />
     </AppShell>
   );
 }

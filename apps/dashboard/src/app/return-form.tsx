@@ -2,7 +2,7 @@
 
 import { Button, Input, Skeleton } from "@pos-apps/ui/atoms";
 import { FormField, formInputClass } from "@pos-apps/ui/molecules";
-import { FormActions, FormBackLink, FormSection } from "@pos-apps/ui/organisms";
+import { FormActions, FormBackLink, FormSection, FormBody, formPageClassName } from "@pos-apps/ui/organisms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ApiErrorBody, ReturnDetail, ReturnListResponse } from "@pos-apps/types";
@@ -169,8 +169,9 @@ export function ReturnForm({
         e.preventDefault();
         void refund();
       }}
-      className="flex min-h-full flex-col gap-5"
+      className={formPageClassName}
     >
+        <FormBody>
       <FormBackLink href="/returns">Daftar retur</FormBackLink>
 
       <FormSection
@@ -206,6 +207,7 @@ export function ReturnForm({
           <p className="text-sm text-muted-foreground">Menunggu refund manajer.</p>
         ) : null}
       </FormSection>
+      </FormBody>
 
       {showExchangeForm || canRefund ? (
         <FormActions

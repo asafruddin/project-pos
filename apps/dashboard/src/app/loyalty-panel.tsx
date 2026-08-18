@@ -107,41 +107,93 @@ export function LoyaltyPanel({ canEdit }: { canEdit: boolean }) {
         </p>
       ) : null}
 
-      <NativeSelect
-        value={customerId}
-        onChange={(e) => void loadAccount(e.target.value)}
-        aria-label="Pilih pelanggan"
-      >
-        <option value="">Pilih pelanggan</option>
-        {customers.map((row) => (
-          <option key={row.customer_id} value={row.customer_id}>
-            {row.name} · {row.loyalty_points} poin
-          </option>
-        ))}
-      </NativeSelect>
+      <div className="rounded-xl border border-border bg-card p-3 shadow-[var(--shadow-card)] sm:p-4">
+        <NativeSelect
+          value={customerId}
+          onChange={(e) => void loadAccount(e.target.value)}
+          aria-label="Pilih pelanggan"
+          className="h-10"
+        >
+          <option value="">Pilih pelanggan</option>
+          {customers.map((row) => (
+            <option key={row.customer_id} value={row.customer_id}>
+              {row.name} · {row.loyalty_points} poin
+            </option>
+          ))}
+        </NativeSelect>
+      </div>
+
       {account ? (
-        <div className="space-y-2 rounded-md border border-border p-4">
-          <p className="text-sm text-muted-foreground">
-            Saldo {account.points_balance} · seumur hidup {account.lifetime_earned}
-            {account.tier ? ` · ${account.tier}` : ""}
-          </p>
-          {account.ledger.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Belum ada mutasi.</p>
-          ) : (
-            <ul className="space-y-1 text-sm">
+        account.ledger.length === 0 ? (
+          <div className="rounded-md border border-dashed border-border bg-secondary/40 px-4 py-10 text-center">
+            <p className="text-sm text-muted-foreground">
+              Saldo {account.points_balance} · seumur hidup {account.lifetime_earned}
+              {account.tier ? ` · ${account.tier}` : ""}. Belum ada mutasi.
+            </p>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground">
+              Saldo {account.points_balance} · seumur hidup {account.lifetime_earned}
+              {account.tier ? ` · ${account.tier}` : ""}
+            </p>
+            <ul className="grid gap-3 sm:hidden">
               {account.ledger.map((row) => (
-                <li key={row.entry_id}>
-                  {row.kind} {row.points_delta > 0 ? "+" : ""}
-                  {row.points_delta}
-                  {row.note ? ` · ${row.note}` : ""}
-                  {row.occurred_at
-                    ? ` · ${new Date(row.occurred_at).toLocaleString("id-ID")}`
-                    : ""}
+                <li
+                  key={row.entry_id}
+                  className="rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-card)]"
+                >
+                  <p className="font-medium text-foreground">
+                    {row.kind} {row.points_delta > 0 ? "+" : ""}
+                    {row.points_delta}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {row.note ?? "—"}
+                    {row.occurred_at
+                      ? ` · ${new Date(row.occurred_at).toLocaleString("id-ID")}`
+                      : ""}
+                  </p>
                 </li>
               ))}
             </ul>
-          )}
-        </div>
+            <div className="hidden overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-card)] sm:block">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[32rem] border-collapse text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-muted-foreground">
+                      <th className="px-4 py-3 font-medium">Jenis</th>
+                      <th className="px-4 py-3 font-medium">Poin</th>
+                      <th className="px-4 py-3 font-medium">Catatan</th>
+                      <th className="px-4 py-3 font-medium">Waktu</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {account.ledger.map((row) => (
+                      <tr
+                        key={row.entry_id}
+                        className="border-b border-border/60 last:border-0"
+                      >
+                        <td className="px-4 py-3 font-medium">{row.kind}</td>
+                        <td className="px-4 py-3">
+                          {row.points_delta > 0 ? "+" : ""}
+                          {row.points_delta}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {row.note ?? "—"}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {row.occurred_at
+                            ? new Date(row.occurred_at).toLocaleString("id-ID")
+                            : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )
       ) : (
         <p className="text-sm text-muted-foreground">
           Pilih pelanggan untuk melihat poin. Nilai{" "}

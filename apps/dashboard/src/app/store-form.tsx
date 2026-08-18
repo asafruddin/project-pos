@@ -1,7 +1,7 @@
 "use client";
 
 import { FormField, formInputClass } from "@pos-apps/ui/molecules";
-import { FormActions, FormBackLink, FormDenied, FormSection } from "@pos-apps/ui/organisms";
+import { FormActions, FormBackLink, FormDenied, FormSection, FormBody, formPageClassName } from "@pos-apps/ui/organisms";
 import { Input } from "@pos-apps/ui/atoms";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -48,7 +48,8 @@ export function StoreForm({ canEdit }: { canEdit: boolean }) {
   }
 
   return (
-    <form onSubmit={(e) => void onCreateStore(e)} className="flex min-h-full flex-col gap-5">
+    <form onSubmit={(e) => void onCreateStore(e)} className={formPageClassName}>
+      <FormBody>
       <FormBackLink href="/stores">Daftar toko</FormBackLink>
       <FormSection title="Toko baru" description="Store #1 tetap toko awal.">
         <FormField id="store-name" label="Nama toko" required>
@@ -61,6 +62,7 @@ export function StoreForm({ canEdit }: { canEdit: boolean }) {
           />
         </FormField>
       </FormSection>
+      </FormBody>
       <FormActions
         error={error}
         pending={pending}

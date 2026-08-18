@@ -18,6 +18,8 @@ import {
   WarehouseIcon,
   BuildingsIcon,
   ArrowsLeftRightIcon,
+  TagIcon,
+  ScalesIcon,
 } from "@phosphor-icons/react";
 import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
@@ -36,6 +38,22 @@ const PAGE_COPY: Record<string, { title: string; subtitle: string }> = {
     title: "Stok / Produk",
     subtitle:
       "Kelola katalog toko. Harga dalam Rupiah penuh (mis. 15000 = Rp15.000).",
+  },
+  "/categories": {
+    title: "Kategori",
+    subtitle: "Kategori produk untuk toko Anda. Muncul sebagai pilihan di form produk.",
+  },
+  "/categories/new": {
+    title: "Tambah kategori",
+    subtitle: "Nama kategori dipakai di form produk.",
+  },
+  "/units": {
+    title: "Satuan",
+    subtitle: "Satuan jual (pcs, kg, slop, dll.) untuk toko Anda. Muncul di form produk.",
+  },
+  "/units/new": {
+    title: "Tambah satuan",
+    subtitle: "Nama satuan dipakai di form produk.",
   },
   "/stock": {
     title: "Ikhtisar stok",
@@ -176,6 +194,20 @@ const PAGE_COPY_MATCHERS: Array<{
   test: (pathname: string) => boolean;
   copy: { title: string; subtitle: string };
 }> = [
+  {
+    test: (p) => /^\/categories\/[^/]+\/edit$/.test(p),
+    copy: {
+      title: "Ubah kategori",
+      subtitle: "Nama kategori dipakai di form produk. Simpan di bagian bawah.",
+    },
+  },
+  {
+    test: (p) => /^\/units\/[^/]+\/edit$/.test(p),
+    copy: {
+      title: "Ubah satuan",
+      subtitle: "Nama satuan dipakai di form produk. Simpan di bagian bawah.",
+    },
+  },
   {
     test: (p) => /^\/products\/[^/]+\/edit$/.test(p),
     copy: {
@@ -329,6 +361,20 @@ export function DashboardShell({
       href: "/products",
       label: "Stok / Produk",
       icon: <PackageIcon size={20} weight="regular" />,
+      show: can("products", "view"),
+    },
+    {
+      group: "Produk",
+      href: "/categories",
+      label: "Kategori",
+      icon: <TagIcon size={20} weight="regular" />,
+      show: can("products", "view"),
+    },
+    {
+      group: "Produk",
+      href: "/units",
+      label: "Satuan",
+      icon: <ScalesIcon size={20} weight="regular" />,
       show: can("products", "view"),
     },
     {
@@ -490,8 +536,8 @@ export function DashboardShell({
           roleLabel={roleLabel(role)}
           searchItems={searchItems}
         />
-        <section className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-          <div className="mx-auto flex w-full max-w-[90rem] flex-col gap-5 sm:gap-6">
+        <section className="flex min-h-0 flex-1 flex-col overflow-hidden p-4 sm:p-6">
+          <div className="mx-auto flex h-full min-h-0 w-full max-w-[90rem] flex-col overflow-y-auto overscroll-contain">
             {children}
           </div>
         </section>

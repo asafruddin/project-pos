@@ -125,6 +125,39 @@ export type ProductImage = {
   is_primary: boolean;
 };
 
+/** Explicit Pack→pcs (or similar) link on the destination (pcs) product. */
+export type ProductUnitConversion = {
+  conversion_id: string;
+  from_product_id: string;
+  from_product_name: string;
+  from_unit_name: string | null;
+  from_stock_qty: number;
+  from_qty: number;
+  to_qty: number;
+};
+
+export type UpsertUnitConversionRequest = {
+  from_product_id: string;
+  /** Packs opened per conversion; default 1. */
+  from_qty?: number;
+  /** Pcs gained per from_qty. */
+  to_qty: number;
+};
+
+export type UnpackUnitRequest = {
+  /** How many pack units to open; default 1. */
+  pack_qty?: number;
+};
+
+export type UnpackUnitResponse = {
+  from_product_id: string;
+  to_product_id: string;
+  from_stock_qty: number;
+  to_stock_qty: number;
+  from_delta: number;
+  to_delta: number;
+};
+
 /** Phase 1: integer rupiah (Rp) — no fractional subunit. */
 export type Product = {
   product_id: string;
@@ -145,6 +178,10 @@ export type Product = {
   category_name?: string | null;
   brand_id?: string | null;
   brand_name?: string | null;
+  unit_id?: string | null;
+  unit_name?: string | null;
+  /** Present when this product is the pcs (destination) of a conversion pair. */
+  unit_conversion?: ProductUnitConversion | null;
   tags: string[];
   images: ProductImage[];
   has_primary_image: boolean;
@@ -168,6 +205,7 @@ export type CreateProductRequest = {
   parent_id?: string | null;
   category_name?: string | null;
   brand_name?: string | null;
+  unit_name?: string | null;
   tags?: string[];
 };
 
@@ -186,7 +224,46 @@ export type UpdateProductRequest = {
   parent_id?: string | null;
   category_name?: string | null;
   brand_name?: string | null;
+  unit_name?: string | null;
   tags?: string[];
+};
+
+export type CategoryRecord = {
+  category_id: string;
+  store_id: string;
+  name: string;
+  created_at: string;
+};
+
+export type CategoryListResponse = {
+  categories: CategoryRecord[];
+};
+
+export type CreateCategoryRequest = {
+  name: string;
+};
+
+export type UpdateCategoryRequest = {
+  name: string;
+};
+
+export type UnitRecord = {
+  unit_id: string;
+  store_id: string;
+  name: string;
+  created_at: string;
+};
+
+export type UnitListResponse = {
+  units: UnitRecord[];
+};
+
+export type CreateUnitRequest = {
+  name: string;
+};
+
+export type UpdateUnitRequest = {
+  name: string;
 };
 
 /** Phase 1 tenancy stub (AD-19). */

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormActions, FormBackLink, FormDenied, FormSection } from "@pos-apps/ui/organisms";
+import { FormActions, FormBackLink, FormDenied, FormSection, FormBody, formPageClassName } from "@pos-apps/ui/organisms";
 import { Checkbox, Skeleton } from "@pos-apps/ui/atoms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -99,7 +99,8 @@ export function OpnameForm({ canMutate }: { canMutate: boolean }) {
   }
 
   return (
-    <form onSubmit={(e) => void onCreate(e)} className="flex min-h-full flex-col gap-5">
+    <form onSubmit={(e) => void onCreate(e)} className={formPageClassName}>
+      <FormBody>
       <FormBackLink href="/opname">Daftar opname</FormBackLink>
 
       <FormSection
@@ -139,6 +140,7 @@ export function OpnameForm({ canMutate }: { canMutate: boolean }) {
         </div>
       </FormSection>
 
+      </FormBody>
       <FormActions
         error={error}
         pending={pending}

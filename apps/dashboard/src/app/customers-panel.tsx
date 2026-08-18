@@ -74,6 +74,48 @@ export function CustomersPanel({ canDelete }: { canDelete: boolean }) {
     void load(query);
   }
 
+  function customerMeta(row: Customer): string {
+    return [
+      row.phone ?? row.email,
+      row.group_name,
+      `kredit ${formatIdr(row.store_credit_minor ?? 0)}`,
+      row.loyalty_points || row.loyalty_tier
+        ? `poin ${row.loyalty_points ?? 0}${row.loyalty_tier ? ` (${row.loyalty_tier})` : ""}`
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  }
+
+  function HistoryBlock({ row }: { row: Customer }) {
+    if (historyFor !== row.customer_id || !history) return null;
+    return (
+      <div className="mt-3 space-y-2 border-t border-border pt-3">
+        <p className="text-sm font-medium">Riwayat belanja</p>
+        <p className="text-sm text-muted-foreground">
+          Total belanja: {formatIdr(history.total_spend_minor)}
+        </p>
+        {history.sales.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Belum ada penjualan.</p>
+        ) : (
+          <ul className="space-y-1 text-sm">
+            {history.sales.map((sale) => (
+              <li key={sale.sale_id}>
+                {formatIdr(sale.amount_minor)}
+                {sale.voided_at ? " · Di-void" : ""}
+              </li>
+            ))}
+          </ul>
+        )}
+        {history.returns.map((ret) => (
+          <p key={ret.return_id} className="text-sm">
+            Retur {formatIdr(ret.amount_minor)} · {ret.status}
+          </p>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -88,22 +130,27 @@ export function CustomersPanel({ canDelete }: { canDelete: boolean }) {
         <CreateLink href="/customers/new">Tambah pelanggan</CreateLink>
       </div>
 
-      <form className="flex max-w-xl items-end gap-2" onSubmit={onSearch}>
-        <div className="min-w-0 flex-1">
-          <FormField id="cust-search" label="Cari">
-            <Input
-              id="cust-search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Nama, telepon, email"
-              className={formInputClass}
-            />
-          </FormField>
-        </div>
-        <Button type="submit" className="h-10 bg-secondary text-secondary-foreground hover:opacity-90">
-          Cari
-        </Button>
-      </form>
+      <div className="rounded-xl border border-border bg-card p-3 shadow-[var(--shadow-card)] sm:p-4">
+        <form className="flex max-w-xl items-end gap-2" onSubmit={onSearch}>
+          <div className="min-w-0 flex-1">
+            <FormField id="cust-search" label="Cari">
+              <Input
+                id="cust-search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Nama, telepon, email"
+                className={formInputClass}
+              />
+            </FormField>
+          </div>
+          <Button
+            type="submit"
+            className="h-10 bg-secondary text-secondary-foreground hover:opacity-90"
+          >
+            Cari
+          </Button>
+        </form>
+      </div>
 
       {error ? (
         <div
@@ -121,59 +168,73 @@ export function CustomersPanel({ canDelete }: { canDelete: boolean }) {
           <p className="text-sm text-muted-foreground">Belum ada pelanggan.</p>
         </div>
       ) : (
-        <ul className="space-y-2">
-          {rows.map((row) => (
-            <li
-              key={row.customer_id}
-              className="rounded-md border border-border bg-background/70 p-4"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
+        <>
+          <ul className="grid gap-3 sm:hidden">
+            {rows.map((row) => (
+              <li
+                key={row.customer_id}
+                className="rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-card)]"
+              >
                 <Button
                   type="button"
                   variant="ghost"
-                  className="h-auto min-w-0 flex-1 flex-col items-start justify-start px-0 py-0 text-left whitespace-normal"
+                  className="h-auto w-full flex-col items-start justify-start px-0 py-0 text-left whitespace-normal"
                   onClick={() => void openHistory(row)}
                 >
-                  <p className="font-medium">{row.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {row.phone ?? row.email}
-                    {row.group_name ? ` · ${row.group_name}` : ""}
-                    {` · kredit ${formatIdr(row.store_credit_minor ?? 0)}`}
-                    {row.loyalty_points || row.loyalty_tier
-                      ? ` · poin ${row.loyalty_points ?? 0}${row.loyalty_tier ? ` (${row.loyalty_tier})` : ""}`
-                      : ""}
+                  <p className="font-medium text-foreground">{row.name}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {customerMeta(row)}
                   </p>
                 </Button>
-                <RowLink href={`/customers/${row.customer_id}/edit`}>Ubah</RowLink>
-              </div>
-              {historyFor === row.customer_id && history ? (
-                <div className="mt-3 space-y-2 border-t border-border pt-3">
-                  <p className="text-sm font-medium">Riwayat belanja</p>
-                  <p className="text-sm text-muted-foreground">
-                    Total belanja: {formatIdr(history.total_spend_minor)}
-                  </p>
-                  {history.sales.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Belum ada penjualan.</p>
-                  ) : (
-                    <ul className="space-y-1 text-sm">
-                      {history.sales.map((sale) => (
-                        <li key={sale.sale_id}>
-                          {formatIdr(sale.amount_minor)}
-                          {sale.voided_at ? " · Di-void" : ""}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {history.returns.map((ret) => (
-                    <p key={ret.return_id} className="text-sm">
-                      Retur {formatIdr(ret.amount_minor)} · {ret.status}
-                    </p>
-                  ))}
+                <div className="mt-3">
+                  <RowLink href={`/customers/${row.customer_id}/edit`}>Ubah</RowLink>
                 </div>
-              ) : null}
-            </li>
-          ))}
-        </ul>
+                <HistoryBlock row={row} />
+              </li>
+            ))}
+          </ul>
+          <div className="hidden overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-card)] sm:block">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[44rem] border-collapse text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border text-muted-foreground">
+                    <th className="px-4 py-3 font-medium">Pelanggan</th>
+                    <th className="px-4 py-3 font-medium">Detail</th>
+                    <th className="px-4 py-3 font-medium">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr
+                      key={row.customer_id}
+                      className="border-b border-border/60 last:border-0"
+                    >
+                      <td className="px-4 py-3 align-top">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="h-auto px-0 py-0 text-left font-medium whitespace-normal hover:bg-transparent"
+                          onClick={() => void openHistory(row)}
+                        >
+                          {row.name}
+                        </Button>
+                        <HistoryBlock row={row} />
+                      </td>
+                      <td className="px-4 py-3 align-top text-muted-foreground">
+                        {customerMeta(row)}
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        <RowLink href={`/customers/${row.customer_id}/edit`}>
+                          Ubah
+                        </RowLink>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
       {canDelete ? null : (
         <p className="text-xs text-muted-foreground">

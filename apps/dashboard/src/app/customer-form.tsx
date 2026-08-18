@@ -2,7 +2,7 @@
 
 import { Button, Input, Skeleton } from "@pos-apps/ui/atoms";
 import { FormField, formInputClass } from "@pos-apps/ui/molecules";
-import { FormActions, FormBackLink, FormSection } from "@pos-apps/ui/organisms";
+import { FormActions, FormBackLink, FormSection, FormBody, formPageClassName } from "@pos-apps/ui/organisms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type {
@@ -250,7 +250,9 @@ export function CustomerForm({
 
   if (missing) {
     return (
-      <div className="flex min-h-full flex-col gap-5">
+      <div className="flex flex-col gap-5">
+
+      
         <FormBackLink href="/customers">Daftar pelanggan</FormBackLink>
         <p className="text-sm text-destructive" role="alert">
           {error ?? "Pelanggan tidak ditemukan."}
@@ -260,7 +262,8 @@ export function CustomerForm({
   }
 
   return (
-    <form onSubmit={(e) => void onSave(e)} className="flex min-h-full flex-col gap-5">
+    <form onSubmit={(e) => void onSave(e)} className={formPageClassName}>
+      <FormBody>
       <FormBackLink href="/customers">Daftar pelanggan</FormBackLink>
       {warn ? (
         <p className="text-sm text-muted-foreground" role="status">
@@ -457,6 +460,9 @@ export function CustomerForm({
         </div>
       </div>
 
+      
+
+      </FormBody>
       <FormActions
         error={error}
         pending={pending}

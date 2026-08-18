@@ -2,7 +2,7 @@
 
 import { Button, Checkbox, Input, Label, Skeleton } from "@pos-apps/ui/atoms";
 import { FormField, formInputClass } from "@pos-apps/ui/molecules";
-import { FormActions, FormBackLink, FormDenied, FormSection } from "@pos-apps/ui/organisms";
+import { FormActions, FormBackLink, FormDenied, FormSection, FormBody, formPageClassName } from "@pos-apps/ui/organisms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type {
@@ -117,7 +117,8 @@ export function LoyaltyProgramForm({ canEdit }: { canEdit: boolean }) {
 
   if (!program) {
     return (
-      <div className="flex min-h-full flex-col gap-5">
+      <div className="flex flex-col gap-5">
+      
         <FormBackLink href="/loyalty">Loyalitas</FormBackLink>
         {error ? (
           <p className="text-sm text-destructive" role="alert">
@@ -136,7 +137,8 @@ export function LoyaltyProgramForm({ canEdit }: { canEdit: boolean }) {
   }
 
   return (
-    <form onSubmit={(e) => void saveProgram(e)} className="flex min-h-full flex-col gap-5">
+    <form onSubmit={(e) => void saveProgram(e)} className={formPageClassName}>
+      <FormBody>
       <FormBackLink href="/loyalty">Loyalitas</FormBackLink>
       <FormSection title="Program poin" description="Aturan poin bersama untuk seluruh toko.">
         <div className="flex items-center gap-2">
@@ -257,6 +259,8 @@ export function LoyaltyProgramForm({ canEdit }: { canEdit: boolean }) {
           Tambah tingkat
         </Button>
       </FormSection>
+      
+      </FormBody>
       <FormActions
         error={error}
         pending={pending}

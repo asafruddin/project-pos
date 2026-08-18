@@ -1,7 +1,7 @@
 "use client";
 
 import { FormField, formInputClass } from "@pos-apps/ui/molecules";
-import { FormActions, FormBackLink, FormDenied, FormSection } from "@pos-apps/ui/organisms";
+import { FormActions, FormBackLink, FormDenied, FormSection, FormBody, formPageClassName } from "@pos-apps/ui/organisms";
 import { Input, NativeSelect, Skeleton } from "@pos-apps/ui/atoms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -106,7 +106,8 @@ export function TransferForm({ canCreate }: { canCreate: boolean }) {
   }
 
   return (
-    <form onSubmit={(e) => void onCreate(e)} className="flex min-h-full flex-col gap-5">
+    <form onSubmit={(e) => void onCreate(e)} className={formPageClassName}>
+      <FormBody>
       <FormBackLink href="/transfers">Daftar transfer</FormBackLink>
       <FormSection
         title="Draf transfer"
@@ -177,6 +178,7 @@ export function TransferForm({ canCreate }: { canCreate: boolean }) {
           />
         </FormField>
       </FormSection>
+      </FormBody>
       <FormActions
         error={error}
         pending={pending}

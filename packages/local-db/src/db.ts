@@ -1,14 +1,23 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 
 export const LOCAL_DB_NAME = "pos-apps-local";
-/** v1: PIN; v2: catalog; v3: durable sales; v4: catalog status/parent; v5: catalog image bytes; v6: parked carts; v7: void outbox; v8: customers; v9: shifts; v10: cash movements + close. */
-export const LOCAL_DB_VERSION = 10;
+/** v1: PIN; v2: catalog; v3: durable sales; v4: catalog status/parent; v5: catalog image bytes; v6: parked carts; v7: void outbox; v8: customers; v9: shifts; v10: cash movements + close; v11: unit conversion cache. */
+export const LOCAL_DB_VERSION = 11;
 
 export type PinMaterialRecord = {
   userId: string;
   pinHash: string;
   salt: string;
   enrolledAt: string;
+};
+
+export type CatalogUnitConversion = {
+  fromProductId: string;
+  fromProductName: string;
+  fromUnitName: string | null;
+  fromStockQty: number;
+  fromQty: number;
+  toQty: number;
 };
 
 /** Catalog cache row — mirrors server Product fields needed for ring-up (AD-9). */
@@ -21,6 +30,8 @@ export type CatalogProductRecord = {
   parentId: string | null;
   sku?: string | null;
   categoryName?: string | null;
+  unitName?: string | null;
+  unitConversion?: CatalogUnitConversion | null;
   pulledAt: string;
 };
 
@@ -290,6 +301,9 @@ export function openLocalDb(): Promise<IDBPDatabase<PosLocalDb>> {
           if (!db.objectStoreNames.contains("shiftCloseOutbox")) {
             db.createObjectStore("shiftCloseOutbox", { keyPath: "shiftId" });
           }
+        }
+        if (oldVersion < 11) {
+          /* catalog rows gain unitName/unitConversion on next replaceCatalog */
         }
       },
     });

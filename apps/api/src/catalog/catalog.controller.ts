@@ -32,6 +32,7 @@ import {
   UploadProductImageDto,
 } from "./dto/product-image.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
+import { UpsertUnitConversionDto } from "./dto/upsert-unit-conversion.dto";
 
 @Controller("catalog/products")
 @UseGuards(JwtAuthGuard)
@@ -66,7 +67,11 @@ export class CatalogController {
     @Body() body: CreateProductDto,
     @CurrentUser() user: AuthUser,
   ): Promise<Product> {
-    return this.catalog.create(body, user.userId);
+    return this.catalog.create(
+      body,
+      user.userId,
+      user.storeId ?? "00000000-0000-4000-8000-000000000001",
+    );
   }
 
   @Patch(":productId")
@@ -75,8 +80,41 @@ export class CatalogController {
   update(
     @Param("productId", ParseUUIDPipe) productId: string,
     @Body() body: UpdateProductDto,
+    @CurrentUser() user: AuthUser,
   ): Promise<Product> {
-    return this.catalog.update(productId, body);
+    return this.catalog.update(
+      productId,
+      body,
+      user.storeId ?? "00000000-0000-4000-8000-000000000001",
+    );
+  }
+
+  @Put(":productId/unit-conversion")
+  @RequirePermission("products", "update")
+  @UseGuards(PermissionsGuard)
+  setUnitConversion(
+    @Param("productId", ParseUUIDPipe) productId: string,
+    @Body() body: UpsertUnitConversionDto,
+    @CurrentUser() user: AuthUser,
+  ): Promise<Product> {
+    return this.catalog.setUnitConversion(
+      productId,
+      body,
+      user.storeId ?? "00000000-0000-4000-8000-000000000001",
+    );
+  }
+
+  @Delete(":productId/unit-conversion")
+  @RequirePermission("products", "update")
+  @UseGuards(PermissionsGuard)
+  deleteUnitConversion(
+    @Param("productId", ParseUUIDPipe) productId: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<Product> {
+    return this.catalog.deleteUnitConversion(
+      productId,
+      user.storeId ?? "00000000-0000-4000-8000-000000000001",
+    );
   }
 
   @Put(":productId/stock")

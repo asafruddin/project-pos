@@ -218,7 +218,7 @@ export function PurchaseOrderDetailForm({ poId }: { poId: string }) {
     selectedPo.status === "completed";
 
   return (
-    <div className="flex min-h-full flex-col gap-5">
+    <div className="flex flex-col gap-5">
       <FormBackLink href="/purchasing">Daftar pembelian</FormBackLink>
       {error ? (
         <p className="text-sm text-destructive" role="alert">

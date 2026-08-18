@@ -19,6 +19,7 @@ describe("hasPermission / default matrix", () => {
     assert.equal(hasPermission(grants, "reports", "view"), true);
     assert.equal(hasPermission(grants, "returns", "approve"), false);
     assert.equal(hasPermission(grants, "inventory", "update"), false);
+    assert.equal(hasPermission(grants, "inventory", "unpack"), true);
     assert.equal(hasPermission(grants, "products", "update"), false);
     assert.equal(hasPermission(grants, "users", "create"), false);
   });

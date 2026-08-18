@@ -92,24 +92,57 @@ export function OpnamePanel({
           <p className="text-sm text-muted-foreground">Belum ada opname.</p>
         </div>
       ) : (
-        <ul className="space-y-2">
-          {list.map((item) => (
-            <li
-              key={item.opname_id}
-              className="rounded-md border border-border bg-background/70 p-4"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium">{statusLabel(item.status)}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {item.product_count} produk
-                  </p>
+        <>
+          <ul className="grid gap-3 sm:hidden">
+            {list.map((item) => (
+              <li
+                key={item.opname_id}
+                className="rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-card)]"
+              >
+                <p className="font-medium text-foreground">
+                  {statusLabel(item.status)}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {item.product_count} produk
+                </p>
+                <div className="mt-3">
+                  <RowLink href={`/opname/${item.opname_id}`}>Buka</RowLink>
                 </div>
-                <RowLink href={`/opname/${item.opname_id}`}>Buka</RowLink>
-              </div>
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-card)] sm:block">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[28rem] border-collapse text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border text-muted-foreground">
+                    <th className="px-4 py-3 font-medium">Status</th>
+                    <th className="px-4 py-3 font-medium">Produk</th>
+                    <th className="px-4 py-3 font-medium">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {list.map((item) => (
+                    <tr
+                      key={item.opname_id}
+                      className="border-b border-border/60 last:border-0"
+                    >
+                      <td className="px-4 py-3 font-medium">
+                        {statusLabel(item.status)}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {item.product_count} produk
+                      </td>
+                      <td className="px-4 py-3">
+                        <RowLink href={`/opname/${item.opname_id}`}>Buka</RowLink>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

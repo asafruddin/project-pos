@@ -1,7 +1,7 @@
 "use client";
 
 import { FormField, formInputClass } from "@pos-apps/ui/molecules";
-import { FormActions, FormBackLink, FormDenied, FormSection } from "@pos-apps/ui/organisms";
+import { FormActions, FormBackLink, FormDenied, FormSection, FormBody, formPageClassName } from "@pos-apps/ui/organisms";
 import { Input, NativeSelect, Skeleton } from "@pos-apps/ui/atoms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -104,7 +104,8 @@ export function StorePricesForm({ canEdit }: { canEdit: boolean }) {
   }
 
   return (
-    <form onSubmit={(e) => void onSetPrice(e)} className="flex min-h-full flex-col gap-5">
+    <form onSubmit={(e) => void onSetPrice(e)} className={formPageClassName}>
+      <FormBody>
       <FormBackLink href="/stores">Daftar toko</FormBackLink>
       <FormSection
         title="Harga toko"
@@ -154,6 +155,7 @@ export function StorePricesForm({ canEdit }: { canEdit: boolean }) {
           />
         </FormField>
       </FormSection>
+      </FormBody>
       <FormActions
         error={error}
         pending={pending}

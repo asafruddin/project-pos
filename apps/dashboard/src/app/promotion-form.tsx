@@ -1,7 +1,7 @@
 "use client";
 
 import { FormField, formInputClass } from "@pos-apps/ui/molecules";
-import { FormActions, FormBackLink, FormDenied, FormSection } from "@pos-apps/ui/organisms";
+import { FormActions, FormBackLink, FormDenied, FormSection, FormBody, formPageClassName } from "@pos-apps/ui/organisms";
 import { Checkbox, Input, Label, NativeSelect } from "@pos-apps/ui/atoms";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -61,7 +61,8 @@ export function PromotionForm({ canEdit }: { canEdit: boolean }) {
   }
 
   return (
-    <form onSubmit={(e) => void savePromo(e)} className="flex min-h-full flex-col gap-5">
+    <form onSubmit={(e) => void savePromo(e)} className={formPageClassName}>
+      <FormBody>
       <FormBackLink href="/promotions">Daftar promo</FormBackLink>
       <FormSection
         title="Kampanye"
@@ -164,6 +165,7 @@ export function PromotionForm({ canEdit }: { canEdit: boolean }) {
           </Label>
         </div>
       </FormSection>
+      </FormBody>
       <FormActions
         error={error}
         pending={pending}

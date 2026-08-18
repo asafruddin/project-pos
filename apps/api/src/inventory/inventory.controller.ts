@@ -14,6 +14,7 @@ import type {
   OpnameListResponse,
   StockOverviewItem,
   StockOverviewResponse,
+  UnpackUnitResponse,
 } from "@pos-apps/types";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -23,6 +24,7 @@ import { PermissionsGuard } from "../auth/permissions.guard";
 import { CreateOpnameDto } from "./dto/create-opname.dto";
 import { MarkDamagedDto } from "./dto/mark-damaged.dto";
 import { SaveOpnameCountsDto } from "./dto/save-opname-counts.dto";
+import { UnpackUnitDto } from "./dto/unpack-unit.dto";
 import { InventoryService } from "./inventory.service";
 import { OpnameService } from "./opname.service";
 
@@ -38,6 +40,22 @@ export class InventoryController {
   @RequirePermission("inventory", "view")
   overview(@Query("store_id") storeId?: string): Promise<StockOverviewResponse> {
     return this.inventory.overview(storeId);
+  }
+
+  @Post("products/:productId/unpack")
+  @RequirePermission("inventory", "unpack")
+  unpack(
+    @Param("productId", ParseUUIDPipe) productId: string,
+    @Body() body: UnpackUnitDto,
+    @CurrentUser() user: AuthUser,
+    @Query("store_id") storeId?: string,
+  ): Promise<UnpackUnitResponse> {
+    return this.inventory.unpack(
+      productId,
+      body ?? {},
+      user.userId,
+      storeId || user.storeId,
+    );
   }
 
   @Post("products/:productId/damaged")

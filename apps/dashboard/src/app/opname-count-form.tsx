@@ -2,7 +2,7 @@
 
 import { Button, Input, Skeleton } from "@pos-apps/ui/atoms";
 import { formInputClass } from "@pos-apps/ui/molecules";
-import { FormActions, FormBackLink, FormSection } from "@pos-apps/ui/organisms";
+import { FormActions, FormBackLink, FormSection, FormBody, formPageClassName } from "@pos-apps/ui/organisms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ApiErrorBody, OpnameDetail, OpnameStatus } from "@pos-apps/types";
@@ -170,8 +170,9 @@ export function OpnameCountForm({
   return (
     <form
       onSubmit={(e) => void onSaveCounts(e)}
-      className="flex min-h-full flex-col gap-5"
+      className={formPageClassName}
     >
+      <FormBody>
       <FormBackLink href="/opname">Daftar opname</FormBackLink>
 
       <FormSection
@@ -232,6 +233,7 @@ export function OpnameCountForm({
         </div>
       </FormSection>
 
+      </FormBody>
       <FormActions
         error={error}
         pending={pending}

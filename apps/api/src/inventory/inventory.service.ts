@@ -3,16 +3,17 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { markDamaged } from "@pos-apps/domain";
+import { markDamaged, unpackUnit } from "@pos-apps/domain";
 import {
   STORE_1_ID,
   type StockOverviewItem,
   type StockOverviewResponse,
+  type UnpackUnitResponse,
 } from "@pos-apps/types";
 import { randomUUID } from "node:crypto";
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "../db/client";
-import { products, stockMovements } from "../db/schema";
+import { products, productUnitConversions, stockMovements } from "../db/schema";
 import { insertStockMovement } from "../db/stock-ledger";
 
 function toQty(value: unknown): number {
@@ -75,6 +76,159 @@ export class InventoryService {
     });
 
     return { store_id: store, products: list };
+  }
+
+  private async sellableQty(
+    tx: {
+      select: (...args: never[]) => {
+        from: (table: typeof stockMovements) => {
+          where: (cond: unknown) => Promise<Array<{ qty: string }>>;
+        };
+      };
+    },
+    storeId: string,
+    productId: string,
+    store1Projection: number,
+  ): Promise<number> {
+    if (storeId === STORE_1_ID) return store1Projection;
+    const sums = await tx
+      .select({
+        qty: sql<string>`coalesce(sum(${stockMovements.qtyDelta}), 0)`,
+      } as never)
+      .from(stockMovements)
+      .where(
+        and(
+          eq(stockMovements.storeId, storeId),
+          eq(stockMovements.bucket, "sellable"),
+          eq(stockMovements.productId, productId),
+        ),
+      );
+    return toQty(sums[0]?.qty);
+  }
+
+  /**
+   * Unpack pack SKU into pcs SKU immediately (AD-4 UnpackUnit).
+   * `:toProductId` is the pcs (destination) product.
+   */
+  async unpack(
+    toProductId: string,
+    input: { pack_qty?: number },
+    actorId?: string,
+    storeId?: string,
+  ): Promise<UnpackUnitResponse> {
+    const movementStore = storeId || STORE_1_ID;
+    const packQty = input.pack_qty ?? 1;
+
+    return getDb().transaction(async (tx) => {
+      const conversionRows = await tx
+        .select()
+        .from(productUnitConversions)
+        .where(eq(productUnitConversions.toProductId, toProductId))
+        .limit(1);
+      const conversion = conversionRows[0];
+      if (!conversion) {
+        throw new BadRequestException({
+          code: "UNPACK_INVALID",
+          message: "Produk tidak memiliki konversi kemasan.",
+        });
+      }
+
+      const locked = await tx
+        .select()
+        .from(products)
+        .where(
+          inArray(products.productId, [
+            conversion.fromProductId,
+            conversion.toProductId,
+          ]),
+        )
+        .for("update");
+      const byId = new Map(locked.map((row) => [row.productId, row]));
+      const fromProduct = byId.get(conversion.fromProductId);
+      const toProduct = byId.get(conversion.toProductId);
+      if (!fromProduct || !toProduct) {
+        throw new NotFoundException({
+          code: "CATALOG_NOT_FOUND",
+          message: "Produk tidak ditemukan.",
+        });
+      }
+
+      const fromSellable = await this.sellableQty(
+        tx as never,
+        movementStore,
+        fromProduct.productId,
+        fromProduct.stockQty,
+      );
+      const toSellable = await this.sellableQty(
+        tx as never,
+        movementStore,
+        toProduct.productId,
+        toProduct.stockQty,
+      );
+
+      const parsed = unpackUnit({
+        pack_qty: packQty,
+        from_qty: conversion.fromQty,
+        to_qty: conversion.toQty,
+        from_stock_qty: fromSellable,
+        from_track_stock: fromProduct.trackStock,
+        to_track_stock: toProduct.trackStock,
+        from_status: fromProduct.status,
+        to_status: toProduct.status,
+        from_product_id: fromProduct.productId,
+        to_product_id: toProduct.productId,
+      });
+      if (!parsed.ok) {
+        throw new BadRequestException({
+          code: parsed.code,
+          message: parsed.message,
+        });
+      }
+
+      const sourceId = randomUUID();
+      await insertStockMovement(tx, {
+        productId: fromProduct.productId,
+        storeId: movementStore,
+        qtyDelta: parsed.from_delta,
+        bucket: "sellable",
+        reason: "unpack",
+        sourceType: "unpack",
+        sourceId,
+        actorId: actorId ?? null,
+      });
+      await insertStockMovement(tx, {
+        productId: toProduct.productId,
+        storeId: movementStore,
+        qtyDelta: parsed.to_delta,
+        bucket: "sellable",
+        reason: "unpack",
+        sourceType: "unpack",
+        sourceId,
+        actorId: actorId ?? null,
+      });
+
+      const fromStockQty = fromSellable + parsed.from_delta;
+      const toStockQty = toSellable + parsed.to_delta;
+      if (movementStore === STORE_1_ID) {
+        await tx
+          .update(products)
+          .set({ stockQty: fromStockQty, updatedAt: new Date() })
+          .where(eq(products.productId, fromProduct.productId));
+        await tx
+          .update(products)
+          .set({ stockQty: toStockQty, updatedAt: new Date() })
+          .where(eq(products.productId, toProduct.productId));
+      }
+
+      return {
+        from_product_id: fromProduct.productId,
+        to_product_id: toProduct.productId,
+        from_stock_qty: fromStockQty,
+        to_stock_qty: toStockQty,
+        from_delta: parsed.from_delta,
+        to_delta: parsed.to_delta,
+      };
+    });
   }
 
   async markDamaged(

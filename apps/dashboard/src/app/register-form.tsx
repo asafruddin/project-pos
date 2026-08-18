@@ -1,7 +1,7 @@
 "use client";
 
 import { FormField, formInputClass } from "@pos-apps/ui/molecules";
-import { FormActions, FormBackLink, FormDenied, FormSection } from "@pos-apps/ui/organisms";
+import { FormActions, FormBackLink, FormDenied, FormSection, FormBody, formPageClassName } from "@pos-apps/ui/organisms";
 import { Input, Skeleton } from "@pos-apps/ui/atoms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -96,7 +96,8 @@ export function RegisterForm({
 
   if (missing || !store) {
     return (
-      <div className="flex min-h-full flex-col gap-5">
+      <div className="flex flex-col gap-5">
+      
         <FormBackLink href="/stores">Daftar toko</FormBackLink>
         <p className="text-sm text-destructive" role="alert">
           {error ?? "Toko tidak ditemukan."}
@@ -106,7 +107,8 @@ export function RegisterForm({
   }
 
   return (
-    <form onSubmit={(e) => void onCreateRegister(e)} className="flex min-h-full flex-col gap-5">
+    <form onSubmit={(e) => void onCreateRegister(e)} className={formPageClassName}>
+      <FormBody>
       <FormBackLink href="/stores">Daftar toko</FormBackLink>
       <FormSection
         title="Register baru"
@@ -122,6 +124,8 @@ export function RegisterForm({
           />
         </FormField>
       </FormSection>
+      
+      </FormBody>
       <FormActions
         error={error}
         pending={pending}

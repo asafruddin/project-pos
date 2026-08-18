@@ -41,6 +41,7 @@ const productRow = {
   parentId: null,
   categoryId: null,
   brandId: null,
+  unitId: null,
   tags: [],
   createdAt: now,
   updatedAt: now,
@@ -248,10 +249,22 @@ describe("CatalogService", () => {
           from: () => ({
             leftJoin: () => ({
               leftJoin: () => ({
-                orderBy: async () => [
-                  { product: productRow, categoryName: null, brandName: null },
-                  { product: inactive, categoryName: null, brandName: null },
-                ],
+                leftJoin: () => ({
+                  orderBy: async () => [
+                    {
+                      product: productRow,
+                      categoryName: null,
+                      brandName: null,
+                      unitName: null,
+                    },
+                    {
+                      product: inactive,
+                      categoryName: null,
+                      brandName: null,
+                      unitName: null,
+                    },
+                  ],
+                }),
               }),
             }),
           }),
@@ -277,9 +290,16 @@ describe("CatalogService", () => {
           from: () => ({
             leftJoin: () => ({
               leftJoin: () => ({
-                orderBy: async () => [
-                  { product: productRow, categoryName: null, brandName: null },
-                ],
+                leftJoin: () => ({
+                  orderBy: async () => [
+                    {
+                      product: productRow,
+                      categoryName: null,
+                      brandName: null,
+                      unitName: null,
+                    },
+                  ],
+                }),
               }),
             }),
           }),
@@ -319,5 +339,63 @@ describe("CatalogService", () => {
         code: "CATALOG_NOT_FOUND",
       });
     }
+  });
+
+  it("create with category_name and unit_name attaches store-scoped rows", async () => {
+    const created = {
+      ...productRow,
+      categoryId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      unitId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+    };
+    const storeId = "00000000-0000-4000-8000-000000000001";
+    getDbMock.mockReturnValue({
+      transaction: async (fn: (tx: unknown) => Promise<unknown>) =>
+        fn({
+          select: () => ({
+            from: () => ({
+              where: () => ({
+                limit: async () => [],
+              }),
+            }),
+          }),
+          insert: () => ({
+            values: (v: Record<string, unknown>) => ({
+              returning: async () => {
+                if (v.storeId && v.name === "Minuman") {
+                  return [
+                    {
+                      categoryId: created.categoryId,
+                      storeId: v.storeId,
+                      name: "Minuman",
+                    },
+                  ];
+                }
+                if (v.storeId && v.name === "pcs") {
+                  return [
+                    { unitId: created.unitId, storeId: v.storeId, name: "pcs" },
+                  ];
+                }
+                return [created];
+              },
+            }),
+          }),
+        }),
+    } as never);
+
+    const result = await service.create(
+      {
+        name: "Latte",
+        price_minor: 25000,
+        stock_qty: 5,
+        category_name: "Minuman",
+        unit_name: "pcs",
+      },
+      undefined,
+      storeId,
+    );
+    expect(result.category_name).toBe("Minuman");
+    expect(result.unit_name).toBe("pcs");
+    expect(result.category_id).toBe(created.categoryId);
+    expect(result.unit_id).toBe(created.unitId);
   });
 });

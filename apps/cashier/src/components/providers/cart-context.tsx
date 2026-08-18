@@ -21,6 +21,8 @@ type CartContextValue = {
   customer: CachedCustomerRecord | null;
   add: (product: CatalogProductRecord) => void;
   setQty: (productId: string, qty: number) => void;
+  /** Raise the cart line stock cap after unpack (then caller may add/increment). */
+  raiseStockCap: (productId: string, stockQty: number) => void;
   clear: () => void;
   replaceLines: (next: CartLine[]) => void;
   pruneToSellable: (sellable: CatalogProductRecord[]) => void;
@@ -70,7 +72,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           if (line) {
             return current.map((entry) =>
               entry.productId === product.productId
-                ? { ...entry, qty: Math.min(entry.qty + 1, entry.stockQty) }
+                ? {
+                    ...entry,
+                    stockQty: Math.max(entry.stockQty, product.stockQty),
+                    qty: Math.min(entry.qty + 1, Math.max(entry.stockQty, product.stockQty)),
+                  }
                 : entry,
             );
           }
@@ -102,6 +108,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                   ? { ...line, qty: Math.min(qty, line.stockQty) }
                   : line,
               ),
+        );
+      },
+      raiseStockCap(productId, stockQty) {
+        setLines((current) =>
+          current.map((line) =>
+            line.productId === productId
+              ? { ...line, stockQty: Math.max(line.stockQty, stockQty) }
+              : line,
+          ),
         );
       },
       clear() {

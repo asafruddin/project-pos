@@ -321,6 +321,103 @@ export function markDamaged(input: {
   return { ok: true, qty: input.qty, reason };
 }
 
+export type UnpackUnitInput = {
+  pack_qty: number;
+  from_qty: number;
+  to_qty: number;
+  from_stock_qty: number;
+  from_track_stock: boolean;
+  to_track_stock: boolean;
+  from_status: string;
+  to_status: string;
+  from_product_id: string;
+  to_product_id: string;
+};
+
+export type UnpackUnitOk = {
+  ok: true;
+  from_delta: number;
+  to_delta: number;
+  pack_qty: number;
+};
+
+export type UnpackUnitErr = {
+  ok: false;
+  code: "UNPACK_INVALID" | "UNPACK_INSUFFICIENT_STOCK";
+  message: string;
+};
+
+/**
+ * Fail-closed Pack→pcs unpack (AD-4 UnpackUnit).
+ * Opens `pack_qty * from_qty` of the pack SKU into `pack_qty * to_qty` pcs.
+ */
+export function unpackUnit(input: UnpackUnitInput): UnpackUnitOk | UnpackUnitErr {
+  if (input.from_product_id === input.to_product_id) {
+    return {
+      ok: false,
+      code: "UNPACK_INVALID",
+      message: "Produk sumber dan tujuan tidak boleh sama.",
+    };
+  }
+  if (!Number.isInteger(input.pack_qty) || input.pack_qty < 1) {
+    return {
+      ok: false,
+      code: "UNPACK_INVALID",
+      message: "Jumlah kemasan harus bilangan bulat ≥ 1.",
+    };
+  }
+  if (!Number.isInteger(input.from_qty) || input.from_qty < 1) {
+    return {
+      ok: false,
+      code: "UNPACK_INVALID",
+      message: "Rasio kemasan tidak valid.",
+    };
+  }
+  if (!Number.isInteger(input.to_qty) || input.to_qty < 1) {
+    return {
+      ok: false,
+      code: "UNPACK_INVALID",
+      message: "Rasio pcs tidak valid.",
+    };
+  }
+  if (!input.from_track_stock || !input.to_track_stock) {
+    return {
+      ok: false,
+      code: "UNPACK_INVALID",
+      message: "Kedua produk harus melacak stok.",
+    };
+  }
+  if (input.from_status !== "active") {
+    return {
+      ok: false,
+      code: "UNPACK_INVALID",
+      message: "Produk kemasan tidak aktif.",
+    };
+  }
+  if (input.to_status !== "active") {
+    return {
+      ok: false,
+      code: "UNPACK_INVALID",
+      message: "Produk pcs tidak aktif.",
+    };
+  }
+  const fromDelta = -(input.pack_qty * input.from_qty);
+  const needed = input.pack_qty * input.from_qty;
+  if (!Number.isInteger(input.from_stock_qty) || input.from_stock_qty < needed) {
+    return {
+      ok: false,
+      code: "UNPACK_INSUFFICIENT_STOCK",
+      message: "Stok kemasan tidak cukup untuk dibuka.",
+    };
+  }
+  return {
+    ok: true,
+    from_delta: fromDelta,
+    to_delta: input.pack_qty * input.to_qty,
+    pack_qty: input.pack_qty,
+  };
+}
+
 /** Approve opname: counted becomes sellable (AD-4 ApplyOpname). */
 export function applyOpname(input: {
   lines: Array<{
@@ -2325,6 +2422,7 @@ const SELL: Array<[string, string]> = [
   ["reports", "view"],
   ["returns", "view"],
   ["returns", "create"],
+  ["inventory", "unpack"],
 ];
 
 const SUPERVISOR: Array<[string, string]> = [
@@ -2379,6 +2477,7 @@ const INVENTORY: Array<[string, string]> = [
   ["inventory", "view"],
   ["inventory", "create"],
   ["inventory", "update"],
+  ["inventory", "unpack"],
   ["reports", "view"],
   ["stores", "view"],
   ["transfers", "view"],

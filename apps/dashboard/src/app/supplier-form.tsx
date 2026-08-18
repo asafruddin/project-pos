@@ -1,7 +1,7 @@
 "use client";
 
 import { FormField, formInputClass } from "@pos-apps/ui/molecules";
-import { FormActions, FormBackLink, FormSection } from "@pos-apps/ui/organisms";
+import { FormActions, FormBackLink, FormSection, FormBody, formPageClassName } from "@pos-apps/ui/organisms";
 import { Checkbox, Input, Skeleton } from "@pos-apps/ui/atoms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -140,8 +140,9 @@ export function SupplierForm({ supplierId }: { supplierId?: string }) {
   return (
     <form
       onSubmit={(e) => void onSaveSupplier(e)}
-      className="flex min-h-full flex-col gap-5"
+      className={formPageClassName}
     >
+      <FormBody>
       <FormBackLink href="/purchasing">Daftar pembelian</FormBackLink>
 
       <FormSection title="Pemasok" description="Nama wajib. Kontak opsional.">
@@ -229,6 +230,7 @@ export function SupplierForm({ supplierId }: { supplierId?: string }) {
         ) : null}
       </FormSection>
 
+      </FormBody>
       <FormActions
         error={error}
         pending={pending}

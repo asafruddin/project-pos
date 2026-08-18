@@ -1,11 +1,17 @@
 "use client";
 
-import { Button, Checkbox, Input, Label, Skeleton, Textarea } from "@pos-apps/ui/atoms";
+import { Button, Checkbox, Input, Label, NativeSelect, Skeleton, Textarea } from "@pos-apps/ui/atoms";
 import { FormField, formInputClass } from "@pos-apps/ui/molecules";
-import { FormActions, FormBackLink, FormDenied, FormSection } from "@pos-apps/ui/organisms";
+import { FormActions, FormBackLink, FormDenied, FormSection, FormBody, formPageClassName } from "@pos-apps/ui/organisms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Product, ProductImage, ProductListResponse } from "@pos-apps/types";
+import type {
+  CategoryListResponse,
+  Product,
+  ProductImage,
+  ProductListResponse,
+  UnitListResponse,
+} from "@pos-apps/types";
 import { catalogRequest } from "@/lib/catalog-request";
 import { formatIdr } from "@/lib/format-money";
 
@@ -21,6 +27,7 @@ type FormState = {
   status: "active" | "inactive";
   category: string;
   brand: string;
+  unit: string;
   cost: string;
   compareAt: string;
   minQty: string;
@@ -45,6 +52,7 @@ const emptyForm: FormState = {
   status: "active",
   category: "",
   brand: "",
+  unit: "",
   cost: "",
   compareAt: "",
   minQty: "",
@@ -83,6 +91,7 @@ function formFromProduct(p: Product): FormState {
     status: p.status ?? "active",
     category: p.category_name ?? "",
     brand: p.brand_name ?? "",
+    unit: p.unit_name ?? "",
     cost: p.cost_minor == null ? "" : String(p.cost_minor),
     compareAt: p.compare_at_minor == null ? "" : String(p.compare_at_minor),
     minQty: p.min_qty == null ? "" : String(p.min_qty),
@@ -104,6 +113,9 @@ export function ProductForm({
 }) {
   const router = useRouter();
   const [product, setProduct] = useState<Product | null>(null);
+  const [createdProductId, setCreatedProductId] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [parentName, setParentName] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>({
     ...emptyForm,
@@ -112,6 +124,26 @@ export function ProductForm({
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [loading, setLoading] = useState(Boolean(productId || parentId));
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+  const [unitOptions, setUnitOptions] = useState<string[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [conversionEnabled, setConversionEnabled] = useState(false);
+  const [conversionFromId, setConversionFromId] = useState("");
+  const [conversionToQty, setConversionToQty] = useState("12");
+  const [hadConversion, setHadConversion] = useState(false);
+
+  const loadLookups = useCallback(async () => {
+    const [cats, unitsRes] = await Promise.all([
+      catalogRequest<CategoryListResponse>("/catalog/categories"),
+      catalogRequest<UnitListResponse>("/catalog/units"),
+    ]);
+    if (cats.ok) {
+      setCategoryOptions(cats.data.categories.map((row) => row.name));
+    }
+    if (unitsRes.ok) {
+      setUnitOptions(unitsRes.data.units.map((row) => row.name));
+    }
+  }, []);
 
   const loadCatalog = useCallback(async () => {
     const result = await catalogRequest<ProductListResponse>("/catalog/products");
@@ -126,9 +158,10 @@ export function ProductForm({
   const loadProduct = useCallback(async () => {
     if (!productId) return;
     setLoading(true);
-    const products = await loadCatalog();
+    const [products] = await Promise.all([loadCatalog(), loadLookups()]);
     setLoading(false);
     if (!products) return;
+    setAllProducts(products);
     const found = products.find((row) => row.product_id === productId);
     if (!found) {
       setError("Produk tidak ditemukan.");
@@ -136,27 +169,41 @@ export function ProductForm({
     }
     setProduct(found);
     setForm(formFromProduct(found));
+    if (found.unit_conversion) {
+      setConversionEnabled(true);
+      setHadConversion(true);
+      setConversionFromId(found.unit_conversion.from_product_id);
+      setConversionToQty(String(found.unit_conversion.to_qty));
+    } else {
+      setConversionEnabled(false);
+      setHadConversion(false);
+      setConversionFromId("");
+      setConversionToQty("12");
+    }
     if (found.parent_id) {
       const parent = products.find((row) => row.product_id === found.parent_id);
       setParentName(parent?.name ?? null);
     }
     setError(null);
-  }, [loadCatalog, productId]);
+  }, [loadCatalog, loadLookups, productId]);
 
   useEffect(() => {
     if (productId) {
       void loadProduct();
       return;
     }
-    if (!parentId) {
-      setLoading(false);
-      return;
-    }
+    void loadLookups();
     void (async () => {
-      setLoading(true);
       const products = await loadCatalog();
-      setLoading(false);
-      if (!products) return;
+      if (products) setAllProducts(products);
+      if (!parentId) {
+        setLoading(false);
+        return;
+      }
+      if (!products) {
+        setLoading(false);
+        return;
+      }
       const parent = products.find((row) => row.product_id === parentId);
       if (parent) {
         setParentName(parent.name);
@@ -165,15 +212,91 @@ export function ProductForm({
           parentId,
           category: parent.category_name ?? f.category,
           brand: parent.brand_name ?? f.brand,
+          unit: parent.unit_name ?? f.unit,
           trackStock: parent.track_stock ?? f.trackStock,
         }));
       }
+      setLoading(false);
     })();
-  }, [loadCatalog, loadProduct, parentId, productId]);
+  }, [loadCatalog, loadLookups, loadProduct, parentId, productId]);
 
-  const editingId = productId ?? null;
+  const editingId = productId ?? createdProductId ?? null;
   const editingImages = product?.images ?? [];
   const pricePreview = parseNonNegInt(form.price);
+
+  const conversionCandidates = allProducts.filter((row) => {
+    if (editingId && row.product_id === editingId) return false;
+    if (row.status !== "active") return false;
+    if (!row.track_stock) return false;
+    const sameName =
+      form.name.trim() &&
+      row.name.trim().toLowerCase() === form.name.trim().toLowerCase();
+    const differentUnit =
+      (form.unit.trim() || null) !== (row.unit_name ?? null);
+    return Boolean(sameName && differentUnit);
+  });
+
+  const conversionSourceOptions = (() => {
+    const byId = new Map(allProducts.map((row) => [row.product_id, row]));
+    const options = [...conversionCandidates];
+    if (conversionFromId && byId.has(conversionFromId)) {
+      const selected = byId.get(conversionFromId)!;
+      if (!options.some((row) => row.product_id === selected.product_id)) {
+        options.unshift(selected);
+      }
+    }
+    return options;
+  })();
+
+  async function saveUnitConversion(targetProductId: string): Promise<boolean> {
+    if (!conversionEnabled) {
+      if (hadConversion) {
+        const cleared = await catalogRequest<Product>(
+          `/catalog/products/${targetProductId}/unit-conversion`,
+          { method: "DELETE" },
+        );
+        if (!cleared.ok) {
+          setError(cleared.message);
+          return false;
+        }
+      }
+      return true;
+    }
+    const toQty = parseNonNegInt(conversionToQty);
+    if (!conversionFromId || toQty === null || toQty < 1) {
+      setError("Pilih produk kemasan dan isi jumlah pcs ≥ 1.");
+      return false;
+    }
+    const saved = await catalogRequest<Product>(
+      `/catalog/products/${targetProductId}/unit-conversion`,
+      {
+        method: "PUT",
+        body: JSON.stringify({
+          from_product_id: conversionFromId,
+          from_qty: 1,
+          to_qty: toQty,
+        }),
+      },
+    );
+    if (!saved.ok) {
+      setError(saved.message);
+      return false;
+    }
+    return true;
+  }
+
+  useEffect(() => {
+    return () => {
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
+    };
+  }, [imagePreview]);
+
+  function selectImage(file: File | undefined) {
+    if (!file) return;
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setSelectedImage(file);
+    setImagePreview(URL.createObjectURL(file));
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -200,6 +323,7 @@ export function ProductForm({
       status: form.status,
       category_name: form.category.trim() || null,
       brand_name: form.brand.trim() || null,
+      unit_name: form.unit.trim() || null,
       cost_minor: form.cost.trim() ? parseNonNegInt(form.cost) : null,
       compare_at_minor: form.compareAt.trim()
         ? parseNonNegInt(form.compareAt)
@@ -278,6 +402,10 @@ export function ProductForm({
           return;
         }
       }
+      if (!(await saveUnitConversion(editingId))) {
+        setPending(false);
+        return;
+      }
     } else {
       const created = await catalogRequest<Product>("/catalog/products", {
         method: "POST",
@@ -293,6 +421,25 @@ export function ProductForm({
         setPending(false);
         return;
       }
+      setCreatedProductId(created.data.product_id);
+      setProduct(created.data);
+      if (selectedImage) {
+        const body = new FormData();
+        body.append("file", selectedImage);
+        const uploaded = await catalogRequest<ProductImage>(
+          `/catalog/products/${created.data.product_id}/images`,
+          { method: "POST", body },
+        );
+        if (!uploaded.ok) {
+          setError(`Produk tersimpan, tetapi gambar gagal diunggah: ${uploaded.message}`);
+          setPending(false);
+          return;
+        }
+      }
+      if (!(await saveUnitConversion(created.data.product_id))) {
+        setPending(false);
+        return;
+      }
     }
 
     setPending(false);
@@ -301,6 +448,7 @@ export function ProductForm({
 
   async function onUploadImage(file: File) {
     if (!editingId) return;
+    selectImage(file);
     setPending(true);
     setError(null);
     const body = new FormData();
@@ -396,8 +544,9 @@ export function ProductForm({
   return (
     <form
       onSubmit={(e) => void onSubmit(e)}
-      className="flex min-h-full flex-col gap-5"
+      className={formPageClassName}
     >
+      <FormBody>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <FormBackLink href="/products">Daftar produk</FormBackLink>
         {form.parentId ? (
@@ -465,26 +614,109 @@ export function ProductForm({
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField id="category" label="Kategori">
-                <Input
+                <NativeSelect
                   id="category"
-                  placeholder="contoh: Minuman"
                   value={form.category}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, category: e.target.value }))
                   }
                   disabled={pending}
                   className={formInputClass}
-                />
+                >
+                  <option value="">Tanpa kategori</option>
+                  {form.category && !categoryOptions.includes(form.category) ? (
+                    <option value={form.category}>{form.category}</option>
+                  ) : null}
+                  {categoryOptions.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </NativeSelect>
               </FormField>
-              <FormField id="brand" label="Merek">
-                <Input
-                  id="brand"
-                  value={form.brand}
-                  onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value }))}
+              <FormField id="unit" label="Satuan">
+                <NativeSelect
+                  id="unit"
+                  value={form.unit}
+                  onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}
                   disabled={pending}
                   className={formInputClass}
-                />
+                >
+                  <option value="">Tanpa satuan</option>
+                  {form.unit && !unitOptions.includes(form.unit) ? (
+                    <option value={form.unit}>{form.unit}</option>
+                  ) : null}
+                  {unitOptions.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </NativeSelect>
               </FormField>
+            </div>
+            <FormField id="brand" label="Merek">
+              <Input
+                id="brand"
+                value={form.brand}
+                onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value }))}
+                disabled={pending}
+                className={formInputClass}
+              />
+            </FormField>
+            <div className="rounded-lg border border-border bg-secondary/20 p-3">
+              <div className="flex items-center gap-2.5">
+                <Checkbox
+                  id="conversionEnabled"
+                  checked={conversionEnabled}
+                  onCheckedChange={(checked) =>
+                    setConversionEnabled(checked === true)
+                  }
+                  disabled={pending || !form.trackStock}
+                />
+                <Label htmlFor="conversionEnabled" className="font-normal">
+                  Buka dari kemasan (Pack → pcs)
+                </Label>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Saat stok pcs habis, kasir dapat membuka 1 kemasan menjadi beberapa pcs.
+                Simpan tautan dari produk pcs ini ke produk Pack.
+              </p>
+              {conversionEnabled ? (
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <FormField id="conversionFrom" label="Produk kemasan">
+                    <NativeSelect
+                      id="conversionFrom"
+                      value={conversionFromId}
+                      onChange={(e) => setConversionFromId(e.target.value)}
+                      disabled={pending}
+                      className={formInputClass}
+                    >
+                      <option value="">Pilih produk Pack…</option>
+                      {conversionSourceOptions.map((row) => (
+                        <option key={row.product_id} value={row.product_id}>
+                          {row.name}
+                          {row.unit_name ? ` (${row.unit_name})` : ""}
+                          {row.sku ? ` · ${row.sku}` : ""}
+                        </option>
+                      ))}
+                    </NativeSelect>
+                  </FormField>
+                  <FormField
+                    id="conversionToQty"
+                    label="Pcs per 1 kemasan"
+                    hint="Contoh: 1 Pack = 12 pcs."
+                  >
+                    <Input
+                      id="conversionToQty"
+                      inputMode="numeric"
+                      value={conversionToQty}
+                      onChange={(e) => setConversionToQty(e.target.value)}
+                      disabled={pending}
+                      className={formInputClass}
+                    />
+                  </FormField>
+                </div>
+              ) : null}
             </div>
             <FormField id="tags" label="Tag" hint="Pisahkan dengan koma.">
               <Input
@@ -498,10 +730,9 @@ export function ProductForm({
             </FormField>
           </FormSection>
 
-          {editingId ? (
-            <FormSection
+          <FormSection
               title="Gambar"
-              description="Gambar utama dipakai kasir setelah menyegarkan menu."
+              description="Gambar utama dipakai kasir setelah menyegarkan menu. Pilih satu gambar utama saat membuat produk."
             >
               {form.status === "active" && !product?.has_primary_image ? (
                 <p
@@ -526,10 +757,23 @@ export function ProductForm({
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     e.target.value = "";
-                    if (file) void onUploadImage(file);
+                    if (file) {
+                      if (editingId) void onUploadImage(file);
+                      else selectImage(file);
+                    }
                   }}
                 />
               </label>
+              {imagePreview && !editingId ? (
+                <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-accent/40 p-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={imagePreview} alt="Pratinjau gambar produk" className="size-16 rounded-md object-cover" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-foreground">{selectedImage?.name}</p>
+                    <p className="text-xs text-muted-foreground">Gambar akan diunggah setelah produk disimpan.</p>
+                  </div>
+                </div>
+              ) : null}
               {editingImages.length > 0 ? (
                 <ul className="grid gap-2">
                   {editingImages.map((image, index) => (
@@ -587,7 +831,6 @@ export function ProductForm({
                 </ul>
               ) : null}
             </FormSection>
-          ) : null}
         </div>
 
         <div className="flex flex-col gap-4">
@@ -735,6 +978,7 @@ export function ProductForm({
         </div>
       </div>
 
+      </FormBody>
       <FormActions
         error={error}
         pending={pending}

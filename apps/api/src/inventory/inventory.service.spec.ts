@@ -227,4 +227,145 @@ describe("InventoryService", () => {
       service.markDamaged(productId, { qty: 1, reason: "pecah" }),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
+
+  it("unpack posts pack out and pcs in then updates projections", async () => {
+    const fromId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const toId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    const updateSet = jest.fn().mockReturnValue({
+      where: jest.fn().mockResolvedValue(undefined),
+    });
+
+    getDbMock.mockReturnValue({
+      transaction: async (fn: (tx: unknown) => Promise<unknown>) => {
+        const tx = {
+          select: jest
+            .fn()
+            .mockReturnValueOnce({
+              from: () => ({
+                where: () => ({
+                  limit: async () => [
+                    {
+                      conversionId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+                      fromProductId: fromId,
+                      toProductId: toId,
+                      fromQty: 1,
+                      toQty: 12,
+                    },
+                  ],
+                }),
+              }),
+            })
+            .mockReturnValueOnce({
+              from: () => ({
+                where: () => ({
+                  for: async () => [
+                    {
+                      productId: fromId,
+                      stockQty: 5,
+                      trackStock: true,
+                      status: "active",
+                    },
+                    {
+                      productId: toId,
+                      stockQty: 0,
+                      trackStock: true,
+                      status: "active",
+                    },
+                  ],
+                }),
+              }),
+            }),
+          update: () => ({ set: updateSet }),
+        };
+        return fn(tx);
+      },
+    } as never);
+
+    const result = await service.unpack(toId, { pack_qty: 1 }, "actor-1");
+    expect(result).toMatchObject({
+      from_product_id: fromId,
+      to_product_id: toId,
+      from_stock_qty: 4,
+      to_stock_qty: 12,
+      from_delta: -1,
+      to_delta: 12,
+    });
+    expect(insertMovementMock).toHaveBeenCalledTimes(2);
+    expect(insertMovementMock).toHaveBeenNthCalledWith(
+      1,
+      expect.anything(),
+      expect.objectContaining({
+        productId: fromId,
+        qtyDelta: -1,
+        sourceType: "unpack",
+        reason: "unpack",
+      }),
+    );
+    expect(insertMovementMock).toHaveBeenNthCalledWith(
+      2,
+      expect.anything(),
+      expect.objectContaining({
+        productId: toId,
+        qtyDelta: 12,
+        sourceType: "unpack",
+      }),
+    );
+    expect(updateSet).toHaveBeenCalled();
+  });
+
+  it("unpack fails closed when pack stock is insufficient", async () => {
+    const fromId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const toId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+
+    getDbMock.mockReturnValue({
+      transaction: async (fn: (tx: unknown) => Promise<unknown>) => {
+        const tx = {
+          select: jest
+            .fn()
+            .mockReturnValueOnce({
+              from: () => ({
+                where: () => ({
+                  limit: async () => [
+                    {
+                      conversionId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+                      fromProductId: fromId,
+                      toProductId: toId,
+                      fromQty: 1,
+                      toQty: 12,
+                    },
+                  ],
+                }),
+              }),
+            })
+            .mockReturnValueOnce({
+              from: () => ({
+                where: () => ({
+                  for: async () => [
+                    {
+                      productId: fromId,
+                      stockQty: 0,
+                      trackStock: true,
+                      status: "active",
+                    },
+                    {
+                      productId: toId,
+                      stockQty: 0,
+                      trackStock: true,
+                      status: "active",
+                    },
+                  ],
+                }),
+              }),
+            }),
+        };
+        return fn(tx);
+      },
+    } as never);
+
+    await expect(service.unpack(toId, {})).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(insertMovementMock).not.toHaveBeenCalled();
+  });
+
 });

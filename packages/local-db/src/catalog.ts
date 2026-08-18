@@ -27,7 +27,22 @@ export async function listCatalogProducts(): Promise<CatalogProductRecord[]> {
   const db = await openLocalDb();
   const rows = await db.getAll("catalogProducts");
   const sellable = rows.filter((row) => isSellableCatalogRow(row, rows));
-  return sellable.sort((a, b) => a.name.localeCompare(b.name, "id"));
+  const byId = new Map(sellable.map((row) => [row.productId, row]));
+  const enriched = sellable.map((product) => {
+    if (!product.unitConversion) return product;
+    const pack = byId.get(product.unitConversion.fromProductId);
+    if (!pack || pack.stockQty === product.unitConversion.fromStockQty) {
+      return product;
+    }
+    return {
+      ...product,
+      unitConversion: {
+        ...product.unitConversion,
+        fromStockQty: pack.stockQty,
+      },
+    };
+  });
+  return enriched.sort((a, b) => a.name.localeCompare(b.name, "id"));
 }
 
 export async function getCatalogPulledAt(): Promise<string | null> {
@@ -45,6 +60,16 @@ export async function replaceCatalog(products: Product[]): Promise<number> {
   const tx = db.transaction(["catalogProducts", "meta"], "readwrite");
   await tx.objectStore("catalogProducts").clear();
   for (const p of products) {
+    const conversion = p.unit_conversion
+      ? {
+          fromProductId: p.unit_conversion.from_product_id,
+          fromProductName: p.unit_conversion.from_product_name,
+          fromUnitName: p.unit_conversion.from_unit_name ?? null,
+          fromStockQty: p.unit_conversion.from_stock_qty,
+          fromQty: p.unit_conversion.from_qty,
+          toQty: p.unit_conversion.to_qty,
+        }
+      : null;
     const row: CatalogProductRecord = {
       productId: p.product_id,
       name: p.name,
@@ -54,6 +79,8 @@ export async function replaceCatalog(products: Product[]): Promise<number> {
       parentId: p.parent_id ?? null,
       sku: p.sku ?? null,
       categoryName: p.category_name ?? null,
+      unitName: p.unit_name ?? null,
+      unitConversion: conversion,
       pulledAt,
     };
     await tx.objectStore("catalogProducts").put(row);
@@ -88,6 +115,38 @@ export async function getCatalogImageRecord(
 ): Promise<CatalogImageRecord | undefined> {
   const db = await openLocalDb();
   return db.get("catalogImages", productId);
+}
+
+/** Patch stock (and conversion.fromStockQty mirrors) in place after unpack. */
+export async function patchCatalogStocks(
+  updates: Array<{ productId: string; stockQty: number }>,
+): Promise<void> {
+  const db = await openLocalDb();
+  const tx = db.transaction("catalogProducts", "readwrite");
+  const store = tx.objectStore("catalogProducts");
+  const byId = new Map(updates.map((u) => [u.productId, u.stockQty]));
+
+  for (const [productId, stockQty] of byId) {
+    const row = await store.get(productId);
+    if (!row) continue;
+    await store.put({ ...row, stockQty });
+  }
+
+  const all = await store.getAll();
+  for (const row of all) {
+    if (!row.unitConversion) continue;
+    const packQty = byId.get(row.unitConversion.fromProductId);
+    if (packQty === undefined) continue;
+    if (row.unitConversion.fromStockQty === packQty) continue;
+    await store.put({
+      ...row,
+      unitConversion: {
+        ...row.unitConversion,
+        fromStockQty: packQty,
+      },
+    });
+  }
+  await tx.done;
 }
 
 export function isValidSellablePrice(priceMinor: number): boolean {

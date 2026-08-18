@@ -29,16 +29,19 @@ import {
   parkCart,
   stackSaleDiscounts,
   verifyManagerPin,
+  type CatalogProductRecord,
   type LocalSaleRecord,
   type ParkedCartRecord,
 } from "@pos-apps/local-db";
 import type { LoyaltyProgram, Promotion, Voucher } from "@pos-apps/types";
 import { useCart } from "@/components/providers/cart-context";
 import { CustomerAttach, restoreCartCustomer } from "@/components/organisms/customer-attach";
+import { UnpackConfirmDialog } from "@/components/organisms/unpack-confirm-dialog";
 import { authorizedFetch } from "@/lib/api-client";
 import { formatIdr } from "@/lib/money";
 import { copy, type LangPref } from "@/lib/preferences";
 import { SHIFT_CHANGED_EVENT } from "@/lib/shift-events";
+import { canOfferUnpack, performUnpack } from "@/lib/unpack";
 
 type Props = {
   lang: LangPref;
@@ -57,7 +60,8 @@ function parkedQty(parked: ParkedCartRecord): number {
 
 export function CartPanel({ lang, onCompleted }: Props) {
   const t = copy(lang);
-  const { lines, setQty, clear, replaceLines, customer, setCustomer } = useCart();
+  const { lines, setQty, clear, replaceLines, customer, setCustomer, add, raiseStockCap } =
+    useCart();
   const [sale, setSale] = useState<LocalSaleRecord | null>(null);
   const [parked, setParked] = useState<ParkedCartRecord[]>([]);
   const [busy, setBusy] = useState(false);
@@ -77,7 +81,21 @@ export function CartPanel({ lang, onCompleted }: Props) {
   const [voucher, setVoucher] = useState<Voucher | null>(null);
   const [managerMinor, setManagerMinor] = useState(0);
   const [managerPin, setManagerPin] = useState("");
+  const [catalogById, setCatalogById] = useState<Map<string, CatalogProductRecord>>(
+    new Map(),
+  );
+  const [unpackTarget, setUnpackTarget] = useState<CatalogProductRecord | null>(
+    null,
+  );
+  const [unpackBusy, setUnpackBusy] = useState(false);
+  const [unpackError, setUnpackError] = useState<string | null>(null);
   const lineTotal = lines.reduce((sum, line) => sum + line.priceMinor * line.qty, 0);
+
+  useEffect(() => {
+    void listCatalogProducts().then((rows) => {
+      setCatalogById(new Map(rows.map((row) => [row.productId, row])));
+    });
+  }, [lines]);
 
   useEffect(() => {
     setCreditMinor(0);
@@ -485,6 +503,41 @@ export function CartPanel({ lang, onCompleted }: Props) {
       id="cart-panel"
       className="fixed inset-x-3 bottom-3 z-30 flex max-h-[min(70dvh,36rem)] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-card)] md:static md:inset-auto md:bottom-auto md:z-auto md:h-full md:max-h-none md:min-h-0"
     >
+      <UnpackConfirmDialog
+        lang={lang}
+        product={unpackTarget}
+        open={Boolean(unpackTarget)}
+        busy={unpackBusy}
+        error={unpackError}
+        onCancel={() => {
+          if (unpackBusy) return;
+          setUnpackTarget(null);
+          setUnpackError(null);
+        }}
+        onConfirm={() => {
+          if (!unpackTarget || unpackBusy) return;
+          void (async () => {
+            setUnpackBusy(true);
+            setUnpackError(null);
+            const result = await performUnpack(unpackTarget);
+            if (!result.ok) {
+              setUnpackError(
+                result.message === "network" ? t.unpackFail : result.message,
+              );
+              setUnpackBusy(false);
+              const rows = await listCatalogProducts();
+              setCatalogById(new Map(rows.map((row) => [row.productId, row])));
+              return;
+            }
+            raiseStockCap(result.product.productId, result.product.stockQty);
+            add(result.product);
+            setUnpackBusy(false);
+            setUnpackTarget(null);
+            const rows = await listCatalogProducts();
+            setCatalogById(new Map(rows.map((row) => [row.productId, row])));
+          })();
+        }}
+      />
       <h2 className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-3 text-lg font-semibold tracking-tight text-foreground sm:px-5">
         <ShoppingCartIcon size={22} weight="duotone" className="text-primary" />
         {t.cart}
@@ -759,7 +812,29 @@ export function CartPanel({ lang, onCompleted }: Props) {
                         size="icon"
                         className="h-12 w-12 rounded-2xl"
                         aria-label={`${t.qtyUp} ${line.name}`}
-                        onClick={() => setQty(line.productId, line.qty + 1)}
+                        onClick={() => {
+                          if (line.qty < line.stockQty) {
+                            setQty(line.productId, line.qty + 1);
+                            return;
+                          }
+                          const catalog = catalogById.get(line.productId);
+                          if (
+                            catalog &&
+                            canOfferUnpack(
+                              catalog,
+                              online,
+                              [...catalogById.values()],
+                            )
+                          ) {
+                            setUnpackError(null);
+                            setUnpackTarget({
+                              ...catalog,
+                              stockQty: line.stockQty,
+                            });
+                            return;
+                          }
+                          setQty(line.productId, line.qty + 1);
+                        }}
                       >
                         <PlusIcon size={18} weight="bold" />
                       </Button>

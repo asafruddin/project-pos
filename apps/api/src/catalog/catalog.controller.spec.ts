@@ -48,6 +48,7 @@ describe("CatalogController", () => {
         stock_qty: 10,
       },
       "u-admin",
+      "00000000-0000-4000-8000-000000000001",
     );
     expect(result.name).toBe("Espresso");
   });

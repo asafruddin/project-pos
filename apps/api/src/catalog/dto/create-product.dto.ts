@@ -87,6 +87,10 @@ export class CreateProductDto {
   brand_name?: string | null;
 
   @IsOptional()
+  @IsString()
+  unit_name?: string | null;
+
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
   tags?: string[];

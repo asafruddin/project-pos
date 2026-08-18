@@ -1,7 +1,7 @@
 "use client";
 
 import { FormField, formInputClass } from "@pos-apps/ui/molecules";
-import { FormActions, FormBackLink, FormDenied, FormSection } from "@pos-apps/ui/organisms";
+import { FormActions, FormBackLink, FormDenied, FormSection, FormBody, formPageClassName } from "@pos-apps/ui/organisms";
 import { Checkbox, Input, Label, NativeSelect, Skeleton } from "@pos-apps/ui/atoms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -183,7 +183,8 @@ export function EmployeeForm({
 
   if (missing) {
     return (
-      <div className="flex min-h-full flex-col gap-5">
+      <div className="flex flex-col gap-5">
+      
         <FormBackLink href="/employees">Daftar karyawan</FormBackLink>
         <p className="text-sm text-destructive" role="alert">
           {error ?? "Karyawan tidak ditemukan."}
@@ -197,7 +198,8 @@ export function EmployeeForm({
     : assignableRoles(actorRole);
 
   return (
-    <form onSubmit={(e) => void onSave(e)} className="flex min-h-full flex-col gap-5">
+    <form onSubmit={(e) => void onSave(e)} className={formPageClassName}>
+      <FormBody>
       <FormBackLink href="/employees">Daftar karyawan</FormBackLink>
       <FormSection
         title={userId ? "Akun" : "Pengguna baru"}
@@ -281,6 +283,8 @@ export function EmployeeForm({
           </div>
         ) : null}
       </FormSection>
+      
+      </FormBody>
       <FormActions
         error={error}
         pending={pending}

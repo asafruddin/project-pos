@@ -1,7 +1,7 @@
 "use client";
 
 import { FormField, formInputClass } from "@pos-apps/ui/molecules";
-import { FormActions, FormBackLink, FormDenied, FormSection } from "@pos-apps/ui/organisms";
+import { FormActions, FormBackLink, FormDenied, FormSection, FormBody, formPageClassName } from "@pos-apps/ui/organisms";
 import { Input, Skeleton } from "@pos-apps/ui/atoms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -150,8 +150,9 @@ export function StockDamageForm({
   return (
     <form
       onSubmit={(e) => void onMarkDamaged(e)}
-      className="flex min-h-full flex-col gap-5"
+      className={formPageClassName}
     >
+      <FormBody>
       <FormBackLink href="/stock">Ikhtisar stok</FormBackLink>
 
       <FormSection
@@ -180,6 +181,7 @@ export function StockDamageForm({
         </FormField>
       </FormSection>
 
+      </FormBody>
       <FormActions
         error={error}
         pending={pending}
