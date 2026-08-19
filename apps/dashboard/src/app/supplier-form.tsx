@@ -11,6 +11,7 @@ import type {
   Supplier,
 } from "@pos-apps/types";
 import { authorizedFetch } from "@/lib/api-client";
+import { fetchAllCatalogProductsAuth } from "@/lib/fetch-all-catalog";
 
 export function SupplierForm({ supplierId }: { supplierId?: string }) {
   const router = useRouter();
@@ -28,14 +29,14 @@ export function SupplierForm({ supplierId }: { supplierId?: string }) {
 
   const load = useCallback(async () => {
     try {
-      const [cRes, sRes] = await Promise.all([
-        authorizedFetch("/catalog/products"),
+      const [catalogResult, sRes] = await Promise.all([
+        fetchAllCatalogProductsAuth(),
         supplierId
           ? authorizedFetch(`/purchasing/suppliers/${supplierId}`)
           : Promise.resolve(null),
       ]);
-      if (cRes.ok) {
-        setCatalog(((await cRes.json()) as ProductListResponse).products);
+      if (catalogResult.ok) {
+        setCatalog(catalogResult.products);
       }
       if (supplierId && sRes) {
         const data = (await sRes.json()) as Supplier | ApiErrorBody;

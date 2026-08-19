@@ -9,6 +9,7 @@ import {
   Patch,
   Post,
   Put,
+  Query,
   StreamableFile,
   UploadedFile,
   UseGuards,
@@ -43,14 +44,24 @@ export class CatalogController {
   ) {}
 
   @Get()
-  async list(@CurrentUser() user: AuthUser): Promise<ProductListResponse> {
+  async list(
+    @CurrentUser() user: AuthUser,
+    @Query("page") pageRaw?: string,
+    @Query("limit") limitRaw?: string,
+  ): Promise<ProductListResponse> {
     const overlayStore =
       user.role === "cashier" || user.role === "supervisor"
         ? user.storeId
         : undefined;
-    const result = await this.catalog.list(overlayStore);
+    const page = Number.parseInt(pageRaw ?? "", 10);
+    const limit = Number.parseInt(limitRaw ?? "", 10);
+    const result = await this.catalog.list(overlayStore, {
+      page: Number.isInteger(page) ? page : undefined,
+      limit: Number.isInteger(limit) ? limit : undefined,
+    });
     if (!hasPermission(grantsFor(user), "products", "view_cost")) {
       return {
+        ...result,
         products: result.products.map((product) => ({
           ...product,
           cost_minor: undefined,

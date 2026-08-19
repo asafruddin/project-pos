@@ -145,6 +145,36 @@ describe("CatalogService", () => {
             }),
           }),
         }),
+      select: jest
+        .fn()
+        .mockReturnValueOnce({
+          from: () => ({
+            leftJoin: () => ({
+              leftJoin: () => ({
+                leftJoin: () => ({
+                  where: () => ({
+                    limit: async () => [
+                      {
+                        categoryName: null,
+                        brandName: null,
+                        unitName: null,
+                      },
+                    ],
+                  }),
+                }),
+              }),
+            }),
+          }),
+        })
+        .mockReturnValueOnce({
+          from: () => ({
+            innerJoin: () => ({
+              leftJoin: () => ({
+                where: async () => [],
+              }),
+            }),
+          }),
+        }),
     } as never);
 
     const result = await service.setStock(
@@ -246,24 +276,31 @@ describe("CatalogService", () => {
       select: jest
         .fn()
         .mockReturnValueOnce({
+          from: async () => [{ value: 2 }],
+        })
+        .mockReturnValueOnce({
           from: () => ({
             leftJoin: () => ({
               leftJoin: () => ({
                 leftJoin: () => ({
-                  orderBy: async () => [
-                    {
-                      product: productRow,
-                      categoryName: null,
-                      brandName: null,
-                      unitName: null,
-                    },
-                    {
-                      product: inactive,
-                      categoryName: null,
-                      brandName: null,
-                      unitName: null,
-                    },
-                  ],
+                  orderBy: () => ({
+                    limit: () => ({
+                      offset: async () => [
+                        {
+                          product: productRow,
+                          categoryName: null,
+                          brandName: null,
+                          unitName: null,
+                        },
+                        {
+                          product: inactive,
+                          categoryName: null,
+                          brandName: null,
+                          unitName: null,
+                        },
+                      ],
+                    }),
+                  }),
                 }),
               }),
             }),
@@ -271,7 +308,11 @@ describe("CatalogService", () => {
         })
         .mockReturnValueOnce({
           from: () => ({
-            where: async () => [],
+            innerJoin: () => ({
+              leftJoin: () => ({
+                where: async () => [],
+              }),
+            }),
           }),
         }),
     } as never);
@@ -280,6 +321,12 @@ describe("CatalogService", () => {
     expect(result.products).toHaveLength(2);
     expect(result.products.map((p) => p.status)).toEqual(["active", "inactive"]);
     expect(result.products[0]?.price_minor).toBe(25000);
+    expect(result.meta).toEqual({
+      page: 1,
+      limit: 50,
+      total: 2,
+      total_pages: 1,
+    });
   });
 
   it("list overlays store selling price when a store is passed", async () => {
@@ -287,19 +334,35 @@ describe("CatalogService", () => {
       select: jest
         .fn()
         .mockReturnValueOnce({
+          from: async () => [{ value: 1 }],
+        })
+        .mockReturnValueOnce({
           from: () => ({
             leftJoin: () => ({
               leftJoin: () => ({
                 leftJoin: () => ({
-                  orderBy: async () => [
-                    {
-                      product: productRow,
-                      categoryName: null,
-                      brandName: null,
-                      unitName: null,
-                    },
-                  ],
+                  orderBy: () => ({
+                    limit: () => ({
+                      offset: async () => [
+                        {
+                          product: productRow,
+                          categoryName: null,
+                          brandName: null,
+                          unitName: null,
+                        },
+                      ],
+                    }),
+                  }),
                 }),
+              }),
+            }),
+          }),
+        })
+        .mockReturnValueOnce({
+          from: () => ({
+            innerJoin: () => ({
+              leftJoin: () => ({
+                where: async () => [],
               }),
             }),
           }),

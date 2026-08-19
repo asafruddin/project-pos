@@ -12,6 +12,7 @@ import type {
   SupplierListResponse,
 } from "@pos-apps/types";
 import { authorizedFetch } from "@/lib/api-client";
+import { fetchAllCatalogProductsAuth } from "@/lib/fetch-all-catalog";
 import { parseGroupedInt } from "@/lib/format-money";
 
 export function PurchaseOrderForm() {
@@ -30,9 +31,9 @@ export function PurchaseOrderForm() {
 
   const load = useCallback(async () => {
     try {
-      const [sRes, cRes] = await Promise.all([
+      const [sRes, catalog] = await Promise.all([
         authorizedFetch("/purchasing/suppliers"),
-        authorizedFetch("/catalog/products"),
+        fetchAllCatalogProductsAuth(),
       ]);
       const sData = (await sRes.json()) as SupplierListResponse | ApiErrorBody;
       if (!sRes.ok) {
@@ -40,8 +41,8 @@ export function PurchaseOrderForm() {
         return;
       }
       setSuppliers((sData as SupplierListResponse).suppliers);
-      if (cRes.ok) {
-        setCatalog(((await cRes.json()) as ProductListResponse).products);
+      if (catalog.ok) {
+        setCatalog(catalog.products);
       }
       setError(null);
     } catch (err) {

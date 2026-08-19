@@ -539,8 +539,16 @@ export type UpdatePoInvoiceRequest = {
   payment_status?: PaymentStatus;
 };
 
+export type ProductListMeta = {
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+};
+
 export type ProductListResponse = {
   products: Product[];
+  meta: ProductListMeta;
 };
 
 /** Synced sales read model shell (populated later by AcceptCompleteSale). */

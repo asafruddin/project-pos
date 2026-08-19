@@ -13,6 +13,7 @@ import type {
   UnitListResponse,
 } from "@pos-apps/types";
 import { catalogRequest } from "@/lib/catalog-request";
+import { fetchAllCatalogProducts } from "@/lib/fetch-all-catalog";
 import { formatIdr } from "@/lib/format-money";
 
 type FormState = {
@@ -147,13 +148,13 @@ export function ProductForm({
   }, []);
 
   const loadCatalog = useCallback(async () => {
-    const result = await catalogRequest<ProductListResponse>("/catalog/products");
+    const result = await fetchAllCatalogProducts();
     if (!result.ok) {
       setError(result.message);
       setLoading(false);
       return null;
     }
-    return result.data.products;
+    return result.products;
   }, []);
 
   const loadProduct = useCallback(async () => {

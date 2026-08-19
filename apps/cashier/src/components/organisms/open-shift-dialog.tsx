@@ -15,8 +15,10 @@ import { openLocalShift } from "@pos-apps/local-db";
 import { flushSalesAndVoids } from "@/lib/flush-sync";
 import { requestLogout } from "@/lib/logout";
 import { copy, type LangPref } from "@/lib/preferences";
-import { parseGroupedInt } from "@/lib/money";
+import { formatGroupedInt, parseGroupedInt } from "@/lib/money";
 import { notifyShiftChanged } from "@/lib/shift-events";
+
+const OPENING_CASH_PRESETS = [20_000, 50_000, 100_000] as const;
 
 export function OpenShiftDialog({
   lang,
@@ -30,6 +32,14 @@ export function OpenShiftDialog({
   const [cash, setCash] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const selectedPreset = OPENING_CASH_PRESETS.find(
+    (amount) => parseGroupedInt(cash) === amount,
+  );
+
+  function applyPreset(amount: number) {
+    setCash(formatGroupedInt(amount, lang));
+    setError(null);
+  }
 
   async function onOpen(e: FormEvent) {
     e.preventDefault();
@@ -91,6 +101,24 @@ export function OpenShiftDialog({
               autoFocus
               aria-invalid={error ? true : undefined}
             />
+            <div className="flex flex-wrap gap-2" role="group" aria-label={t.shiftOpeningCash}>
+              {OPENING_CASH_PRESETS.map((amount) => {
+                const active = selectedPreset === amount;
+                return (
+                  <Button
+                    key={amount}
+                    type="button"
+                    variant={active ? "default" : "secondary"}
+                    disabled={busy}
+                    className="min-h-11 flex-1 rounded-xl"
+                    aria-pressed={active}
+                    onClick={() => applyPreset(amount)}
+                  >
+                    {formatGroupedInt(amount, lang)}
+                  </Button>
+                );
+              })}
+            </div>
           </div>
           {error ? (
             <p className="text-sm text-destructive" role="alert">

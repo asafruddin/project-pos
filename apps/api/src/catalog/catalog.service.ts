@@ -17,7 +17,7 @@ import type {
   UpsertUnitConversionRequest,
 } from "@pos-apps/types";
 import { STORE_1_ID } from "@pos-apps/types";
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "../db/client";
 import { insertStockMovement } from "../db/stock-ledger";
 import { MediaService } from "../media/media.service";
@@ -320,9 +320,25 @@ export class CatalogService {
     return map;
   }
 
-  async list(storeId?: string): Promise<ProductListResponse> {
+  async list(
+    storeId?: string,
+    opts: { page?: number; limit?: number } = {},
+  ): Promise<ProductListResponse> {
+    const page =
+      Number.isInteger(opts.page) && (opts.page ?? 0) > 0 ? opts.page! : 1;
+    const limit =
+      Number.isInteger(opts.limit) && (opts.limit ?? 0) > 0
+        ? Math.min(opts.limit!, 100)
+        : 50;
+    const offset = (page - 1) * limit;
     const stockStore = storeId || STORE_1_ID;
-    const rows = await getDb()
+    const db = getDb();
+
+    const [totalRow] = await db.select({ value: count() }).from(products);
+    const total = Number(totalRow?.value ?? 0);
+    const total_pages = total === 0 ? 0 : Math.ceil(total / limit);
+
+    const rows = await db
       .select({
         product: products,
         categoryName: categories.name,
@@ -333,7 +349,9 @@ export class CatalogService {
       .leftJoin(categories, eq(products.categoryId, categories.categoryId))
       .leftJoin(brands, eq(products.brandId, brands.brandId))
       .leftJoin(units, eq(products.unitId, units.unitId))
-      .orderBy(asc(products.name));
+      .orderBy(asc(products.name))
+      .limit(limit)
+      .offset(offset);
     const imagesByProduct = await this.media.imagesFor(
       rows.map((row) => row.product.productId),
     );
@@ -343,7 +361,7 @@ export class CatalogService {
     );
     const storePriceByProduct = new Map<string, number>();
     if (storeId) {
-      const overrides = await getDb()
+      const overrides = await db
         .select()
         .from(storePrices)
         .where(eq(storePrices.storeId, storeId));
@@ -370,6 +388,7 @@ export class CatalogService {
           }),
         };
       }),
+      meta: { page, limit, total, total_pages },
     };
   }
 

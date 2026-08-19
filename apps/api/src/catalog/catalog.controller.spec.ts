@@ -67,6 +67,7 @@ describe("CatalogController", () => {
             cost_minor: 9000,
           },
         ],
+        meta: { page: 1, limit: 50, total: 1, total_pages: 1 },
       }),
       update: jest.fn(),
       setStock: jest.fn(),
@@ -90,9 +91,13 @@ describe("CatalogController", () => {
       role: "cashier",
       storeId: "store-2",
     });
-    expect(catalog.list).toHaveBeenCalledWith("store-2");
+    expect(catalog.list).toHaveBeenCalledWith("store-2", {
+      page: undefined,
+      limit: undefined,
+    });
     expect(result.products[0]?.cost_minor).toBeUndefined();
     expect(result.products[0]?.status).toBe("inactive");
+    expect(result.meta.total).toBe(1);
   });
 });
 

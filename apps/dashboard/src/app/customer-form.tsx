@@ -13,6 +13,7 @@ import type {
   ProductListResponse,
 } from "@pos-apps/types";
 import { authorizedFetch } from "@/lib/api-client";
+import { fetchAllCatalogProductsAuth } from "@/lib/fetch-all-catalog";
 import { formatIdr, parseGroupedInt } from "@/lib/format-money";
 
 function productLabel(
@@ -61,9 +62,9 @@ export function CustomerForm({
 
   const load = useCallback(async () => {
     try {
-      const [gRes, pRes, cRes] = await Promise.all([
+      const [gRes, catalog, cRes] = await Promise.all([
         authorizedFetch("/customers/groups"),
-        authorizedFetch("/catalog/products"),
+        fetchAllCatalogProductsAuth(),
         customerId
           ? authorizedFetch(`/customers/${customerId}`)
           : Promise.resolve(null),
@@ -72,9 +73,8 @@ export function CustomerForm({
         const gData = (await gRes.json()) as CustomerGroupListResponse;
         setGroups(gData.groups);
       }
-      if (pRes.ok) {
-        const pData = (await pRes.json()) as ProductListResponse;
-        setProducts(pData.products);
+      if (catalog.ok) {
+        setProducts(catalog.products);
       }
       if (customerId && cRes) {
         const data = (await cRes.json()) as Customer | ApiErrorBody;

@@ -13,6 +13,7 @@ import type {
 } from "@pos-apps/types";
 import { STORE_1_ID } from "@pos-apps/types";
 import { authorizedFetch } from "@/lib/api-client";
+import { fetchAllCatalogProductsAuth } from "@/lib/fetch-all-catalog";
 import { parseGroupedInt } from "@/lib/format-money";
 
 function errorMessage(res: Response, body: unknown): string {
@@ -32,9 +33,9 @@ export function StorePricesForm({ canEdit }: { canEdit: boolean }) {
 
   const load = useCallback(async () => {
     try {
-      const [storeRes, catalogRes] = await Promise.all([
+      const [storeRes, catalog] = await Promise.all([
         authorizedFetch("/stores"),
-        authorizedFetch("/catalog/products"),
+        fetchAllCatalogProductsAuth(),
       ]);
       const storeData = (await storeRes.json()) as StoreListResponse | ApiErrorBody;
       if (!storeRes.ok) {
@@ -43,8 +44,8 @@ export function StorePricesForm({ canEdit }: { canEdit: boolean }) {
       }
       const packed = storeData as StoreListResponse;
       setStores(packed.stores);
-      if (catalogRes.ok) {
-        setProducts(((await catalogRes.json()) as ProductListResponse).products);
+      if (catalog.ok) {
+        setProducts(catalog.products);
       }
       setError(null);
     } catch {

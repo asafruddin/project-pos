@@ -267,8 +267,8 @@ export function AppShell({
           >
             <div
               className={cn(
-                "min-w-0 rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-card)] sm:p-5",
-                aside && "min-h-0 overflow-y-auto",
+                "flex min-w-0 flex-col rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-card)] sm:p-5",
+                aside && "min-h-0 overflow-hidden",
               )}
             >
               {children}

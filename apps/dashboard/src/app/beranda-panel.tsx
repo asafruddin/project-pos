@@ -82,10 +82,12 @@ export function BerandaPanel() {
         if (canViewProducts) {
           jobs.push(
             (async () => {
-              const catalogRes = await authorizedFetch("/catalog/products");
+              const catalogRes = await authorizedFetch(
+                "/catalog/products?page=1&limit=1",
+              );
               if (cancelled || !catalogRes.ok) return;
               const data = (await catalogRes.json()) as ProductListResponse;
-              setCatalogCount(data.products.length);
+              setCatalogCount(data.meta?.total ?? data.products.length);
             })(),
           );
         }
