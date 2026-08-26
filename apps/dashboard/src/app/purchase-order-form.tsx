@@ -1,7 +1,16 @@
 "use client";
 
-import { Button, Input, NativeSelect, Skeleton } from "@pos-apps/ui/atoms";
+import { Button, Input, Skeleton } from "@pos-apps/ui/atoms";
 import { FormField, formInputClass } from "@pos-apps/ui/molecules";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  toSelectValue,
+  fromSelectValue,
+} from "@pos-apps/ui/molecules";
 import { FormActions, FormBackLink, FormSection, FormBody, formPageClassName } from "@pos-apps/ui/organisms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -128,39 +137,48 @@ export function PurchaseOrderForm() {
         description="Pilih pemasok dan item. Draf belum mengubah stok."
       >
         <FormField id="poSupplier" label="Pemasok" required>
-          <NativeSelect
-            id="poSupplier"
-            value={poSupplierId}
-            onChange={(e) => setPoSupplierId(e.target.value)}
+          <Select
+            value={toSelectValue(poSupplierId)}
+            onValueChange={(value) => setPoSupplierId(fromSelectValue(value))}
             disabled={pending}
           >
-            <option value="">Pilih pemasok</option>
-            {suppliers.map((item) => (
-              <option key={item.supplier_id} value={item.supplier_id}>
-                {item.name}
-              </option>
-            ))}
-          </NativeSelect>
+            <SelectTrigger id="poSupplier">
+              <SelectValue placeholder="Pilih pemasok" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={toSelectValue("")}>Pilih pemasok</SelectItem>
+              {suppliers.map((item) => (
+                <SelectItem key={item.supplier_id} value={item.supplier_id}>
+                  {item.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </FormField>
         {poLines.map((line, index) => (
           <div key={index} className="grid gap-3 sm:grid-cols-[1fr_6rem_8rem]">
             <FormField label="Produk">
-              <NativeSelect
-                value={line.product_id}
-                onChange={(e) => {
+              <Select
+                value={toSelectValue(line.product_id)}
+                onValueChange={(value) => {
                   const next = [...poLines];
-                  next[index] = { ...line, product_id: e.target.value };
+                  next[index] = { ...line, product_id: fromSelectValue(value) };
                   setPoLines(next);
                 }}
                 disabled={pending}
               >
-                <option value="">Produk</option>
-                {catalog.map((p) => (
-                  <option key={p.product_id} value={p.product_id}>
-                    {p.name}
-                  </option>
-                ))}
-              </NativeSelect>
+                <SelectTrigger>
+                  <SelectValue placeholder="Produk" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={toSelectValue("")}>Produk</SelectItem>
+                  {catalog.map((p) => (
+                    <SelectItem key={p.product_id} value={p.product_id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </FormField>
             <FormField label="Jumlah">
               <Input

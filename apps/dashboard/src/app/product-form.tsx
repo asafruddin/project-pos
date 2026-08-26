@@ -1,7 +1,16 @@
 "use client";
 
-import { Button, Checkbox, Input, Label, NativeSelect, Skeleton, Textarea } from "@pos-apps/ui/atoms";
+import { Button, Checkbox, Input, Label, Skeleton, Textarea } from "@pos-apps/ui/atoms";
 import { FormField, formInputClass } from "@pos-apps/ui/molecules";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  toSelectValue,
+  fromSelectValue,
+} from "@pos-apps/ui/molecules";
 import { FormActions, FormBackLink, FormDenied, FormSection, FormBody, formPageClassName } from "@pos-apps/ui/organisms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -616,44 +625,52 @@ export function ProductForm({
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField id="category" label="Kategori">
-                <NativeSelect
-                  id="category"
-                  value={form.category}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, category: e.target.value }))
+                <Select
+                  value={toSelectValue(form.category)}
+                  onValueChange={(value) =>
+                    setForm((f) => ({ ...f, category: fromSelectValue(value) }))
                   }
                   disabled={pending}
-                  className={formInputClass}
                 >
-                  <option value="">Tanpa kategori</option>
-                  {form.category && !categoryOptions.includes(form.category) ? (
-                    <option value={form.category}>{form.category}</option>
-                  ) : null}
-                  {categoryOptions.map((name) => (
-                    <option key={name} value={name}>
-                      {name}
-                    </option>
-                  ))}
-                </NativeSelect>
+                  <SelectTrigger id="category">
+                    <SelectValue placeholder="Tanpa kategori" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={toSelectValue("")}>Tanpa kategori</SelectItem>
+                    {form.category && !categoryOptions.includes(form.category) ? (
+                      <SelectItem value={form.category}>{form.category}</SelectItem>
+                    ) : null}
+                    {categoryOptions.map((name) => (
+                      <SelectItem key={name} value={name}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </FormField>
               <FormField id="unit" label="Satuan">
-                <NativeSelect
-                  id="unit"
-                  value={form.unit}
-                  onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}
+                <Select
+                  value={toSelectValue(form.unit)}
+                  onValueChange={(value) =>
+                    setForm((f) => ({ ...f, unit: fromSelectValue(value) }))
+                  }
                   disabled={pending}
-                  className={formInputClass}
                 >
-                  <option value="">Tanpa satuan</option>
-                  {form.unit && !unitOptions.includes(form.unit) ? (
-                    <option value={form.unit}>{form.unit}</option>
-                  ) : null}
-                  {unitOptions.map((name) => (
-                    <option key={name} value={name}>
-                      {name}
-                    </option>
-                  ))}
-                </NativeSelect>
+                  <SelectTrigger id="unit">
+                    <SelectValue placeholder="Tanpa satuan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={toSelectValue("")}>Tanpa satuan</SelectItem>
+                    {form.unit && !unitOptions.includes(form.unit) ? (
+                      <SelectItem value={form.unit}>{form.unit}</SelectItem>
+                    ) : null}
+                    {unitOptions.map((name) => (
+                      <SelectItem key={name} value={name}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </FormField>
             </div>
             <FormField id="brand" label="Merek">
@@ -686,22 +703,29 @@ export function ProductForm({
               {conversionEnabled ? (
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   <FormField id="conversionFrom" label="Produk kemasan">
-                    <NativeSelect
-                      id="conversionFrom"
-                      value={conversionFromId}
-                      onChange={(e) => setConversionFromId(e.target.value)}
+                    <Select
+                      value={toSelectValue(conversionFromId)}
+                      onValueChange={(value) =>
+                        setConversionFromId(fromSelectValue(value))
+                      }
                       disabled={pending}
-                      className={formInputClass}
                     >
-                      <option value="">Pilih produk Pack…</option>
-                      {conversionSourceOptions.map((row) => (
-                        <option key={row.product_id} value={row.product_id}>
-                          {row.name}
-                          {row.unit_name ? ` (${row.unit_name})` : ""}
-                          {row.sku ? ` · ${row.sku}` : ""}
-                        </option>
-                      ))}
-                    </NativeSelect>
+                      <SelectTrigger id="conversionFrom">
+                        <SelectValue placeholder="Pilih produk Pack…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={toSelectValue("")}>
+                          Pilih produk Pack…
+                        </SelectItem>
+                        {conversionSourceOptions.map((row) => (
+                          <SelectItem key={row.product_id} value={row.product_id}>
+                            {row.name}
+                            {row.unit_name ? ` (${row.unit_name})` : ""}
+                            {row.sku ? ` · ${row.sku}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </FormField>
                   <FormField
                     id="conversionToQty"

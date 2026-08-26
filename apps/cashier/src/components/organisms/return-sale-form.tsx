@@ -1,6 +1,13 @@
 "use client";
 
-import { Button, Input, NativeSelect } from "@pos-apps/ui/atoms";
+import { Button, Input } from "@pos-apps/ui/atoms";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@pos-apps/ui/molecules";
 import { useState } from "react";
 import type {
   ApiErrorBody,
@@ -142,24 +149,28 @@ export function ReturnSaleForm({
                       }}
                     />
                   </label>
-                  <label className="text-sm">
+                  <label className="flex flex-col gap-1.5 text-sm sm:flex-row sm:items-center">
                     {t.returnDecision}
-                    <NativeSelect
-                      className="ml-2 min-h-12 w-auto"
+                    <Select
                       value={row?.decision ?? "resellable"}
-                      onChange={(e) => {
+                      onValueChange={(value) => {
                         const next = [...draft];
                         next[index] = {
                           ...next[index]!,
-                          decision: e.target.value as ReturnDecision,
+                          decision: value as ReturnDecision,
                         };
                         setDraft(next);
                       }}
                     >
-                      <option value="resellable">{t.returnResellable}</option>
-                      <option value="damaged">{t.returnDamaged}</option>
-                      <option value="warranty">{t.returnWarranty}</option>
-                    </NativeSelect>
+                      <SelectTrigger className="h-12 min-h-12 w-full rounded-2xl sm:ml-2 sm:w-auto sm:min-w-[10rem]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="resellable">{t.returnResellable}</SelectItem>
+                        <SelectItem value="damaged">{t.returnDamaged}</SelectItem>
+                        <SelectItem value="warranty">{t.returnWarranty}</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </label>
                 </div>
               )}

@@ -1,8 +1,15 @@
 "use client";
 
-import { Button, Label, NativeSelect } from "@pos-apps/ui/atoms";
+import { Button, Label } from "@pos-apps/ui/atoms";
 import { RowLink } from "@pos-apps/ui/organisms";
-import { TableSkeleton } from "@pos-apps/ui/molecules";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  TableSkeleton,
+} from "@pos-apps/ui/molecules";
 import { useCallback, useEffect, useState } from "react";
 import type {
   ApiErrorBody,
@@ -121,19 +128,19 @@ export function StockOverviewPanel({ canMutate }: { canMutate: boolean }) {
             {stores.length > 1 ? (
               <div className="min-w-[12rem]">
                 <Label htmlFor="overview-store">Toko</Label>
-                <NativeSelect
-                  id="overview-store"
-                  className="h-10"
-                  value={storeId}
-                  onChange={(e) => setStoreId(e.target.value)}
-                >
-                  {stores.map((store) => (
-                    <option key={store.store_id} value={store.store_id}>
-                      {store.name}
-                      {store.store_id === STORE_1_ID ? " · Store #1" : ""}
-                    </option>
-                  ))}
-                </NativeSelect>
+                <Select value={storeId} onValueChange={setStoreId}>
+                  <SelectTrigger id="overview-store" className="h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {stores.map((store) => (
+                      <SelectItem key={store.store_id} value={store.store_id}>
+                        {store.name}
+                        {store.store_id === STORE_1_ID ? " · Store #1" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             ) : null}
             <div className="flex flex-wrap gap-2">

@@ -1,6 +1,14 @@
 "use client";
 
-import { NativeSelect } from "@pos-apps/ui/atoms";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  toSelectValue,
+  fromSelectValue,
+} from "@pos-apps/ui/molecules";
 import { RowLink } from "@pos-apps/ui/organisms";
 import { useCallback, useEffect, useState } from "react";
 import type {
@@ -108,19 +116,22 @@ export function LoyaltyPanel({ canEdit }: { canEdit: boolean }) {
       ) : null}
 
       <div className="rounded-xl border border-border bg-card p-3 shadow-[var(--shadow-card)] sm:p-4">
-        <NativeSelect
-          value={customerId}
-          onChange={(e) => void loadAccount(e.target.value)}
-          aria-label="Pilih pelanggan"
-          className="h-10"
+        <Select
+          value={toSelectValue(customerId)}
+          onValueChange={(value) => void loadAccount(fromSelectValue(value))}
         >
-          <option value="">Pilih pelanggan</option>
-          {customers.map((row) => (
-            <option key={row.customer_id} value={row.customer_id}>
-              {row.name} · {row.loyalty_points} poin
-            </option>
-          ))}
-        </NativeSelect>
+          <SelectTrigger aria-label="Pilih pelanggan" className="h-10">
+            <SelectValue placeholder="Pilih pelanggan" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={toSelectValue("")}>Pilih pelanggan</SelectItem>
+            {customers.map((row) => (
+              <SelectItem key={row.customer_id} value={row.customer_id}>
+                {row.name} · {row.loyalty_points} poin
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {account ? (

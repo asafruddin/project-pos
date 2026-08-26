@@ -1,7 +1,14 @@
 "use client";
 
-import { Button, Input, NativeSelect, Skeleton } from "@pos-apps/ui/atoms";
+import { Button, Input, Skeleton } from "@pos-apps/ui/atoms";
 import { FormField, formInputClass } from "@pos-apps/ui/molecules";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@pos-apps/ui/molecules";
 import { FormActions, FormBackLink, FormSection } from "@pos-apps/ui/organisms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -339,20 +346,22 @@ export function PurchaseOrderDetailForm({ poId }: { poId: string }) {
               />
             </FormField>
             <FormField id="payStatus" label="Status bayar">
-              <NativeSelect
-                id="payStatus"
+              <Select
                 value={paymentStatus}
-                onChange={(e) =>
-                  setPaymentStatus(
-                    e.target.value as "unpaid" | "partial" | "paid",
-                  )
+                onValueChange={(value) =>
+                  setPaymentStatus(value as "unpaid" | "partial" | "paid")
                 }
                 disabled={pending}
               >
-                <option value="unpaid">Belum</option>
-                <option value="partial">Sebagian</option>
-                <option value="paid">Lunas</option>
-              </NativeSelect>
+                <SelectTrigger id="payStatus">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unpaid">Belum</SelectItem>
+                  <SelectItem value="partial">Sebagian</SelectItem>
+                  <SelectItem value="paid">Lunas</SelectItem>
+                </SelectContent>
+              </Select>
             </FormField>
           </FormSection>
           <FormActions

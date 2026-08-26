@@ -1,8 +1,17 @@
 "use client";
 
 import { FormField, formInputClass } from "@pos-apps/ui/molecules";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  toSelectValue,
+  fromSelectValue,
+} from "@pos-apps/ui/molecules";
 import { FormActions, FormBackLink, FormDenied, FormSection, FormBody, formPageClassName } from "@pos-apps/ui/organisms";
-import { Input, NativeSelect, Skeleton } from "@pos-apps/ui/atoms";
+import { Input, Skeleton } from "@pos-apps/ui/atoms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type {
@@ -117,12 +126,10 @@ export function TransferForm({ canCreate }: { canCreate: boolean }) {
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField id="from-store" label="Dari" required>
-            <NativeSelect
-              id="from-store"
+            <Select
               value={fromStore}
               disabled={pending}
-              onChange={(e) => {
-                const next = e.target.value;
+              onValueChange={(next) => {
                 setFromStore(next);
                 setToStore((current) => {
                   if (current !== next) return current;
@@ -130,44 +137,57 @@ export function TransferForm({ canCreate }: { canCreate: boolean }) {
                 });
               }}
             >
-              {stores.map((store) => (
-                <option key={store.store_id} value={store.store_id}>
-                  {store.name}
-                </option>
-              ))}
-            </NativeSelect>
+              <SelectTrigger id="from-store">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {stores.map((store) => (
+                  <SelectItem key={store.store_id} value={store.store_id}>
+                    {store.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </FormField>
           <FormField id="to-store" label="Ke" required>
-            <NativeSelect
-              id="to-store"
+            <Select
               value={toStore}
               disabled={pending}
-              onChange={(e) => setToStore(e.target.value)}
+              onValueChange={setToStore}
             >
-              {stores
-                .filter((store) => store.store_id !== fromStore)
-                .map((store) => (
-                  <option key={store.store_id} value={store.store_id}>
-                    {store.name}
-                  </option>
-                ))}
-            </NativeSelect>
+              <SelectTrigger id="to-store">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {stores
+                  .filter((store) => store.store_id !== fromStore)
+                  .map((store) => (
+                    <SelectItem key={store.store_id} value={store.store_id}>
+                      {store.name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
           </FormField>
         </div>
         <FormField id="tr-product" label="Produk" required>
-          <NativeSelect
-            id="tr-product"
-            value={productId}
+          <Select
+            value={toSelectValue(productId)}
             disabled={pending}
-            onChange={(e) => setProductId(e.target.value)}
+            onValueChange={(value) => setProductId(fromSelectValue(value))}
           >
-            <option value="">Pilih</option>
-            {products.map((product) => (
-              <option key={product.product_id} value={product.product_id}>
-                {product.name}
-              </option>
-            ))}
-          </NativeSelect>
+            <SelectTrigger id="tr-product">
+              <SelectValue placeholder="Pilih" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={toSelectValue("")}>Pilih</SelectItem>
+              {products.map((product) => (
+                <SelectItem key={product.product_id} value={product.product_id}>
+                  {product.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </FormField>
         <FormField id="tr-qty" label="Qty" required>
           <Input

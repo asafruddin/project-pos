@@ -1,7 +1,16 @@
 "use client";
 
 import { AuthLoadingShell } from "@pos-apps/ui/organisms";
-import { Button, Input, Label, NativeSelect } from "@pos-apps/ui/atoms";
+import { Button, Input, Label } from "@pos-apps/ui/atoms";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  toSelectValue,
+  fromSelectValue,
+} from "@pos-apps/ui/molecules";
 import { ListIcon, SquaresFourIcon } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -435,49 +444,69 @@ export default function MenuPage() {
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="catalog-category">{t.catalogFilterCategory}</Label>
-              <NativeSelect
-                id="catalog-category"
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="h-11 rounded-xl bg-background"
+              <Select
+                value={toSelectValue(categoryFilter)}
+                onValueChange={(value) => setCategoryFilter(fromSelectValue(value))}
               >
-                <option value="">{t.catalogFilterAllCategories}</option>
-                {categories.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </NativeSelect>
+                <SelectTrigger
+                  id="catalog-category"
+                  className="h-11 rounded-xl bg-background"
+                >
+                  <SelectValue placeholder={t.catalogFilterAllCategories} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={toSelectValue("")}>
+                    {t.catalogFilterAllCategories}
+                  </SelectItem>
+                  {categories.map((name) => (
+                    <SelectItem key={name} value={name}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="catalog-stock">{t.catalogFilterStock}</Label>
-              <NativeSelect
-                id="catalog-stock"
+              <Select
                 value={stockFilter}
-                onChange={(e) => setStockFilter(e.target.value as StockFilter)}
-                className="h-11 rounded-xl bg-background"
+                onValueChange={(value) => setStockFilter(value as StockFilter)}
               >
-                <option value="all">{t.catalogFilterAllStock}</option>
-                <option value="in">{t.catalogFilterInStock}</option>
-                <option value="out">{t.catalogFilterOutOfStock}</option>
-              </NativeSelect>
+                <SelectTrigger
+                  id="catalog-stock"
+                  className="h-11 rounded-xl bg-background"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t.catalogFilterAllStock}</SelectItem>
+                  <SelectItem value="in">{t.catalogFilterInStock}</SelectItem>
+                  <SelectItem value="out">{t.catalogFilterOutOfStock}</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div className="grid min-w-[12rem] flex-1 gap-1.5 sm:max-w-xs">
               <Label htmlFor="catalog-sort">{t.catalogSort}</Label>
-              <NativeSelect
-                id="catalog-sort"
+              <Select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as CatalogSort)}
-                className="h-11 rounded-xl bg-background"
+                onValueChange={(value) => setSortBy(value as CatalogSort)}
               >
-                <option value="name-asc">{t.catalogSortNameAsc}</option>
-                <option value="name-desc">{t.catalogSortNameDesc}</option>
-                <option value="price-asc">{t.catalogSortPriceAsc}</option>
-                <option value="price-desc">{t.catalogSortPriceDesc}</option>
-                <option value="stock-desc">{t.catalogSortStockDesc}</option>
-              </NativeSelect>
+                <SelectTrigger
+                  id="catalog-sort"
+                  className="h-11 rounded-xl bg-background"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name-asc">{t.catalogSortNameAsc}</SelectItem>
+                  <SelectItem value="name-desc">{t.catalogSortNameDesc}</SelectItem>
+                  <SelectItem value="price-asc">{t.catalogSortPriceAsc}</SelectItem>
+                  <SelectItem value="price-desc">{t.catalogSortPriceDesc}</SelectItem>
+                  <SelectItem value="stock-desc">{t.catalogSortStockDesc}</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div
               className="inline-flex rounded-xl border border-border bg-background p-1"

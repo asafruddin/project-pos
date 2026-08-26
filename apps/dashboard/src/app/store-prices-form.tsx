@@ -1,8 +1,17 @@
 "use client";
 
 import { FormField, formInputClass } from "@pos-apps/ui/molecules";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  toSelectValue,
+  fromSelectValue,
+} from "@pos-apps/ui/molecules";
 import { FormActions, FormBackLink, FormDenied, FormSection, FormBody, formPageClassName } from "@pos-apps/ui/organisms";
-import { Input, NativeSelect, Skeleton } from "@pos-apps/ui/atoms";
+import { Input, Skeleton } from "@pos-apps/ui/atoms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type {
@@ -115,33 +124,41 @@ export function StorePricesForm({ canEdit }: { canEdit: boolean }) {
         description="Kosongkan harga untuk kembali ke harga katalog. Berlaku setelah kasir menyegarkan menu."
       >
         <FormField id="price-store" label="Toko" required>
-          <NativeSelect
-            id="price-store"
+          <Select
             value={priceStore}
             disabled={pending}
-            onChange={(e) => setPriceStore(e.target.value)}
+            onValueChange={setPriceStore}
           >
-            {stores.map((store) => (
-              <option key={store.store_id} value={store.store_id}>
-                {store.name}
-              </option>
-            ))}
-          </NativeSelect>
+            <SelectTrigger id="price-store">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {stores.map((store) => (
+                <SelectItem key={store.store_id} value={store.store_id}>
+                  {store.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </FormField>
         <FormField id="price-product" label="Produk" required>
-          <NativeSelect
-            id="price-product"
-            value={priceProduct}
+          <Select
+            value={toSelectValue(priceProduct)}
             disabled={pending}
-            onChange={(e) => setPriceProduct(e.target.value)}
+            onValueChange={(value) => setPriceProduct(fromSelectValue(value))}
           >
-            <option value="">Pilih</option>
-            {products.map((product) => (
-              <option key={product.product_id} value={product.product_id}>
-                {product.name}
-              </option>
-            ))}
-          </NativeSelect>
+            <SelectTrigger id="price-product">
+              <SelectValue placeholder="Pilih" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={toSelectValue("")}>Pilih</SelectItem>
+              {products.map((product) => (
+                <SelectItem key={product.product_id} value={product.product_id}>
+                  {product.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </FormField>
         <FormField
           id="price-minor"

@@ -2,6 +2,13 @@
 
 import { FormField } from "@pos-apps/ui/molecules";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@pos-apps/ui/molecules";
+import {
   FormActions,
   FormBackLink,
   FormBody,
@@ -9,7 +16,7 @@ import {
   FormSection,
   formPageClassName,
 } from "@pos-apps/ui/organisms";
-import { Checkbox, Input, NativeSelect, Skeleton } from "@pos-apps/ui/atoms";
+import { Checkbox, Input, Skeleton } from "@pos-apps/ui/atoms";
 import { CheckCircleIcon, MagnifyingGlassIcon, ShieldCheckIcon, XCircleIcon } from "@phosphor-icons/react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -200,9 +207,22 @@ export function EmployeeRolesForm({
           description={`Tentukan izin yang dimiliki setiap peran. Pengguna dengan peran ini akan mengikuti perubahan izin berikutnya. Anda sedang mengatur: ${ROLE_LABELS[actorRole]}.`}
         >
           <FormField id="matrix-role" label="Peran yang diatur" hint="Perubahan berlaku untuk semua pengguna dengan peran ini." required>
-            <NativeSelect id="matrix-role" value={matrixRole} disabled={pending} onChange={(e) => setRole(e.target.value as Role)}>
-              {ACCOUNT_ROLES.map((role) => <option key={role} value={role}>{ROLE_LABELS[role]}</option>)}
-            </NativeSelect>
+            <Select
+              value={matrixRole}
+              disabled={pending}
+              onValueChange={(value) => setRole(value as Role)}
+            >
+              <SelectTrigger id="matrix-role">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ACCOUNT_ROLES.map((role) => (
+                  <SelectItem key={role} value={role}>
+                    {ROLE_LABELS[role]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </FormField>
 
           <div className="flex flex-col gap-3 rounded-xl border border-primary/20 bg-accent/40 p-4 sm:flex-row sm:items-center sm:justify-between">

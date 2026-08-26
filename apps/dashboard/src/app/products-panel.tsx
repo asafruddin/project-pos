@@ -1,7 +1,14 @@
 "use client";
 
-import { TableSkeleton } from "@pos-apps/ui/molecules";
-import { Button, Input, NativeSelect } from "@pos-apps/ui/atoms";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  TableSkeleton,
+} from "@pos-apps/ui/molecules";
+import { Button, Input } from "@pos-apps/ui/atoms";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -249,48 +256,61 @@ export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
                 className="h-10"
               />
             </label>
-            <NativeSelect
-              aria-label="Filter status"
+            <Select
               value={status}
-              onChange={(e) => setStatus(e.target.value)}
+              onValueChange={setStatus}
             >
-              <option value="all">Semua status</option>
-              <option value="active">Aktif</option>
-              <option value="inactive">Nonaktif</option>
-            </NativeSelect>
-            <NativeSelect
-              aria-label="Filter kategori"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              <option value="all">Semua kategori</option>
-              {categories.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </NativeSelect>
-            <NativeSelect
-              aria-label="Filter stok"
+              <SelectTrigger aria-label="Filter status" className="h-10">
+                <SelectValue placeholder="Semua status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua status</SelectItem>
+                <SelectItem value="active">Aktif</SelectItem>
+                <SelectItem value="inactive">Nonaktif</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger aria-label="Filter kategori" className="h-10">
+                <SelectValue placeholder="Semua kategori" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua kategori</SelectItem>
+                {categories.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {item}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
               value={stock}
-              onChange={(e) => setStock(e.target.value as StockFilter)}
+              onValueChange={(value) => setStock(value as StockFilter)}
             >
-              <option value="all">Semua stok</option>
-              <option value="in-stock">Ada stok</option>
-              <option value="low">Stok rendah</option>
-              <option value="out">Stok habis</option>
-            </NativeSelect>
-            <NativeSelect
-              aria-label="Urutkan produk"
+              <SelectTrigger aria-label="Filter stok" className="h-10">
+                <SelectValue placeholder="Semua stok" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua stok</SelectItem>
+                <SelectItem value="in-stock">Ada stok</SelectItem>
+                <SelectItem value="low">Stok rendah</SelectItem>
+                <SelectItem value="out">Stok habis</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
               value={sort}
-              onChange={(e) => setSort(e.target.value as SortKey)}
+              onValueChange={(value) => setSort(value as SortKey)}
             >
-              <option value="name">Nama A–Z</option>
-              <option value="newest">Terbaru</option>
-              <option value="price-low">Harga terendah</option>
-              <option value="price-high">Harga tertinggi</option>
-              <option value="stock-low">Stok terendah</option>
-            </NativeSelect>
+              <SelectTrigger aria-label="Urutkan produk" className="h-10">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">Nama A–Z</SelectItem>
+                <SelectItem value="newest">Terbaru</SelectItem>
+                <SelectItem value="price-low">Harga terendah</SelectItem>
+                <SelectItem value="price-high">Harga tertinggi</SelectItem>
+                <SelectItem value="stock-low">Stok terendah</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             {hasFilters ? (

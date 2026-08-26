@@ -1,8 +1,15 @@
 "use client";
 
 import { FormField, formInputClass } from "@pos-apps/ui/molecules";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@pos-apps/ui/molecules";
 import { FormActions, FormBackLink, FormDenied, FormSection, FormBody, formPageClassName } from "@pos-apps/ui/organisms";
-import { Checkbox, Input, Label, NativeSelect } from "@pos-apps/ui/atoms";
+import { Checkbox, Input, Label } from "@pos-apps/ui/atoms";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ApiErrorBody, Promotion } from "@pos-apps/types";
@@ -79,15 +86,19 @@ export function PromotionForm({ canEdit }: { canEdit: boolean }) {
           />
         </FormField>
         <FormField id="promo-kind" label="Jenis" required>
-          <NativeSelect
-            id="promo-kind"
+          <Select
             value={kind}
             disabled={pending}
-            onChange={(e) => setKind(e.target.value as "percent" | "fixed")}
+            onValueChange={(value) => setKind(value as "percent" | "fixed")}
           >
-            <option value="percent">Persen (bps, 1000 = 10%)</option>
-            <option value="fixed">Nominal tetap</option>
-          </NativeSelect>
+            <SelectTrigger id="promo-kind">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="percent">Persen (bps, 1000 = 10%)</SelectItem>
+              <SelectItem value="fixed">Nominal tetap</SelectItem>
+            </SelectContent>
+          </Select>
         </FormField>
         {kind === "percent" ? (
           <FormField id="promo-bps" label="Persen (bps)" required>

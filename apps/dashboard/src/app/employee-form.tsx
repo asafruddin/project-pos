@@ -1,8 +1,15 @@
 "use client";
 
 import { FormField, formInputClass } from "@pos-apps/ui/molecules";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@pos-apps/ui/molecules";
 import { FormActions, FormBackLink, FormDenied, FormSection, FormBody, formPageClassName } from "@pos-apps/ui/organisms";
-import { Checkbox, Input, Label, NativeSelect, Skeleton } from "@pos-apps/ui/atoms";
+import { Checkbox, Input, Label, Skeleton } from "@pos-apps/ui/atoms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type {
@@ -240,33 +247,41 @@ export function EmployeeForm({
         </FormField>
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField id="emp-role" label="Peran" required>
-            <NativeSelect
-              id="emp-role"
+            <Select
               value={role}
-              onChange={(e) => setRole(e.target.value as Role)}
+              onValueChange={(value) => setRole(value as Role)}
               disabled={pending}
             >
-              {roles.map((r) => (
-                <option key={r} value={r}>
-                  {ROLE_LABELS[r]}
-                </option>
-              ))}
-            </NativeSelect>
+              <SelectTrigger id="emp-role">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {roles.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {ROLE_LABELS[r]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </FormField>
           <FormField id="emp-store" label="Toko" required>
-            <NativeSelect
-              id="emp-store"
+            <Select
               value={storeId}
-              onChange={(e) => setStoreId(e.target.value)}
+              onValueChange={setStoreId}
               disabled={pending}
             >
-              {storeOptions(stores).map((store) => (
-                <option key={store.store_id} value={store.store_id}>
-                  {store.name}
-                  {store.store_id === STORE_1_ID ? " · Store #1" : ""}
-                </option>
-              ))}
-            </NativeSelect>
+              <SelectTrigger id="emp-store">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {storeOptions(stores).map((store) => (
+                  <SelectItem key={store.store_id} value={store.store_id}>
+                    {store.name}
+                    {store.store_id === STORE_1_ID ? " · Store #1" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </FormField>
         </div>
         {userId ? (
