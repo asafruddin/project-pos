@@ -129,7 +129,7 @@ export default function MenuPage() {
   const [sortBy, setSortBy] = useState<CatalogSort>("name-asc");
   const [viewMode, setViewMode] = useState<CatalogView>("grid");
   const [page, setPage] = useState(1);
-  const { add, pruneToSellable, raiseStockCap } = useCart();
+  const { add, lines, pruneToSellable, raiseStockCap } = useCart();
   const [unpackTarget, setUnpackTarget] = useState<CatalogProductRecord | null>(
     null,
   );
@@ -541,11 +541,14 @@ export default function MenuPage() {
           <ul
             className={
               viewMode === "grid"
-                ? "grid min-h-0 flex-1 auto-rows-min grid-cols-1 content-start gap-3 overflow-y-auto pb-2 sm:grid-cols-2 xl:grid-cols-3"
+                ? "grid min-h-0 flex-1 auto-rows-min grid-cols-1 content-start gap-3 overflow-y-auto pb-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
                 : "flex min-h-0 flex-1 flex-col content-start gap-2 overflow-y-auto pb-2"
             }
           >
             {pagedProducts.map((p) => {
+              const selectedQty = lines.find(
+                (line) => line.productId === p.productId,
+              )?.qty ?? 0;
               const priceOk = isValidSellablePrice(p.priceMinor);
               const inStock = priceOk && p.stockQty > 0;
               const unpackable =
@@ -560,7 +563,7 @@ export default function MenuPage() {
                     ? t.stockOut
                     : t.catalogBlockedPrice;
               return (
-                <li key={p.productId}>
+                <li key={p.productId} className="h-full">
                   <Button
                     type="button"
                     disabled={!clickable}
@@ -577,8 +580,8 @@ export default function MenuPage() {
                     }}
                     className={
                       viewMode === "grid"
-                        ? "group flex h-auto w-full flex-col items-stretch gap-0 overflow-hidden rounded-2xl border-border/80 p-0 text-left whitespace-normal shadow-none transition-colors hover:border-primary/40 hover:bg-accent/40"
-                        : "group flex h-auto w-full flex-row items-center gap-3 rounded-2xl border-border/80 p-2.5 text-left whitespace-normal shadow-none transition-colors hover:border-primary/40 hover:bg-accent/40 sm:gap-4 sm:p-3"
+                        ? `group relative flex h-full w-full flex-col items-stretch gap-0 overflow-hidden rounded-2xl border-border/80 p-0 text-left whitespace-normal shadow-none transition-colors hover:border-primary/40 hover:bg-accent/40 ${selectedQty > 0 ? "border-primary bg-accent/30 ring-1 ring-primary/20" : ""}`
+                        : `group relative flex h-full w-full flex-row items-center gap-3 rounded-2xl border-border/80 p-2.5 text-left whitespace-normal shadow-none transition-colors hover:border-primary/40 hover:bg-accent/40 sm:gap-4 sm:p-3 ${selectedQty > 0 ? "border-primary bg-accent/30 ring-1 ring-primary/20" : ""}`
                     }
                     title={
                       clickable
@@ -588,19 +591,27 @@ export default function MenuPage() {
                           : t.catalogBlockedPrice
                     }
                   >
+                    {selectedQty > 0 ? (
+                      <span
+                        className="absolute top-2 right-2 z-10 inline-flex min-w-8 items-center justify-center rounded-full bg-primary px-2 py-1 text-sm font-bold leading-none text-primary-foreground shadow-md"
+                        aria-label={`${selectedQty} dipilih`}
+                      >
+                        {selectedQty}
+                      </span>
+                    ) : null}
                     <CatalogProductThumb
                       productId={p.productId}
                       alt=""
                       className={
                         viewMode === "list"
                           ? "aspect-square size-16 w-16 shrink-0 rounded-xl sm:size-[4.5rem] sm:w-[4.5rem]"
-                          : "rounded-none"
+                          : "aspect-[4/3] max-h-36 rounded-none"
                       }
                     />
                     <span
                       className={
                         viewMode === "grid"
-                          ? "flex min-w-0 flex-col gap-1 px-3 pt-2.5 pb-3"
+                          ? "flex min-w-0 flex-col gap-1 px-3 pt-2 pb-2.5"
                           : "flex min-w-0 flex-1 flex-col gap-1 py-0.5"
                       }
                     >

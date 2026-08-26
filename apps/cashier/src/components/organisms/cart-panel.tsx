@@ -2,12 +2,22 @@
 
 import { Button, Input, Label } from "@pos-apps/ui/atoms";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@pos-apps/ui/molecules";
+import {
+  ArchiveTrayIcon,
   MinusIcon,
   PauseIcon,
   PlayIcon,
   PlusIcon,
   ShoppingCartIcon,
   TrashSimpleIcon,
+  UserCircleCheckIcon,
+  UserPlusIcon,
   XIcon,
 } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
@@ -64,6 +74,8 @@ export function CartPanel({ lang, onCompleted }: Props) {
     useCart();
   const [sale, setSale] = useState<LocalSaleRecord | null>(null);
   const [parked, setParked] = useState<ParkedCartRecord[]>([]);
+  const [parkedDialogOpen, setParkedDialogOpen] = useState(false);
+  const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [shiftOpen, setShiftOpen] = useState(false);
   const inFlight = useRef(false);
@@ -90,6 +102,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
   const [unpackBusy, setUnpackBusy] = useState(false);
   const [unpackError, setUnpackError] = useState<string | null>(null);
   const lineTotal = lines.reduce((sum, line) => sum + line.priceMinor * line.qty, 0);
+  const parkedBadge = parked.length > 99 ? "99+" : String(parked.length);
 
   useEffect(() => {
     void listCatalogProducts().then((rows) => {
@@ -207,6 +220,10 @@ export function CartPanel({ lang, onCompleted }: Props) {
     window.addEventListener(SHIFT_CHANGED_EVENT, syncShift);
     return () => window.removeEventListener(SHIFT_CHANGED_EVENT, syncShift);
   }, []);
+
+  useEffect(() => {
+    if (!parked.length) setParkedDialogOpen(false);
+  }, [parked.length]);
 
   async function startCheckout() {
     if (!lines.length || !beginWork()) return;
@@ -479,6 +496,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
       );
       setCustomer(await restoreCartCustomer(record.customerId ?? null));
       await discardParkedCart(parkId);
+      setParkedDialogOpen(false);
     } catch {
       setError(t.resumeFail);
     } finally {
@@ -538,9 +556,95 @@ export function CartPanel({ lang, onCompleted }: Props) {
           })();
         }}
       />
-      <h2 className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-3 text-lg font-semibold tracking-tight text-foreground sm:px-5">
-        <ShoppingCartIcon size={22} weight="duotone" className="text-primary" />
-        {t.cart}
+      <Dialog open={parkedDialogOpen} onOpenChange={setParkedDialogOpen}>
+        <DialogContent className="max-h-[min(80dvh,38rem)] overflow-y-auto sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>{t.parked}</DialogTitle>
+            <DialogDescription>{t.parkedDialogHint}</DialogDescription>
+          </DialogHeader>
+          <ul className="space-y-2">
+            {parked.map((row) => (
+              <li
+                key={row.parkId}
+                className="rounded-2xl border border-border bg-secondary/40 px-3 py-2"
+              >
+                <p className="font-medium">{parkedLabel(row)}</p>
+                <p className="text-sm text-muted-foreground">
+                  {formatIdr(row.totalMinor, lang)} ·{" "}
+                  {t.holdLineCount.replace("{count}", String(parkedQty(row)))}
+                  {row.customerName ? ` · ${row.customerName}` : ""}
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={busy}
+                    className="h-12 min-h-12 flex-1 rounded-2xl"
+                    onClick={() => void resumeHold(row.parkId)}
+                  >
+                    <PlayIcon size={16} weight="bold" />
+                    {t.resumeHold}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    disabled={busy}
+                    className="h-12 w-12 rounded-2xl text-destructive hover:text-destructive"
+                    aria-label={`${t.discardHold} ${parkedLabel(row)}`}
+                    onClick={() => void discardHold(row.parkId)}
+                  >
+                    <TrashSimpleIcon size={18} weight="bold" />
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </DialogContent>
+      </Dialog>
+      <h2 className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3 text-lg font-semibold tracking-tight text-foreground sm:px-5">
+        <span className="flex items-center gap-2">
+          <ShoppingCartIcon size={22} weight="duotone" className="text-primary" />
+          {t.cart}
+        </span>
+        <span className="flex items-center gap-2">
+          {!sale ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="size-10 rounded-xl"
+              disabled={busy}
+              aria-label={
+                customer ? `${t.customerAttach}: ${customer.name}` : t.customerAttach
+              }
+              title={customer ? customer.name : t.customerAttach}
+              onClick={() => setCustomerPickerOpen(true)}
+            >
+              {customer ? (
+                <UserCircleCheckIcon size={19} weight="duotone" className="text-primary" />
+              ) : (
+                <UserPlusIcon size={19} weight="duotone" />
+              )}
+            </Button>
+          ) : null}
+          {parked.length > 0 ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="relative size-10 rounded-xl"
+              onClick={() => setParkedDialogOpen(true)}
+              aria-label={`${t.parked}: ${parkedBadge}`}
+              title={`${t.parked}: ${parkedBadge}`}
+            >
+              <ArchiveTrayIcon size={19} weight="duotone" />
+              <span className="absolute -top-1.5 -right-1.5 min-w-5 rounded-full bg-primary px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-primary-foreground">
+                {parkedBadge}
+              </span>
+            </Button>
+          ) : null}
+        </span>
       </h2>
       {receipt ? (
         <p className="shrink-0 border-b border-border px-4 py-3 text-sm sm:px-5" role="status">
@@ -732,50 +836,12 @@ export function CartPanel({ lang, onCompleted }: Props) {
       ) : (
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pt-4 sm:px-5 sm:pt-5">
-          {parked.length ? (
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">{t.parked}</p>
-              <ul className="space-y-2">
-                {parked.map((row) => (
-                  <li
-                    key={row.parkId}
-                    className="rounded-2xl border border-border bg-secondary/40 px-3 py-2"
-                  >
-                    <p className="font-medium">{parkedLabel(row)}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatIdr(row.totalMinor, lang)} ·{" "}
-                      {t.holdLineCount.replace("{count}", String(parkedQty(row)))}
-                      {row.customerName ? ` · ${row.customerName}` : ""}
-                    </p>
-                    <div className="mt-2 flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        disabled={busy}
-                        className="h-12 min-h-12 flex-1 rounded-2xl"
-                        onClick={() => void resumeHold(row.parkId)}
-                      >
-                        <PlayIcon size={16} weight="bold" />
-                        {t.resumeHold}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        disabled={busy}
-                        className="h-12 w-12 rounded-2xl text-destructive hover:text-destructive"
-                        aria-label={`${t.discardHold} ${parkedLabel(row)}`}
-                        onClick={() => void discardHold(row.parkId)}
-                      >
-                        <TrashSimpleIcon size={18} weight="bold" />
-                      </Button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          <CustomerAttach lang={lang} disabled={busy} />
+          <CustomerAttach
+            lang={lang}
+            disabled={busy}
+            open={customerPickerOpen}
+            onOpenChange={setCustomerPickerOpen}
+          />
           {lines.length === 0 ? (
             <div className="flex min-h-40 flex-1 flex-col items-center justify-center gap-2 py-8 text-center">
               <ShoppingCartIcon
@@ -786,7 +852,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
               <p className="text-sm text-muted-foreground">{t.cartEmpty}</p>
             </div>
           ) : (
-            <ul className="mt-3 space-y-3">
+            <ul className="space-y-3">
               {lines.map((line) => (
                 <li key={line.productId} className="border-b border-border pb-3">
                   <p className="font-medium">{line.name}</p>
@@ -875,9 +941,9 @@ export function CartPanel({ lang, onCompleted }: Props) {
               </Button>
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 disabled={busy}
-                className="mt-2 h-12 min-h-12 w-full text-sm text-muted-foreground"
+                className="mt-2 h-12 min-h-12 w-full rounded-xl text-sm"
                 onClick={() => void holdCart()}
               >
                 <PauseIcon size={16} weight="bold" />
