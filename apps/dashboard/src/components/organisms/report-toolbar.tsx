@@ -1,8 +1,8 @@
 "use client";
 
-import { Button, Input } from "@pos-apps/ui/atoms";
-import { FormField, formInputClass } from "@pos-apps/ui/molecules";
-import { FormEvent, useState, type ReactNode } from "react";
+import { Button } from "@pos-apps/ui/atoms";
+import { DateRangePicker, FormField } from "@pos-apps/ui/molecules";
+import { FormEvent, useEffect, useState, type ReactNode } from "react";
 import {
   downloadCsv,
   downloadPdf,
@@ -36,8 +36,14 @@ export function ReportToolbar({
   const [start, setStart] = useState(from);
   const [end, setEnd] = useState(to);
 
+  useEffect(() => {
+    setStart(from);
+    setEnd(to);
+  }, [from, to]);
+
   function submit(e: FormEvent) {
     e.preventDefault();
+    if (!start || !end) return;
     onApply({ from: start, to: end });
   }
 
@@ -46,29 +52,22 @@ export function ReportToolbar({
       className="flex flex-col gap-3 lg:flex-row lg:items-end"
       onSubmit={submit}
     >
-      <div className="min-w-0 flex-1">
-        <FormField id="report-from" label="Dari (UTC)">
-          <Input
-            id="report-from"
-            type="date"
-            value={start}
-            onChange={(e) => setStart(e.target.value)}
-            className={formInputClass}
+      <div className="min-w-0 flex-1 sm:max-w-sm">
+        <FormField id="report-range" label="Rentang tanggal (UTC)">
+          <DateRangePicker
+            id="report-range"
+            from={start}
+            to={end}
+            disabled={pending}
+            placeholder="Pilih rentang tanggal"
+            onChange={({ from: nextFrom, to: nextTo }) => {
+              setStart(nextFrom);
+              setEnd(nextTo);
+            }}
           />
         </FormField>
       </div>
-      <div className="min-w-0 flex-1">
-        <FormField id="report-to" label="Sampai (UTC)">
-          <Input
-            id="report-to"
-            type="date"
-            value={end}
-            onChange={(e) => setEnd(e.target.value)}
-            className={formInputClass}
-          />
-        </FormField>
-      </div>
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" disabled={pending || !start || !end}>
         Terapkan
       </Button>
       {table ? (
