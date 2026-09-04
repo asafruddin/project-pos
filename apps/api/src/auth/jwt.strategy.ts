@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
 import type { Role } from "@pos-apps/types";
+import { isPlatformJwtAudience, isStoreJwtAudience } from "@pos-apps/types";
 import { eq } from "drizzle-orm";
 import { getDb } from "../db/client";
 import { users } from "../db/schema";
@@ -29,6 +30,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: JwtPayload): Promise<AuthUser> {
     if (!payload?.sub || typeof payload.sub !== "string" || !payload.sub.trim()) {
+      throw new UnauthorizedException({
+        code: "AUTH_INVALID_TOKEN",
+        message: "Sesi tidak valid.",
+      });
+    }
+
+    if (isPlatformJwtAudience(payload.aud) || !isStoreJwtAudience(payload.aud)) {
       throw new UnauthorizedException({
         code: "AUTH_INVALID_TOKEN",
         message: "Sesi tidak valid.",

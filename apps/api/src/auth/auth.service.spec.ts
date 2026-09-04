@@ -61,6 +61,13 @@ describe("AuthService", () => {
     expect(result.user_id).toBe("11111111-1111-4111-8111-111111111111");
     expect(result.store_id).toBe("00000000-0000-4000-8000-000000000001");
     expect(result.permissions).toEqual(expect.arrayContaining(["users:create"]));
+    expect(jwt.signAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sub: "11111111-1111-4111-8111-111111111111",
+        role: "catalog_admin",
+        aud: "store",
+      }),
+    );
     expect(passwordHash).not.toBe("Admin123!");
   });
 

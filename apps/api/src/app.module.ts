@@ -8,6 +8,7 @@ import { CustomersModule } from "./customers/customers.module";
 import { InventoryModule } from "./inventory/inventory.module";
 import { LoyaltyModule } from "./loyalty/loyalty.module";
 import { MediaModule } from "./media/media.module";
+import { PlatformModule } from "./platform/platform.module";
 import { PromotionsModule } from "./promotions/promotions.module";
 import { PurchasingModule } from "./purchasing/purchasing.module";
 import { ReportsModule } from "./reports/reports.module";
@@ -28,6 +29,7 @@ import { StoresModule } from "./stores/stores.module";
     InventoryModule,
     LoyaltyModule,
     MediaModule,
+    PlatformModule,
     PromotionsModule,
     PurchasingModule,
     ReportsModule,

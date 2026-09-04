@@ -169,6 +169,13 @@
       "when": 1786760000000,
       "tag": "0023_inventory_unpack_permission",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1786770000000,
+      "tag": "0024_platform_users",
+      "breakpoints": true
     }
   ]
 }

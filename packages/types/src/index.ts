@@ -104,6 +104,78 @@ export type ReplaceRolePermissionsRequest = {
   permissions: Array<{ resource: string; action: string }>;
 };
 
+/** JWT audience — store staff vs platform operators (AD-20). */
+export const JWT_AUD_STORE = "store" as const;
+export const JWT_AUD_PLATFORM = "platform" as const;
+export type JwtAudience = typeof JWT_AUD_STORE | typeof JWT_AUD_PLATFORM;
+
+export function isStoreJwtAudience(aud: unknown): boolean {
+  return aud == null || aud === JWT_AUD_STORE;
+}
+
+export function isPlatformJwtAudience(
+  aud: unknown,
+): aud is typeof JWT_AUD_PLATFORM {
+  return aud === JWT_AUD_PLATFORM;
+}
+
+/** Platform operator roles — not store `Role` (AD-20). */
+export type PlatformRole = "super_admin";
+
+export const PLATFORM_ROLES: readonly PlatformRole[] = ["super_admin"];
+
+export const PLATFORM_ROLE_LABELS: Record<PlatformRole, string> = {
+  super_admin: "Super Admin",
+};
+
+export function isPlatformRole(value: unknown): value is PlatformRole {
+  return (
+    typeof value === "string" &&
+    (PLATFORM_ROLES as readonly string[]).includes(value)
+  );
+}
+
+export type PlatformLoginResponse = {
+  access_token: string;
+  token_type: "Bearer";
+  user_id: string;
+  role: PlatformRole;
+};
+
+export type PlatformAuthMeResponse = {
+  user_id: string;
+  role: PlatformRole;
+  active: boolean;
+};
+
+export type PlatformOperator = {
+  user_id: string;
+  username: string;
+  role: PlatformRole;
+  active: boolean;
+  created_at: string;
+};
+
+export type PlatformOperatorListResponse = {
+  operators: PlatformOperator[];
+};
+
+export type CreatePlatformOperatorRequest = {
+  username: string;
+  password: string;
+  role?: PlatformRole;
+};
+
+export type UpdatePlatformOperatorRequest = {
+  role?: PlatformRole;
+  active?: boolean;
+  password?: string;
+};
+
+export type CreatePlatformAccountRequest = CreateUserRequest;
+
+export type UpdatePlatformAccountRequest = UpdateUserRequest;
+
 export type ApiErrorBody = {
   code: string;
   message: string;

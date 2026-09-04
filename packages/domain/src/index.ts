@@ -1,4 +1,5 @@
-import type { StockBucket } from "@pos-apps/types";
+import type { PlatformRole, StockBucket } from "@pos-apps/types";
+import { isPlatformRole } from "@pos-apps/types";
 
 /**
  * Set absolute server Stock qty (AD-4 AdjustStock — not Sale Sync).
@@ -2607,6 +2608,83 @@ export function evaluateUserAccount(input: {
     role: input.role,
     store_id: input.store_id,
   };
+}
+
+export function evaluatePlatformOperator(input: {
+  username: string;
+  password?: string;
+  role: string;
+  require_password: boolean;
+}):
+  | { ok: true; username: string; role: PlatformRole }
+  | {
+      ok: false;
+      code: "PLATFORM_USER_INVALID";
+      message: string;
+    } {
+  const username = input.username.trim();
+  if (!username || username.length < 3) {
+    return {
+      ok: false,
+      code: "PLATFORM_USER_INVALID",
+      message: "Username minimal 3 karakter.",
+    };
+  }
+  if (!isPlatformRole(input.role)) {
+    return {
+      ok: false,
+      code: "PLATFORM_USER_INVALID",
+      message: "Peran operator tidak dikenal.",
+    };
+  }
+  if (input.require_password) {
+    const password = input.password ?? "";
+    if (password.length < 8) {
+      return {
+        ok: false,
+        code: "PLATFORM_USER_INVALID",
+        message: "Password minimal 8 karakter.",
+      };
+    }
+  } else if (
+    input.password != null &&
+    input.password.length > 0 &&
+    input.password.length < 8
+  ) {
+    return {
+      ok: false,
+      code: "PLATFORM_USER_INVALID",
+      message: "Password minimal 8 karakter.",
+    };
+  }
+  return { ok: true, username, role: input.role };
+}
+
+/**
+ * Last active Super Admin cannot be deactivated. Operators cannot deactivate themselves.
+ */
+export function canDeactivatePlatformOperator(input: {
+  actor_id: string;
+  target_id: string;
+  remaining_active_super_admins: number;
+}):
+  | { ok: true }
+  | { ok: false; code: "AUTH_FORBIDDEN"; message: string } {
+  if (input.actor_id === input.target_id) {
+    return {
+      ok: false,
+      code: "AUTH_FORBIDDEN",
+      message: "Tidak dapat menonaktifkan akun sendiri.",
+    };
+  }
+  if (input.remaining_active_super_admins === 0) {
+    return {
+      ok: false,
+      code: "AUTH_FORBIDDEN",
+      message: "Tidak dapat menonaktifkan Super Admin terakhir.",
+    };
+  }
+  return { ok: true };
 }
 
 

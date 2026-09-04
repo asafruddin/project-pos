@@ -8,6 +8,7 @@ Coffee-shop POS Phase 1 monorepo (Instant Checkout + Offline Mode).
 |---------|------|------|
 | Cashier | Next.js 16.3 App Router + Serwist PWA + shadcn/Tailwind | `3000` |
 | Dashboard | Next.js 16.3 App Router + shadcn/Tailwind (online-only) | `3002` |
+| Platform | Next.js 16.3 App Router + shadcn/Tailwind (operator console) | `3003` |
 | API | NestJS 11.1 (`GET /health`, `POST /auth/login`) | `3001` |
 | Database | PostgreSQL 16+ via `DATABASE_URL` (Drizzle ORM 0.45.x) | — |
 
@@ -29,7 +30,7 @@ pnpm --filter @pos-apps/api db:seed
 pnpm build
 ```
 
-`pnpm build` runs Turborepo across packages and all three apps. Cashier production builds use **webpack** (`next build --webpack`) so `@serwist/next` can emit `apps/cashier/public/sw.js`.
+`pnpm build` runs Turborepo across packages and all apps. Cashier production builds use **webpack** (`next build --webpack`) so `@serwist/next` can emit `apps/cashier/public/sw.js`.
 
 ## Auth (Story 1.2)
 
@@ -42,14 +43,18 @@ pnpm build
 
 **Demo seed users** (from `pnpm --filter @pos-apps/api db:seed`):
 
-| Username | Password | Role |
-|----------|----------|------|
-| `admin` | `Admin123!` | `catalog_admin` |
-| `cashier` | `Cashier123!` | `cashier` |
+| Username | Password | Role | App |
+|----------|----------|------|-----|
+| `owner` | `Owner123!` | `owner` | Dashboard |
+| `admin` | `Admin123!` | `catalog_admin` | Dashboard |
+| `cashier` | `Cashier123!` | `cashier` | Cashier / Dashboard |
+| `superadmin` | `Superadmin123!` | `super_admin` | Platform (`:3003`) |
+
+Platform operators live in `platform_users`, not `users`. Login: `POST /platform/auth/login`. Store JWTs cannot call `/platform/*`; platform JWTs cannot call `/auth/me` or store APIs.
 
 Phase 1 login identifier is the `username` column (**case-sensitive** exact match after trim; may look like an email). Passwords are bcrypt-hashed; never logged in plaintext.
 
-Dashboard stores the Bearer token in **`localStorage`** (keys `pos_apps_*`) for later API calls — fine for local demo; treat XSS carefully before production.
+Dashboard stores the Bearer token in **`localStorage`** (keys `pos_apps_*`) for later API calls — fine for local demo; treat XSS carefully before production. Platform uses **`pos_platform_*`**.
 
 ## Catalog (Story 1.3)
 
@@ -116,7 +121,7 @@ Env vars (see `.env.example`):
 - `DATABASE_URL` — Postgres connection string
 - `JWT_SECRET` — signing secret (required)
 - `JWT_EXPIRES_IN` — default `8h`
-- `CORS_ORIGIN` — default `http://localhost:3002`
+- `CORS_ORIGIN` — default `http://localhost:3002,http://localhost:3000,http://localhost:3003`
 - `NEXT_PUBLIC_API_URL` — Dashboard → API base (default `http://localhost:3001`)
 - `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` — API-only Media Provider (Story 4.3)
 
@@ -136,7 +141,7 @@ Env vars (see `.env.example`):
 - **Tutup hari** (Day Close): after 2C, finish is disabled while a Shift is open (FR-111). Cash summary **displays** this Register’s closed Shift Expected / counted / difference — it does not recompute FR-78. Sales total is still today’s complete Sales. FR-24 still hard-blocks finish while unsynced sales remain unless acknowledged. Confirm ends Account Login + POS PIN without wiping the Sync outbox (AD-8).
 - Theme (system/light/dark) + language (id/en) via Settings
 - Demo: `cashier` / `Cashier123!` then choose any 6-digit PIN on first enroll (remember it for offline)
-- `CORS_ORIGIN` must include Cashier, e.g. `http://localhost:3002,http://localhost:3000`
+- `CORS_ORIGIN` must include Cashier and Platform, e.g. `http://localhost:3002,http://localhost:3000,http://localhost:3003`
 
 ## Local development
 
@@ -147,6 +152,7 @@ pnpm dev
 # One app
 pnpm dev:cashier    # http://localhost:3000
 pnpm dev:dashboard  # http://localhost:3002  → /login “Masuk”
+pnpm dev:platform   # http://localhost:3003  → operator console
 pnpm dev:api        # http://localhost:3001  → GET /health → { "status": "ok" }
 ```
 
@@ -166,6 +172,7 @@ Product requirements, architecture, UX, and sprint tracking live under `_bmad-ou
 ```text
 apps/cashier      Next PWA (Serwist)
 apps/dashboard    Next online-only (+ Account Login)
+apps/platform     Next online-only operator console (AD-20)
 apps/api          NestJS API (AuthModule + health)
 packages/domain   Pure TS domain (adjustStock, acceptCompleteSale)
 packages/types    Shared DTOs (auth, catalog, sync)

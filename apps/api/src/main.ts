@@ -16,7 +16,9 @@ async function bootstrap() {
   );
   app.useGlobalFilters(new ApiExceptionFilter());
 
-  const raw = process.env.CORS_ORIGIN ?? "http://localhost:3002,http://localhost:3000";
+  const raw =
+    process.env.CORS_ORIGIN ??
+    "http://localhost:3002,http://localhost:3000,http://localhost:3003";
   const origins = raw
     .split(",")
     .map((s) => s.trim())

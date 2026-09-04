@@ -1,4 +1,4 @@
-import type { Role } from "@pos-apps/types";
+import type { PlatformRole, Role } from "@pos-apps/types";
 import { sql } from "drizzle-orm";
 import {
   boolean,
@@ -34,6 +34,27 @@ export const users = pgTable(
     check(
       "users_role_check",
       sql`${t.role} in ('owner', 'catalog_admin', 'store_manager', 'supervisor', 'cashier', 'inventory_staff', 'purchasing_staff')`,
+    ),
+  ],
+);
+
+/** Platform operators — not store staff (AD-20). */
+export const platformUsers = pgTable(
+  "platform_users",
+  {
+    platformUserId: uuid("platform_user_id").primaryKey().defaultRandom(),
+    username: text("username").notNull().unique(),
+    passwordHash: text("password_hash").notNull(),
+    role: text("role").notNull().$type<PlatformRole>(),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    check(
+      "platform_users_role_check",
+      sql`${t.role} in ('super_admin')`,
     ),
   ],
 );

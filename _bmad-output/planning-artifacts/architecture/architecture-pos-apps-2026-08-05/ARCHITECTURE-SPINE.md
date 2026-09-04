@@ -67,6 +67,7 @@ apps/api            # NestJS — Auth/Identity · Catalog · Inventory · Sales/
 flowchart LR
   cashier[apps/cashier]
   dashboard[apps/dashboard]
+  platform[apps/platform]
   api[apps/api]
   domain[packages/domain]
   localdb[packages/local-db]
@@ -80,6 +81,8 @@ flowchart LR
   dashboard --> domain
   dashboard --> uilib
   dashboard --> types
+  platform --> uilib
+  platform --> types
   api --> domain
   api --> types
   localdb --> types
@@ -171,6 +174,12 @@ flowchart LR
 - **Prevents:** 2D activating a Store model Phase 1 never had; cashier picking a Store per line
 - **Rule:** Phase 1 data **is** Store #1 + one Register. Sale, Stock Movement, and Shift rows carry `store_id` / `register_id` once the stub exists. Cashier session is bound to one Register. Cross-Store offline Sync is out.
 
+### AD-20 — Platform operator console `[ADOPTED]`
+
+- **Binds:** Phase-3 SaaS operator surface (accounts-first)
+- **Prevents:** Mixing platform operators into store `Role` / `users`; store JWT calling `/platform/*`
+- **Rule:** `apps/platform` is online-only and talks only to `apps/api` `/platform/*`. Platform identity lives in `platform_users`, not `users`. JWT `aud` is `store` \| `platform`. Store tokens cannot call platform routes; platform tokens cannot call store catalog/sales/employees APIs. AD-7 still applies: no third Phase 2 ops app; platform is a distinct Phase-3 operator console. Tenants and subscriptions are later.
+
 ## Consistency Conventions
 
 | Concern | Convention |
@@ -193,7 +202,7 @@ Seed verified 2026-08-13 against installed brownfield + npm (Cloudinary). Code o
 | --- | --- |
 | TypeScript | ^5.8 (workspace) |
 | pnpm + Turborepo | pnpm 11.20.0 · turbo ^2.10.0 |
-| Next.js (cashier, dashboard) | 16.3.0 |
+| Next.js (cashier, dashboard, platform) | 16.3.0 |
 | React | 19.2.8 |
 | NestJS (api) | @nestjs/core ^11.1.0 |
 | PostgreSQL | 16.x managed |
@@ -208,7 +217,8 @@ pos-apps/
   apps/
     cashier/          # Next.js PWA — sell, Offline Mode, Day Close, Shift, Returns lookup
     dashboard/        # Next.js — catalog, media upload, ledger, purchasing, RBAC
-    api/              # NestJS — Identity, Catalog, Inventory, Purchasing, Sales, Customers, Promotions, Reports, Stores, Media
+    platform/         # Next.js — operator console (platform_users, POS accounts)
+    api/              # NestJS — Identity, Catalog, Inventory, Purchasing, Sales, Customers, Promotions, Reports, Stores, Platform, Media
   packages/
     domain/           # completeness, AcceptCompleteSale, AdjustStock, ledger post, promo/loyalty eval
     local-db/         # IndexedDB + outbox + catalog/image cache + PIN + Shift
@@ -234,10 +244,12 @@ flowchart TB
     CDN[Cloudinary]
     PG[(PostgreSQL + Stock Ledger)]
     Dash[Dashboard UI]
+    Plat[Platform UI]
     API --> PG
     API --> Media
     Media --> CDN
     Dash --> API
+    Plat --> API
   end
 
   Outbox -->|idempotent sale_id / shift_id| API
@@ -274,6 +286,7 @@ erDiagram
 | Shift | cashier local-db + api | AD-14, AD-16, FR-75–81 |
 | Promotions | domain + dashboard + cashier eval | AD-18, AD-10, FR-87–92 |
 | RBAC | dashboard + api Identity | AD-11, AD-17, FR-98–103 |
+| Platform operators | platform + api `/platform/*` | AD-20 |
 | Multi-Store / Transfer | dashboard + api Stores/Inventory | AD-19, AD-13, FR-104–109 |
 
 ## Operations envelope

@@ -5,7 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { ACCOUNT_ROLES, defaultPermissionsForRole } from "@pos-apps/domain";
 import { REGISTER_1_ID, STORE_1_ID } from "@pos-apps/types";
 import { getDb, getPool } from "./client";
-import { products, registers, rolePermissions, stockMovements, stores, users, customers } from "./schema";
+import { platformUsers, products, registers, rolePermissions, stockMovements, stores, users, customers } from "./schema";
 
 config({ path: resolve(__dirname, "../../.env") });
 
@@ -60,6 +60,32 @@ async function seed() {
       });
       console.log(`created seed user: ${demo.username} (${demo.role})`);
     }
+  }
+
+  const platformPasswordHash = await hash("Superadmin123!", 10);
+  const existingPlatform = await db
+    .select()
+    .from(platformUsers)
+    .where(eq(platformUsers.username, "superadmin"))
+    .limit(1);
+  if (existingPlatform.length > 0) {
+    await db
+      .update(platformUsers)
+      .set({
+        passwordHash: platformPasswordHash,
+        role: "super_admin",
+        active: true,
+      })
+      .where(eq(platformUsers.username, "superadmin"));
+    console.log("updated seed platform user: superadmin (super_admin)");
+  } else {
+    await db.insert(platformUsers).values({
+      username: "superadmin",
+      passwordHash: platformPasswordHash,
+      role: "super_admin",
+      active: true,
+    });
+    console.log("created seed platform user: superadmin (super_admin)");
   }
 
   for (const role of ACCOUNT_ROLES) {

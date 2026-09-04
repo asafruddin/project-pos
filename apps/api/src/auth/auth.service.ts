@@ -6,8 +6,8 @@ import {
 import { JwtService } from "@nestjs/jwt";
 import { compare } from "bcryptjs";
 import { eq } from "drizzle-orm";
-import type { AuthMeResponse, LoginResponse, Role } from "@pos-apps/types";
-import { STORE_1_ID } from "@pos-apps/types";
+import type { AuthMeResponse, LoginResponse } from "@pos-apps/types";
+import { JWT_AUD_STORE, STORE_1_ID } from "@pos-apps/types";
 import { getDb } from "../db/client";
 import { users } from "../db/schema";
 import { loadRolePermissions } from "./load-permissions";
@@ -15,7 +15,8 @@ import { isRole } from "./roles";
 
 export type JwtPayload = {
   sub: string;
-  role: Role;
+  role: string;
+  aud?: "store" | "platform";
 };
 
 /** Precomputed bcrypt hash so unknown-user path still runs compare (timing). */
@@ -57,6 +58,7 @@ export class AuthService {
     const payload: JwtPayload = {
       sub: user.userId,
       role: user.role,
+      aud: JWT_AUD_STORE,
     };
 
     const access_token = await this.jwt.signAsync(payload);
