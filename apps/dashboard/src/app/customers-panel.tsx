@@ -4,6 +4,7 @@ import { Button, Input } from "@pos-apps/ui/atoms";
 import { FormField, formInputClass, TableSkeleton } from "@pos-apps/ui/molecules";
 import { CreateLink, RowLink } from "@pos-apps/ui/organisms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import type {
   ApiErrorBody,
   Customer,
@@ -14,7 +15,13 @@ import { authorizedFetch } from "@/lib/api-client";
 import { getAccessToken, isAccessTokenExpired, logoutToLogin } from "@/lib/auth-token";
 import { formatIdr } from "@/lib/format-money";
 
-export function CustomersPanel({ canDelete }: { canDelete: boolean }) {
+export function CustomersPanel({
+  canDelete,
+  canImport,
+}: {
+  canDelete: boolean;
+  canImport: boolean;
+}) {
   const [query, setQuery] = useState("");
   const [rows, setRows] = useState<Customer[]>([]);
   const [history, setHistory] = useState<CustomerHistoryResponse | null>(null);
@@ -127,7 +134,18 @@ export function CustomersPanel({ canDelete }: { canDelete: boolean }) {
             {loading ? "Memuat pelanggan…" : `${rows.length} pelanggan`}
           </p>
         </div>
-        <CreateLink href="/customers/new">Tambah pelanggan</CreateLink>
+        <div className="flex flex-wrap items-center gap-2">
+          {canImport ? (
+            <Link
+              href="/customers/import"
+              scroll={false}
+              className="inline-flex h-11 items-center gap-2 rounded-md bg-secondary px-4 text-sm font-medium text-secondary-foreground transition-opacity hover:opacity-90"
+            >
+              Impor
+            </Link>
+          ) : null}
+          <CreateLink href="/customers/new">Tambah pelanggan</CreateLink>
+        </div>
       </div>
 
       <div className="rounded-xl border border-border bg-card p-3 shadow-[var(--shadow-card)] sm:p-4">

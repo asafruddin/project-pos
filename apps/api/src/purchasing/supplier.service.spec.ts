@@ -64,4 +64,77 @@ describe("SupplierService", () => {
       NotFoundException,
     );
   });
+
+  it("importSuppliers creates a new name and updates an existing name", async () => {
+    getDbMock.mockReturnValue({
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            then: (
+              resolve: (value: Array<{ supplierId: string; name: string }>) => unknown,
+            ) => resolve([{ supplierId, name: "Kopi Jaya" }]),
+          }),
+        }),
+      }),
+    } as never);
+    const create = jest.spyOn(service, "create").mockResolvedValue({
+      supplier_id: "new-id",
+      name: "Baru",
+    } as never);
+    const update = jest.spyOn(service, "update").mockResolvedValue({} as never);
+
+    const result = await service.importSuppliers(
+      [
+        { row: 2, name: "Baru", phone: "0800" },
+        { row: 3, name: "Kopi Jaya", phone: "0812" },
+      ],
+      [],
+    );
+
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ name: "Baru" }));
+    expect(update).toHaveBeenCalledWith(
+      supplierId,
+      expect.objectContaining({ name: "Kopi Jaya", phone: "0812" }),
+    );
+    expect(result.created).toBe(1);
+    expect(result.updated).toBe(1);
+    expect(result.updated_keys).toEqual(["Kopi Jaya"]);
+    create.mockRestore();
+    update.mockRestore();
+  });
+
+  it("importSuppliers reports ambiguous names without aborting other rows", async () => {
+    getDbMock.mockReturnValue({
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            then: (
+              resolve: (value: Array<{ supplierId: string; name: string }>) => unknown,
+            ) =>
+              resolve([
+                { supplierId, name: "Dup" },
+                { supplierId: "other", name: "Dup" },
+              ]),
+          }),
+        }),
+      }),
+    } as never);
+    const create = jest.spyOn(service, "create").mockResolvedValue({
+      supplier_id: "solo",
+      name: "Solo",
+    } as never);
+
+    const result = await service.importSuppliers(
+      [
+        { row: 2, name: "Dup" },
+        { row: 3, name: "Solo" },
+      ],
+      [],
+    );
+
+    expect(result.created).toBe(1);
+    expect(result.errors[0]?.message).toContain("Dup");
+    expect(create).toHaveBeenCalledTimes(1);
+    create.mockRestore();
+  });
 });

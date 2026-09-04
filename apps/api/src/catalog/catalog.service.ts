@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -10,6 +11,8 @@ import type {
   CreateProductRequest,
   Product,
   ProductImage,
+  ProductImportResult,
+  ProductImportRowError,
   ProductListResponse,
   ProductStatus,
   ProductUnitConversion,
@@ -31,6 +34,7 @@ import {
   units,
   type ProductRow,
 } from "../db/schema";
+import type { ProductImportParsedRow } from "./product-import";
 
 function blankToNull(value: string | null | undefined): string | null {
   if (value == null) return null;
@@ -92,6 +96,21 @@ function pgMeta(err: unknown): { code?: string; constraint?: string } {
   if (typeof err !== "object" || err === null) return {};
   const e = err as { code?: string; constraint?: string };
   return { code: e.code, constraint: e.constraint };
+}
+
+function exceptionMessage(err: unknown): string {
+  if (err instanceof HttpException) {
+    const body = err.getResponse();
+    if (typeof body === "string") return body;
+    if (typeof body === "object" && body !== null && "message" in body) {
+      const message = (body as { message: unknown }).message;
+      if (typeof message === "string") return message;
+      if (Array.isArray(message)) return message.map(String).join("; ");
+    }
+    return err.message;
+  }
+  if (err instanceof Error) return err.message;
+  return "Gagal mengimpor baris.";
 }
 
 function rethrowCatalogWriteError(err: unknown): never {
@@ -735,6 +754,166 @@ export class CatalogService {
       .delete(productUnitConversions)
       .where(eq(productUnitConversions.toProductId, toProductId));
     return this.withImages(toProduct, storeId);
+  }
+
+  async importProducts(
+    rows: ProductImportParsedRow[],
+    parseErrors: ProductImportRowError[],
+    actorId: string,
+    storeId: string = STORE_1_ID,
+  ): Promise<ProductImportResult> {
+    const errors: ProductImportRowError[] = [...parseErrors];
+    let created = 0;
+    let updated = 0;
+    const updatedSkus: string[] = [];
+    const skuToId = new Map<string, string>();
+
+    const uniqueSkus = [
+      ...new Set(
+        rows
+          .flatMap((row) => [row.sku, row.parentSku])
+          .filter((sku): sku is string => Boolean(sku)),
+      ),
+    ];
+    if (uniqueSkus.length > 0) {
+      const existing = await getDb()
+        .select({
+          productId: products.productId,
+          sku: products.sku,
+        })
+        .from(products)
+        .where(inArray(products.sku, uniqueSkus));
+      for (const row of existing) {
+        if (row.sku) skuToId.set(row.sku, row.productId);
+      }
+    }
+
+    const ordered = [
+      ...rows.filter((row) => !row.parentSku),
+      ...rows.filter((row) => row.parentSku),
+    ];
+
+    for (const row of ordered) {
+      try {
+        let parentId: string | null | undefined;
+        if (row.parentSku) {
+          let resolved = skuToId.get(row.parentSku);
+          if (!resolved) {
+            resolved = await this.lookupSku(row.parentSku);
+            if (resolved) skuToId.set(row.parentSku, resolved);
+          }
+          if (!resolved) {
+            errors.push({
+              row: row.row,
+              sku: row.sku,
+              message: `Produk induk SKU "${row.parentSku}" tidak ditemukan.`,
+            });
+            continue;
+          }
+          parentId = resolved;
+        }
+
+        const existingId = row.sku ? skuToId.get(row.sku) : undefined;
+        if (existingId) {
+          await this.update(
+            existingId,
+            this.toUpdateRequest(row, parentId),
+            storeId,
+          );
+          await this.setStock(
+            existingId,
+            { stock_qty: row.stockQty, reason: "import" },
+            actorId,
+          );
+          updated += 1;
+          if (row.sku && !updatedSkus.includes(row.sku)) {
+            updatedSkus.push(row.sku);
+          }
+        } else {
+          const product = await this.create(
+            this.toCreateRequest(row, parentId ?? null),
+            actorId,
+            storeId,
+          );
+          created += 1;
+          if (row.sku) skuToId.set(row.sku, product.product_id);
+        }
+      } catch (err) {
+        errors.push({
+          row: row.row,
+          sku: row.sku,
+          message: exceptionMessage(err),
+        });
+      }
+    }
+
+    return {
+      created,
+      updated,
+      updated_skus: updatedSkus,
+      errors,
+    };
+  }
+
+  private async lookupSku(sku: string): Promise<string | undefined> {
+    const rows = await getDb()
+      .select({ productId: products.productId })
+      .from(products)
+      .where(eq(products.sku, sku))
+      .limit(1);
+    return rows[0]?.productId;
+  }
+
+  private toCreateRequest(
+    row: ProductImportParsedRow,
+    parentId: string | null,
+  ): CreateProductRequest {
+    return {
+      name: row.name,
+      price_minor: row.priceMinor,
+      stock_qty: row.stockQty,
+      sku: row.sku,
+      barcode: row.barcode,
+      description: row.description,
+      status: row.status,
+      cost_minor: row.costMinor,
+      compare_at_minor: row.compareAtMinor,
+      min_qty: row.minQty,
+      max_qty: row.maxQty,
+      track_stock: row.trackStock,
+      parent_id: parentId,
+      category_name: row.categoryName,
+      brand_name: row.brandName,
+      unit_name: row.unitName,
+      tags: row.tags,
+    };
+  }
+
+  private toUpdateRequest(
+    row: ProductImportParsedRow,
+    parentId: string | null | undefined,
+  ): UpdateProductRequest {
+    const patch: UpdateProductRequest = {
+      name: row.name,
+      price_minor: row.priceMinor,
+    };
+    if (row.sku != null) patch.sku = row.sku;
+    if (row.barcode !== undefined) patch.barcode = row.barcode;
+    if (row.description !== undefined) patch.description = row.description;
+    if (row.status !== undefined) patch.status = row.status;
+    if (row.costMinor !== undefined) patch.cost_minor = row.costMinor;
+    if (row.compareAtMinor !== undefined) {
+      patch.compare_at_minor = row.compareAtMinor;
+    }
+    if (row.minQty !== undefined) patch.min_qty = row.minQty;
+    if (row.maxQty !== undefined) patch.max_qty = row.maxQty;
+    if (row.trackStock !== undefined) patch.track_stock = row.trackStock;
+    if (parentId !== undefined) patch.parent_id = parentId;
+    if (row.categoryName !== undefined) patch.category_name = row.categoryName;
+    if (row.brandName !== undefined) patch.brand_name = row.brandName;
+    if (row.unitName !== undefined) patch.unit_name = row.unitName;
+    if (row.tags !== undefined) patch.tags = row.tags;
+    return patch;
   }
 
   private async requireProduct(productId: string): Promise<ProductRow> {

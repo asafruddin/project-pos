@@ -461,4 +461,127 @@ describe("CatalogService", () => {
     expect(result.category_id).toBe(created.categoryId);
     expect(result.unit_id).toBe(created.unitId);
   });
+
+  it("importProducts creates a new SKU and updates an existing SKU", async () => {
+    const existingId = "22222222-2222-4222-8222-222222222222";
+    getDbMock.mockReturnValue({
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            limit: async () => [],
+            then: (
+              resolve: (value: Array<{ productId: string; sku: string }>) => unknown,
+            ) =>
+              resolve([{ productId: existingId, sku: "OLD-1" }]),
+          }),
+        }),
+      }),
+    } as never);
+    const create = jest.spyOn(service, "create").mockResolvedValue({
+      product_id: "33333333-3333-4333-8333-333333333333",
+      name: "Baru",
+      price_minor: 1000,
+      stock_qty: 1,
+    } as never);
+    const update = jest.spyOn(service, "update").mockResolvedValue({} as never);
+    const setStock = jest.spyOn(service, "setStock").mockResolvedValue({} as never);
+
+    const result = await service.importProducts(
+      [
+        {
+          row: 2,
+          sku: "NEW-1",
+          parentSku: null,
+          name: "Baru",
+          priceMinor: 1000,
+          stockQty: 1,
+        },
+        {
+          row: 3,
+          sku: "OLD-1",
+          parentSku: null,
+          name: "Lama",
+          priceMinor: 2000,
+          stockQty: 8,
+        },
+      ],
+      [],
+      "actor-1",
+    );
+
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({ sku: "NEW-1", name: "Baru", stock_qty: 1 }),
+      "actor-1",
+      expect.any(String),
+    );
+    expect(update).toHaveBeenCalledWith(
+      existingId,
+      expect.objectContaining({ name: "Lama", price_minor: 2000 }),
+      expect.any(String),
+    );
+    expect(setStock).toHaveBeenCalledWith(
+      existingId,
+      { stock_qty: 8, reason: "import" },
+      "actor-1",
+    );
+    expect(result.created).toBe(1);
+    expect(result.updated).toBe(1);
+    expect(result.updated_skus).toEqual(["OLD-1"]);
+    create.mockRestore();
+    update.mockRestore();
+    setStock.mockRestore();
+  });
+
+  it("importProducts reports a missing parent SKU without aborting other rows", async () => {
+    getDbMock.mockReturnValue({
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            limit: async () => [],
+            then: (resolve: (value: unknown[]) => unknown) => resolve([]),
+          }),
+        }),
+      }),
+    } as never);
+    const create = jest.spyOn(service, "create").mockResolvedValue({
+      product_id: "44444444-4444-4444-8444-444444444444",
+      name: "Anak",
+      price_minor: 500,
+      stock_qty: 2,
+    } as never);
+
+    const result = await service.importProducts(
+      [
+        {
+          row: 2,
+          sku: "CHILD-1",
+          parentSku: "MISSING",
+          name: "Anak",
+          priceMinor: 500,
+          stockQty: 2,
+        },
+        {
+          row: 3,
+          sku: "SOLO-1",
+          parentSku: null,
+          name: "Solo",
+          priceMinor: 700,
+          stockQty: 1,
+        },
+      ],
+      [],
+      "actor-1",
+    );
+
+    expect(result.created).toBe(1);
+    expect(result.errors).toEqual([
+      expect.objectContaining({
+        row: 2,
+        sku: "CHILD-1",
+        message: expect.stringContaining("MISSING"),
+      }),
+    ]);
+    expect(create).toHaveBeenCalledTimes(1);
+    create.mockRestore();
+  });
 });

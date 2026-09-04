@@ -139,9 +139,19 @@ const PAGE_COPY: Record<string, { title: string; subtitle: string }> = {
     title: "Tambah produk",
     subtitle: "Isi nama dan harga dulu. Detail lain opsional.",
   },
+  "/products/import": {
+    title: "Impor produk",
+    subtitle:
+      "Unduh template CSV/Excel, isi baris produk, lalu unggah. SKU yang sudah ada akan diperbarui.",
+  },
   "/customers/new": {
     title: "Tambah pelanggan",
     subtitle: "Nama wajib. Telepon, email, dan catatan opsional.",
+  },
+  "/customers/import": {
+    title: "Impor pelanggan",
+    subtitle:
+      "Unduh template CSV/Excel. Telepon yang sudah ada akan diperbarui; jika kosong, email dipakai sebagai kunci.",
   },
   "/employees/new": {
     title: "Tambah karyawan",
@@ -171,6 +181,11 @@ const PAGE_COPY: Record<string, { title: string; subtitle: string }> = {
   "/purchasing/suppliers/new": {
     title: "Tambah pemasok",
     subtitle: "Nama wajib. Produk dipasok opsional.",
+  },
+  "/purchasing/suppliers/import": {
+    title: "Impor pemasok",
+    subtitle:
+      "Unduh template CSV/Excel, isi baris pemasok, lalu unggah. Nama yang sudah ada akan diperbarui.",
   },
   "/purchasing/orders/new": {
     title: "Pesanan pembelian baru",

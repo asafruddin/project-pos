@@ -225,14 +225,23 @@ export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
           </p>
         </div>
         {canMutate ? (
-          <Link
-            href="/products/new"
-            scroll={false}
-            className="inline-flex h-11 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
-          >
-            <PlusIcon size={18} weight="bold" />
-            Tambah produk
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/products/import"
+              scroll={false}
+              className="inline-flex h-11 items-center gap-2 rounded-md bg-secondary px-4 text-sm font-medium text-secondary-foreground transition-opacity hover:opacity-90"
+            >
+              Impor
+            </Link>
+            <Link
+              href="/products/new"
+              scroll={false}
+              className="inline-flex h-11 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+            >
+              <PlusIcon size={18} weight="bold" />
+              Tambah produk
+            </Link>
+          </div>
         ) : null}
       </div>
       {error ? (
@@ -365,14 +374,23 @@ export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
             katalog.
           </p>
           {canMutate ? (
-            <Link
-              href="/products/new"
-              scroll={false}
-              className="mt-4 inline-flex h-11 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90"
-            >
-              <PlusIcon size={18} weight="bold" />
-              Tambah produk
-            </Link>
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+              <Link
+                href="/products/import"
+                scroll={false}
+                className="inline-flex h-11 items-center gap-2 rounded-md bg-secondary px-4 text-sm font-medium text-secondary-foreground hover:opacity-90"
+              >
+                Impor
+              </Link>
+              <Link
+                href="/products/new"
+                scroll={false}
+                className="inline-flex h-11 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90"
+              >
+                <PlusIcon size={18} weight="bold" />
+                Tambah produk
+              </Link>
+            </div>
           ) : null}
         </div>
       ) : visibleProducts.length === 0 ? (

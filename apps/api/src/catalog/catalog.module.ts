@@ -3,6 +3,7 @@ import { AuthModule } from "../auth/auth.module";
 import { MediaModule } from "../media/media.module";
 import { CatalogController } from "./catalog.controller";
 import { CatalogService } from "./catalog.service";
+import { ProductImportController } from "./product-import.controller";
 import { CategoriesController } from "./categories.controller";
 import { CategoriesService } from "./categories.service";
 import { UnitsController } from "./units.controller";
@@ -10,7 +11,12 @@ import { UnitsService } from "./units.service";
 
 @Module({
   imports: [AuthModule, MediaModule],
-  controllers: [CatalogController, CategoriesController, UnitsController],
+  controllers: [
+    ProductImportController,
+    CatalogController,
+    CategoriesController,
+    UnitsController,
+  ],
   providers: [CatalogService, CategoriesService, UnitsService],
   exports: [CatalogService, CategoriesService, UnitsService],
 })

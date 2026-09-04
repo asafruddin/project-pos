@@ -4,6 +4,7 @@ import { Button, Input } from "@pos-apps/ui/atoms";
 import { FormField, formInputClass, TableSkeleton } from "@pos-apps/ui/molecules";
 import { CreateLink, RowLink } from "@pos-apps/ui/organisms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import type {
   ApiErrorBody,
   PurchaseOrderListResponse,
@@ -22,7 +23,7 @@ function statusLabel(status: PurchaseOrderStatus): string {
   return "Dibatalkan";
 }
 
-export function PurchasingPanel() {
+export function PurchasingPanel({ canImport }: { canImport: boolean }) {
   const [query, setQuery] = useState("");
   const [suppliers, setSuppliers] = useState<SupplierListResponse["suppliers"]>(
     [],
@@ -103,7 +104,18 @@ export function PurchasingPanel() {
               {loading ? "Memuat pemasok…" : `${suppliers.length} pemasok`}
             </p>
           </div>
-          <CreateLink href="/purchasing/suppliers/new">Tambah pemasok</CreateLink>
+          <div className="flex flex-wrap items-center gap-2">
+            {canImport ? (
+              <Link
+                href="/purchasing/suppliers/import"
+                scroll={false}
+                className="inline-flex h-11 items-center gap-2 rounded-md bg-secondary px-4 text-sm font-medium text-secondary-foreground transition-opacity hover:opacity-90"
+              >
+                Impor
+              </Link>
+            ) : null}
+            <CreateLink href="/purchasing/suppliers/new">Tambah pemasok</CreateLink>
+          </div>
         </div>
         <div className="rounded-xl border border-border bg-card p-3 shadow-[var(--shadow-card)] sm:p-4">
           <form className="flex max-w-xl items-end gap-2" onSubmit={onSearch}>

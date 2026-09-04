@@ -13,5 +13,9 @@ export default function PurchasingPage() {
       </p>
     );
   }
-  return <PurchasingPanel />;
+  return (
+    <PurchasingPanel
+      canImport={hasPermission(me.permissions, "purchases", "update")}
+    />
+  );
 }

@@ -228,6 +228,137 @@ export type UpdateProductRequest = {
   tags?: string[];
 };
 
+/** Spreadsheet columns for catalog product import (aligns with create/update payload). */
+export const PRODUCT_IMPORT_COLUMNS = [
+  "name",
+  "price_minor",
+  "stock_qty",
+  "sku",
+  "barcode",
+  "description",
+  "status",
+  "cost_minor",
+  "compare_at_minor",
+  "min_qty",
+  "max_qty",
+  "track_stock",
+  "category_name",
+  "brand_name",
+  "unit_name",
+  "tags",
+  "parent_sku",
+] as const;
+
+export type ProductImportColumn = (typeof PRODUCT_IMPORT_COLUMNS)[number];
+
+export const PRODUCT_IMPORT_REQUIRED_COLUMNS = [
+  "name",
+  "price_minor",
+  "stock_qty",
+] as const satisfies readonly ProductImportColumn[];
+
+export const PRODUCT_IMPORT_MAX_ROWS = 1000;
+export const PRODUCT_IMPORT_MAX_BYTES = 2 * 1024 * 1024;
+
+export const PRODUCT_IMPORT_EXAMPLE_ROW: Record<ProductImportColumn, string> = {
+  name: "Espresso",
+  price_minor: "18000",
+  stock_qty: "50",
+  sku: "ESP-001",
+  barcode: "8990000000001",
+  description: "Kopi espresso",
+  status: "active",
+  cost_minor: "8000",
+  compare_at_minor: "",
+  min_qty: "5",
+  max_qty: "",
+  track_stock: "true",
+  category_name: "Minuman",
+  brand_name: "",
+  unit_name: "pcs",
+  tags: "kopi,hot",
+  parent_sku: "",
+};
+
+export type ProductImportTemplateFormat = "csv" | "xlsx";
+
+export type ProductImportRowError = {
+  row: number;
+  sku: string | null;
+  message: string;
+};
+
+export type ProductImportResult = {
+  created: number;
+  updated: number;
+  updated_skus: string[];
+  errors: ProductImportRowError[];
+};
+
+export const CUSTOMER_IMPORT_COLUMNS = [
+  "name",
+  "phone",
+  "email",
+  "notes",
+  "group_name",
+  "store_credit_minor",
+] as const;
+
+export type CustomerImportColumn = (typeof CUSTOMER_IMPORT_COLUMNS)[number];
+
+export const CUSTOMER_IMPORT_REQUIRED_COLUMNS = [
+  "name",
+] as const satisfies readonly CustomerImportColumn[];
+
+export const CUSTOMER_IMPORT_EXAMPLE_ROW: Record<CustomerImportColumn, string> = {
+  name: "Budi",
+  phone: "08123456789",
+  email: "budi@example.com",
+  notes: "",
+  group_name: "",
+  store_credit_minor: "0",
+};
+
+export const SUPPLIER_IMPORT_COLUMNS = [
+  "name",
+  "contact_name",
+  "phone",
+  "email",
+  "payment_terms",
+  "notes",
+] as const;
+
+export type SupplierImportColumn = (typeof SUPPLIER_IMPORT_COLUMNS)[number];
+
+export const SUPPLIER_IMPORT_REQUIRED_COLUMNS = [
+  "name",
+] as const satisfies readonly SupplierImportColumn[];
+
+export const SUPPLIER_IMPORT_EXAMPLE_ROW: Record<SupplierImportColumn, string> = {
+  name: "Kopi Jaya",
+  contact_name: "Sari",
+  phone: "08129876543",
+  email: "order@kopijaya.example",
+  payment_terms: "NET 7",
+  notes: "",
+};
+
+export type SpreadsheetImportRowError = {
+  row: number;
+  key: string | null;
+  message: string;
+};
+
+export type SpreadsheetImportResult = {
+  created: number;
+  updated: number;
+  updated_keys: string[];
+  errors: SpreadsheetImportRowError[];
+};
+
+export type CustomerImportResult = SpreadsheetImportResult;
+export type SupplierImportResult = SpreadsheetImportResult;
+
 export type CategoryRecord = {
   category_id: string;
   store_id: string;

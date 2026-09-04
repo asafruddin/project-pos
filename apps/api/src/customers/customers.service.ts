@@ -11,15 +11,19 @@ import type {
   Customer,
   CustomerGroupListResponse,
   CustomerHistoryResponse,
+  CustomerImportResult,
   CustomerListResponse,
   PriceOverride,
   Role,
   SetCustomerPriceRequest,
   SetGroupPriceRequest,
+  SpreadsheetImportRowError,
   UpdateCustomerRequest,
 } from "@pos-apps/types";
 import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { getDb } from "../db/client";
+import { importExceptionMessage } from "../common/spreadsheet-file";
+import type { CustomerImportParsedRow } from "./customer-import";
 import {
   customerGroupPrices,
   customerPrices,
@@ -547,6 +551,138 @@ export class CustomersService {
         loyalty_lifetime_earned: account?.lifetimeEarned ?? 0,
       });
     });
+  }
+
+  async importCustomers(
+    rows: CustomerImportParsedRow[],
+    parseErrors: SpreadsheetImportRowError[],
+    actor: Actor,
+  ): Promise<CustomerImportResult> {
+    const errors: SpreadsheetImportRowError[] = [...parseErrors];
+    let created = 0;
+    let updated = 0;
+    const updatedKeys: string[] = [];
+    const keyToId = new Map<string, string>();
+    const ambiguous = new Set<string>();
+
+    const phones = [
+      ...new Set(rows.map((row) => row.phone).filter((v): v is string => Boolean(v))),
+    ];
+    const emails = [
+      ...new Set(
+        rows
+          .filter((row) => !row.phone && row.email)
+          .map((row) => row.email)
+          .filter((v): v is string => Boolean(v)),
+      ),
+    ];
+
+    if (phones.length > 0) {
+      const found = await getDb()
+        .select({
+          customerId: customers.customerId,
+          phone: customers.phone,
+        })
+        .from(customers)
+        .where(inArray(customers.phone, phones));
+      const byPhone = new Map<string, string[]>();
+      for (const row of found) {
+        if (!row.phone) continue;
+        const list = byPhone.get(row.phone) ?? [];
+        list.push(row.customerId);
+        byPhone.set(row.phone, list);
+      }
+      for (const [phone, ids] of byPhone) {
+        const matchKey = `phone:${phone}`;
+        if (ids.length > 1) ambiguous.add(matchKey);
+        else if (ids[0]) keyToId.set(matchKey, ids[0]);
+      }
+    }
+
+    if (emails.length > 0) {
+      const found = await getDb()
+        .select({
+          customerId: customers.customerId,
+          email: customers.email,
+        })
+        .from(customers)
+        .where(inArray(customers.email, emails));
+      const byEmail = new Map<string, string[]>();
+      for (const row of found) {
+        if (!row.email) continue;
+        const list = byEmail.get(row.email) ?? [];
+        list.push(row.customerId);
+        byEmail.set(row.email, list);
+      }
+      for (const [email, ids] of byEmail) {
+        const matchKey = `email:${email}`;
+        if (ids.length > 1) ambiguous.add(matchKey);
+        else if (ids[0]) keyToId.set(matchKey, ids[0]);
+      }
+    }
+
+    for (const row of rows) {
+      const matchKey = row.phone ? `phone:${row.phone}` : `email:${row.email ?? ""}`;
+      if (ambiguous.has(matchKey)) {
+        errors.push({
+          row: row.row,
+          key: row.key,
+          message: row.phone
+            ? `Telepon "${row.phone}" dipakai lebih dari satu pelanggan.`
+            : `Email "${row.email}" dipakai lebih dari satu pelanggan.`,
+        });
+        continue;
+      }
+
+      try {
+        const existingId = keyToId.get(matchKey);
+        if (existingId) {
+          await this.update(
+            existingId,
+            {
+              name: row.name,
+              phone: row.phone,
+              email: row.email,
+              ...(row.notes !== undefined ? { notes: row.notes } : {}),
+              ...(row.groupName !== undefined ? { group_name: row.groupName } : {}),
+              ...(row.storeCreditMinor !== undefined
+                ? { store_credit_minor: row.storeCreditMinor }
+                : {}),
+            },
+            actor,
+          );
+          updated += 1;
+          if (!updatedKeys.includes(row.key)) updatedKeys.push(row.key);
+        } else {
+          const createdRow = await this.create(
+            {
+              name: row.name,
+              phone: row.phone,
+              email: row.email,
+              notes: row.notes,
+              group_name: row.groupName,
+              store_credit_minor: row.storeCreditMinor,
+            },
+            actor,
+          );
+          created += 1;
+          keyToId.set(matchKey, createdRow.customer.customer_id);
+        }
+      } catch (err) {
+        errors.push({
+          row: row.row,
+          key: row.key,
+          message: importExceptionMessage(err),
+        });
+      }
+    }
+
+    return {
+      created,
+      updated,
+      updated_keys: updatedKeys,
+      errors,
+    };
   }
 
   private async load(customerId: string) {

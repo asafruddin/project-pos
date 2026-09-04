@@ -7,6 +7,9 @@ import { CustomersPanel } from "../customers-panel";
 export default function CustomersPage() {
   const me = useDashboardSession();
   return (
-    <CustomersPanel canDelete={hasPermission(me.permissions, "customers", "delete")} />
+    <CustomersPanel
+      canDelete={hasPermission(me.permissions, "customers", "delete")}
+      canImport={hasPermission(me.permissions, "customers", "update")}
+    />
   );
 }

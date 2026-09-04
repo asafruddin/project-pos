@@ -148,4 +148,108 @@ describe("CustomersService", () => {
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
+
+  it("importCustomers creates a new phone and updates an existing phone", async () => {
+    getDbMock.mockReturnValue({
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            then: (
+              resolve: (value: Array<{ customerId: string; phone: string }>) => unknown,
+            ) => resolve([{ customerId, phone: "0812" }]),
+          }),
+        }),
+      }),
+    } as never);
+    const create = jest.spyOn(service, "create").mockResolvedValue({
+      customer: { customer_id: "new-id", name: "Baru", phone: "0899" },
+      warnings: [],
+      already_accepted: false,
+    } as never);
+    const update = jest.spyOn(service, "update").mockResolvedValue({} as never);
+
+    const result = await service.importCustomers(
+      [
+        {
+          row: 2,
+          key: "0899",
+          name: "Baru",
+          phone: "0899",
+          email: null,
+        },
+        {
+          row: 3,
+          key: "0812",
+          name: "Sari Updated",
+          phone: "0812",
+          email: null,
+        },
+      ],
+      [],
+      { role: "catalog_admin" },
+    );
+
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledWith(
+      customerId,
+      expect.objectContaining({ name: "Sari Updated", phone: "0812" }),
+      { role: "catalog_admin" },
+    );
+    expect(result.created).toBe(1);
+    expect(result.updated).toBe(1);
+    expect(result.updated_keys).toEqual(["0812"]);
+    create.mockRestore();
+    update.mockRestore();
+  });
+
+  it("importCustomers reports ambiguous phones without aborting other rows", async () => {
+    getDbMock.mockReturnValue({
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            then: (
+              resolve: (
+                value: Array<{ customerId: string; phone: string }>,
+              ) => unknown,
+            ) =>
+              resolve([
+                { customerId, phone: "0812" },
+                { customerId: "other-id", phone: "0812" },
+              ]),
+          }),
+        }),
+      }),
+    } as never);
+    const create = jest.spyOn(service, "create").mockResolvedValue({
+      customer: { customer_id: "solo", name: "Solo", phone: "0800" },
+      warnings: [],
+      already_accepted: false,
+    } as never);
+
+    const result = await service.importCustomers(
+      [
+        {
+          row: 2,
+          key: "0812",
+          name: "Dup",
+          phone: "0812",
+          email: null,
+        },
+        {
+          row: 3,
+          key: "0800",
+          name: "Solo",
+          phone: "0800",
+          email: null,
+        },
+      ],
+      [],
+      { role: "catalog_admin" },
+    );
+
+    expect(result.created).toBe(1);
+    expect(result.errors[0]?.message).toContain("0812");
+    expect(create).toHaveBeenCalledTimes(1);
+    create.mockRestore();
+  });
 });

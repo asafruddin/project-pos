@@ -6,11 +6,15 @@ import {
 import type {
   CreateSupplierRequest,
   Supplier,
+  SupplierImportResult,
   SupplierListResponse,
+  SpreadsheetImportRowError,
   UpdateSupplierRequest,
 } from "@pos-apps/types";
 import { desc, eq, ilike, inArray, or } from "drizzle-orm";
 import { getDb } from "../db/client";
+import { importExceptionMessage } from "../common/spreadsheet-file";
+import type { SupplierImportParsedRow } from "./supplier-import";
 import {
   products,
   purchaseOrders,
@@ -231,6 +235,91 @@ export class SupplierService {
       })),
       created_at: header.createdAt.toISOString(),
       updated_at: header.updatedAt.toISOString(),
+    };
+  }
+
+  async importSuppliers(
+    rows: SupplierImportParsedRow[],
+    parseErrors: SpreadsheetImportRowError[],
+  ): Promise<SupplierImportResult> {
+    const errors: SpreadsheetImportRowError[] = [...parseErrors];
+    let created = 0;
+    let updated = 0;
+    const updatedKeys: string[] = [];
+    const nameToId = new Map<string, string>();
+    const ambiguous = new Set<string>();
+
+    const names = [...new Set(rows.map((row) => row.name))];
+    if (names.length > 0) {
+      const found = await getDb()
+        .select({
+          supplierId: suppliers.supplierId,
+          name: suppliers.name,
+        })
+        .from(suppliers)
+        .where(inArray(suppliers.name, names));
+      const byName = new Map<string, string[]>();
+      for (const row of found) {
+        const list = byName.get(row.name) ?? [];
+        list.push(row.supplierId);
+        byName.set(row.name, list);
+      }
+      for (const [name, ids] of byName) {
+        if (ids.length > 1) ambiguous.add(name);
+        else if (ids[0]) nameToId.set(name, ids[0]);
+      }
+    }
+
+    for (const row of rows) {
+      if (ambiguous.has(row.name)) {
+        errors.push({
+          row: row.row,
+          key: row.name,
+          message: `Nama pemasok "${row.name}" dipakai lebih dari satu data.`,
+        });
+        continue;
+      }
+      try {
+        const existingId = nameToId.get(row.name);
+        if (existingId) {
+          await this.update(existingId, {
+            name: row.name,
+            ...(row.contactName !== undefined ? { contact_name: row.contactName } : {}),
+            ...(row.phone !== undefined ? { phone: row.phone } : {}),
+            ...(row.email !== undefined ? { email: row.email } : {}),
+            ...(row.paymentTerms !== undefined
+              ? { payment_terms: row.paymentTerms }
+              : {}),
+            ...(row.notes !== undefined ? { notes: row.notes } : {}),
+          });
+          updated += 1;
+          if (!updatedKeys.includes(row.name)) updatedKeys.push(row.name);
+        } else {
+          const createdRow = await this.create({
+            name: row.name,
+            contact_name: row.contactName,
+            phone: row.phone,
+            email: row.email,
+            payment_terms: row.paymentTerms,
+            notes: row.notes,
+          });
+          created += 1;
+          nameToId.set(row.name, createdRow.supplier_id);
+        }
+      } catch (err) {
+        errors.push({
+          row: row.row,
+          key: row.name,
+          message: importExceptionMessage(err),
+        });
+      }
+    }
+
+    return {
+      created,
+      updated,
+      updated_keys: updatedKeys,
+      errors,
     };
   }
 }
