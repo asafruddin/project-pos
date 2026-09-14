@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { ApiErrorBody, StoreListResponse, StoreRecord } from "@pos-apps/types";
 import { STORE_1_ID } from "@pos-apps/types";
 import { authorizedFetch } from "@/lib/api-client";
+import { DashboardStoreLogo } from "@/components/molecules/dashboard-store-logo";
 
 function errorMessage(res: Response, body: unknown): string {
   return (body as ApiErrorBody)?.message ?? `Gagal (${res.status})`;
@@ -92,15 +93,20 @@ export function StoresPanel({ canEdit }: { canEdit: boolean }) {
                 key={store.store_id}
                 className="rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-card)]"
               >
-                <p className="font-medium text-foreground">
-                  {store.name}
-                  {store.store_id === STORE_1_ID ? " · Store #1" : ""}
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <div className="flex items-center gap-3">
+                  <DashboardStoreLogo store={store} />
+                  <p className="min-w-0 font-medium text-foreground">
+                    {store.name}
+                    {store.store_id === STORE_1_ID ? " · Store #1" : ""}
+                  </p>
+                </div>
+                <p className="mt-1 pl-11 text-sm text-muted-foreground">
                   {registerLabel(store.store_id)}
                 </p>
                 {canEdit ? (
-                  <div className="mt-3">
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <RowLink href={`/stores/${store.store_id}/edit`}>Ubah</RowLink>
+                    <RowLink href="/employees/new">Tambah kasir</RowLink>
                     <RowLink href={`/stores/${store.store_id}/registers/new`}>
                       Tambah register
                     </RowLink>
@@ -126,19 +132,32 @@ export function StoresPanel({ canEdit }: { canEdit: boolean }) {
                       className="border-b border-border/60 last:border-0"
                     >
                       <td className="px-4 py-3 font-medium">
-                        {store.name}
-                        {store.store_id === STORE_1_ID ? (
-                          <span className="ml-1 text-muted-foreground">· Store #1</span>
-                        ) : null}
+                        <div className="flex min-w-0 items-center gap-3">
+                          <DashboardStoreLogo store={store} />
+                          <span className="min-w-0 truncate">
+                            {store.name}
+                            {store.store_id === STORE_1_ID ? (
+                              <span className="ml-1 text-muted-foreground">
+                                · Store #1
+                              </span>
+                            ) : null}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
                         {registerLabel(store.store_id)}
                       </td>
                       <td className="px-4 py-3">
                         {canEdit ? (
-                          <RowLink href={`/stores/${store.store_id}/registers/new`}>
-                            Tambah register
-                          </RowLink>
+                          <div className="flex flex-wrap gap-2">
+                            <RowLink href={`/stores/${store.store_id}/edit`}>
+                              Ubah
+                            </RowLink>
+                            <RowLink href="/employees/new">Tambah kasir</RowLink>
+                            <RowLink href={`/stores/${store.store_id}/registers/new`}>
+                              Tambah register
+                            </RowLink>
+                          </div>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { ThemeToggle } from "@/components/molecules/theme-toggle";
+import { StoreLogo } from "@pos-apps/ui/molecules";
 import { cn } from "@/lib/utils";
 
 export type HeaderSearchItem = {
@@ -16,11 +17,15 @@ export function DashboardHeader({
   title,
   subtitle,
   roleLabel,
+  storeName,
+  storeLogoSrc,
   searchItems,
 }: {
   title: string;
   subtitle?: string;
   roleLabel: string;
+  storeName?: string | null;
+  storeLogoSrc?: string | null;
   searchItems: HeaderSearchItem[];
 }) {
   const router = useRouter();
@@ -64,12 +69,7 @@ export function DashboardHeader({
     router.push(href, { scroll: false });
   }
 
-  const initials = roleLabel
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
+  const brandName = storeName?.trim() || "POS Apps";
 
   return (
     <header className="flex shrink-0 flex-col gap-3 border-b border-border bg-card px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:gap-6">
@@ -133,11 +133,9 @@ export function DashboardHeader({
       <div className="flex items-center justify-end gap-2">
         <ThemeToggle />
         <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/50 py-1 pr-3 pl-1">
-          <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-xs font-semibold text-primary-foreground">
-            {initials || "POS"}
-          </div>
+          <StoreLogo src={storeLogoSrc} alt={brandName} size="sm" />
           <div className="hidden min-w-0 sm:block">
-            <p className="truncate text-sm font-medium leading-tight">POS Apps</p>
+            <p className="truncate text-sm font-medium leading-tight">{brandName}</p>
             <p className="truncate text-xs text-muted-foreground">{roleLabel}</p>
           </div>
         </div>

@@ -8,11 +8,13 @@ export function BrandMark({
   subtitle,
   className,
   size = "md",
+  logoSrc,
 }: {
   title?: string;
   subtitle?: string;
   className?: string;
   size?: "sm" | "md" | "lg";
+  logoSrc?: string | null;
 }) {
   const mark =
     size === "lg" ? "h-16 w-16" : size === "sm" ? "h-9 w-9" : "h-12 w-12";
@@ -20,15 +22,24 @@ export function BrandMark({
 
   return (
     <div className={cn("flex flex-col items-center gap-2 text-center", className)}>
-      <div
-        className={cn(
-          "inline-flex items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm",
-          mark,
-        )}
-        aria-hidden
-      >
-        <CoffeeIcon size={iconSize} weight="fill" />
-      </div>
+      {logoSrc ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={logoSrc}
+          alt=""
+          className={cn("rounded-xl object-cover shadow-sm", mark)}
+        />
+      ) : (
+        <div
+          className={cn(
+            "inline-flex items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm",
+            mark,
+          )}
+          aria-hidden
+        >
+          <CoffeeIcon size={iconSize} weight="fill" />
+        </div>
+      )}
       <div>
         <p
           className={cn(

@@ -45,7 +45,7 @@ function errorMessage(res: Response, body: unknown): string {
 function storeOptions(stores: StoreRecord[]): StoreRecord[] {
   return stores.length
     ? stores
-    : [{ store_id: STORE_1_ID, name: "Store #1", created_at: "" }];
+    : [{ store_id: STORE_1_ID, name: "Store #1", created_at: "", logo_public_id: null, logo_secure_url: null }];
 }
 
 export function EmployeeForm({

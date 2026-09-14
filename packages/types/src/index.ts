@@ -55,6 +55,8 @@ export type LoginResponse = {
   role: Role;
   permissions: string[];
   store_id: string;
+  store_name: string;
+  store_logo_url: string | null;
 };
 
 export type AuthMeResponse = {
@@ -62,6 +64,8 @@ export type AuthMeResponse = {
   role: Role;
   permissions: string[];
   store_id: string;
+  store_name: string;
+  store_logo_url: string | null;
   active: boolean;
 };
 
@@ -521,7 +525,14 @@ export type StoreRecord = {
   store_id: string;
   name: string;
   created_at: string;
+  logo_public_id: string | null;
+  logo_secure_url: string | null;
 };
+
+/** Authenticated byte-proxy path for a store logo (not a Cloudinary URL). */
+export function storeLogoFilePath(storeId: string): string {
+  return `/stores/${storeId}/logo/file`;
+}
 
 export type RegisterRecord = {
   register_id: string;
@@ -536,6 +547,10 @@ export type StoreListResponse = {
 };
 
 export type CreateStoreRequest = {
+  name: string;
+};
+
+export type UpdateStoreRequest = {
   name: string;
 };
 

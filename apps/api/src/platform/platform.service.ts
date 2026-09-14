@@ -52,6 +52,8 @@ function toStore(row: typeof stores.$inferSelect): StoreRecord {
     store_id: row.storeId,
     name: row.name,
     created_at: row.createdAt.toISOString(),
+    logo_public_id: row.logoPublicId ?? null,
+    logo_secure_url: row.logoSecureUrl ?? null,
   };
 }
 

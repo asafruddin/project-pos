@@ -24,6 +24,13 @@ export class CreateStoreDto {
   name!: string;
 }
 
+export class UpdateStoreDto {
+  @Transform(({ value }: { value: unknown }) => trim(value))
+  @IsString()
+  @MinLength(1, { message: "Nama toko wajib diisi." })
+  name!: string;
+}
+
 export class CreateRegisterDto {
   @IsUUID("4")
   store_id!: string;

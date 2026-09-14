@@ -12,6 +12,7 @@ export * from "./popover";
 export * from "./sonner";
 export * from "./form-field";
 export * from "./brand-mark";
+export * from "./store-logo";
 export * from "./stat-card";
 export * from "./table-skeleton";
 export * from "./calendar";

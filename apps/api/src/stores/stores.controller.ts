@@ -2,12 +2,18 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Put,
+  StreamableFile,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
 import type {
   RegisterRecord,
   StockTransfer,
@@ -16,6 +22,7 @@ import type {
   StorePrice,
   StoreRecord,
 } from "@pos-apps/types";
+import { assertPermission } from "../auth/assert-permission";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { AuthUser } from "../auth/jwt.strategy";
@@ -27,6 +34,7 @@ import {
   CreateStoreDto,
   SetStorePriceDto,
   TransitionStockTransferDto,
+  UpdateStoreDto,
 } from "./dto/stores.dto";
 import { StoresService } from "./stores.service";
 import { TransferService } from "./transfer.service";
@@ -45,10 +53,55 @@ export class StoresController {
     return this.stores.list();
   }
 
+  @Get("stores/:storeId")
+  @RequirePermission("stores", "view")
+  getStore(
+    @Param("storeId", ParseUUIDPipe) storeId: string,
+  ): Promise<StoreRecord> {
+    return this.stores.getById(storeId);
+  }
+
   @Post("stores")
   @RequirePermission("stores", "update")
   createStore(@Body() body: CreateStoreDto): Promise<StoreRecord> {
     return this.stores.createStore(body);
+  }
+
+  @Patch("stores/:storeId")
+  @RequirePermission("stores", "update")
+  updateStore(
+    @Param("storeId", ParseUUIDPipe) storeId: string,
+    @Body() body: UpdateStoreDto,
+  ): Promise<StoreRecord> {
+    return this.stores.updateStore(storeId, body);
+  }
+
+  @Post("stores/:storeId/logo")
+  @RequirePermission("stores", "update")
+  @UseInterceptors(
+    FileInterceptor("file", { limits: { fileSize: 8 * 1024 * 1024 } }),
+  )
+  uploadLogo(
+    @Param("storeId", ParseUUIDPipe) storeId: string,
+    @UploadedFile() file: { buffer: Buffer; mimetype: string; size: number },
+  ): Promise<StoreRecord> {
+    return this.stores.setLogo(storeId, file);
+  }
+
+  @Get("stores/:storeId/logo/file")
+  @Header("Cache-Control", "private, max-age=60")
+  async logoFile(
+    @Param("storeId", ParseUUIDPipe) storeId: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<StreamableFile> {
+    if (user.storeId !== storeId) {
+      assertPermission(user, "stores", "view");
+    }
+    const file = await this.stores.getLogoFile(storeId);
+    return new StreamableFile(file.bytes, {
+      type: file.mimeType,
+      disposition: "inline",
+    });
   }
 
   @Post("registers")

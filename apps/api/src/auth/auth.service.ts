@@ -7,9 +7,9 @@ import { JwtService } from "@nestjs/jwt";
 import { compare } from "bcryptjs";
 import { eq } from "drizzle-orm";
 import type { AuthMeResponse, LoginResponse } from "@pos-apps/types";
-import { JWT_AUD_STORE, STORE_1_ID } from "@pos-apps/types";
+import { JWT_AUD_STORE, STORE_1_ID, storeLogoFilePath } from "@pos-apps/types";
 import { getDb } from "../db/client";
-import { users } from "../db/schema";
+import { stores, users } from "../db/schema";
 import { loadRolePermissions } from "./load-permissions";
 import { isRole } from "./roles";
 
@@ -22,6 +22,11 @@ export type JwtPayload = {
 /** Precomputed bcrypt hash so unknown-user path still runs compare (timing). */
 const DUMMY_PASSWORD_HASH =
   "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
+
+type StoreIdentity = {
+  store_name: string;
+  store_logo_url: string | null;
+};
 
 @Injectable()
 export class AuthService {
@@ -63,6 +68,8 @@ export class AuthService {
 
     const access_token = await this.jwt.signAsync(payload);
     const permissions = await loadRolePermissions(user.role);
+    const storeId = user.storeId ?? STORE_1_ID;
+    const store = await this.storeIdentity(storeId);
 
     return {
       access_token,
@@ -70,7 +77,9 @@ export class AuthService {
       user_id: user.userId,
       role: user.role,
       permissions,
-      store_id: user.storeId ?? STORE_1_ID,
+      store_id: storeId,
+      store_name: store.store_name,
+      store_logo_url: store.store_logo_url,
     };
   }
 
@@ -88,12 +97,34 @@ export class AuthService {
         message: "Sesi tidak valid.",
       });
     }
+    const storeId = user.storeId ?? STORE_1_ID;
+    const store = await this.storeIdentity(storeId);
     return {
       user_id: user.userId,
       role: user.role,
       permissions: await loadRolePermissions(user.role),
-      store_id: user.storeId ?? STORE_1_ID,
+      store_id: storeId,
+      store_name: store.store_name,
+      store_logo_url: store.store_logo_url,
       active: user.active,
+    };
+  }
+
+  private async storeIdentity(storeId: string): Promise<StoreIdentity> {
+    const rows = await getDb()
+      .select({
+        name: stores.name,
+        logoPublicId: stores.logoPublicId,
+      })
+      .from(stores)
+      .where(eq(stores.storeId, storeId))
+      .limit(1);
+    const store = rows[0];
+    return {
+      store_name: store?.name?.trim() || "Store #1",
+      store_logo_url: store?.logoPublicId
+        ? `${storeLogoFilePath(storeId)}?v=${encodeURIComponent(store.logoPublicId)}`
+        : null,
     };
   }
 }

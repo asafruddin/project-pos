@@ -14,6 +14,7 @@ export function AuthSplitShell({
   topRight,
   children,
   className,
+  logoSrc,
 }: {
   brandTitle?: string;
   brandSubtitle?: string;
@@ -24,6 +25,7 @@ export function AuthSplitShell({
   topRight?: ReactNode;
   children: ReactNode;
   className?: string;
+  logoSrc?: string | null;
 }) {
   return (
     <main
@@ -61,6 +63,7 @@ export function AuthSplitShell({
             subtitle={brandSubtitle}
             size="lg"
             className="mb-8"
+            logoSrc={logoSrc}
           />
           <h1 className="text-center text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             {heading}

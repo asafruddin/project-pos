@@ -27,6 +27,7 @@ import {
 import { AppShell } from "@/components/templates/app-shell";
 import { PinPad } from "@/components/organisms/pin-pad";
 import { ReturnSaleForm } from "@/components/organisms/return-sale-form";
+import { SaleReceiptPreview } from "@/components/organisms/sale-receipt";
 import { authorizedFetch } from "@/lib/api-client";
 import { getAccessToken, getSession, isAccessTokenExpired } from "@/lib/auth-token";
 import { flushSalesAndVoids } from "@/lib/flush-sync";
@@ -44,6 +45,7 @@ export default function TransactionsPage() {
   const [pinMode, setPinMode] = useState<"enroll" | "unlock" | null>(null);
   const [pin, setPin] = useState("");
   const [returnSale, setReturnSale] = useState<SaleLookupResponse | null>(null);
+  const [previewSale, setPreviewSale] = useState<LocalSaleRecord | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -297,29 +299,38 @@ export default function TransactionsPage() {
                       )}
                     </TableCell>
                     <TableCell className="px-3 py-3 text-right whitespace-normal">
-                      {voided ? (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      ) : (
-                        <div className="flex flex-wrap justify-end gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            disabled={busy}
-                            className="min-h-11 rounded-xl"
-                            onClick={() => void startReturn(sale)}
-                          >
-                            {t.returnTitle}
-                          </Button>
-                          <Button
-                            type="button"
-                            disabled={busy}
-                            className="min-h-11 rounded-xl bg-secondary text-secondary-foreground hover:opacity-90"
-                            onClick={() => void startVoid(sale)}
-                          >
-                            {t.voidAction}
-                          </Button>
-                        </div>
-                      )}
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={busy}
+                          className="min-h-11 rounded-xl"
+                          onClick={() => setPreviewSale(sale)}
+                        >
+                          {t.receipt}
+                        </Button>
+                        {voided ? null : (
+                          <>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              disabled={busy}
+                              className="min-h-11 rounded-xl"
+                              onClick={() => void startReturn(sale)}
+                            >
+                              {t.returnTitle}
+                            </Button>
+                            <Button
+                              type="button"
+                              disabled={busy}
+                              className="min-h-11 rounded-xl bg-secondary text-secondary-foreground hover:opacity-90"
+                              onClick={() => void startVoid(sale)}
+                            >
+                              {t.voidAction}
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -390,6 +401,17 @@ export default function TransactionsPage() {
           </div>
         </div>
       ) : null}
+      <SaleReceiptPreview
+        sale={previewSale}
+        customerName={
+          previewSale?.customerId
+            ? (customerNames[previewSale.customerId] ?? null)
+            : null
+        }
+        lang={lang}
+        open={Boolean(previewSale)}
+        onClose={() => setPreviewSale(null)}
+      />
     </AppShell>
   );
 }

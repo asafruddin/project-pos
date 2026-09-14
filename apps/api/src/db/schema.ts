@@ -73,6 +73,8 @@ export const rolePermissions = pgTable(
 export const stores = pgTable("stores", {
   storeId: uuid("store_id").primaryKey(),
   name: text("name").notNull(),
+  logoPublicId: text("logo_public_id"),
+  logoSecureUrl: text("logo_secure_url"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

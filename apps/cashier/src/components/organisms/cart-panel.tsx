@@ -46,6 +46,7 @@ import {
 import type { LoyaltyProgram, Promotion, Voucher } from "@pos-apps/types";
 import { useCart } from "@/components/providers/cart-context";
 import { CustomerAttach, restoreCartCustomer } from "@/components/organisms/customer-attach";
+import { SaleReceiptPreview } from "@/components/organisms/sale-receipt";
 import { UnpackConfirmDialog } from "@/components/organisms/unpack-confirm-dialog";
 import { authorizedFetch } from "@/lib/api-client";
 import { formatIdr, parseGroupedInt } from "@/lib/money";
@@ -81,6 +82,10 @@ export function CartPanel({ lang, onCompleted }: Props) {
   const inFlight = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<string | null>(null);
+  const [previewSale, setPreviewSale] = useState<LocalSaleRecord | null>(null);
+  const [previewCustomerName, setPreviewCustomerName] = useState<string | null>(
+    null,
+  );
   const [creditMinor, setCreditMinor] = useState(0);
   const [redeemInput, setRedeemInput] = useState(0);
   const [online, setOnline] = useState(
@@ -395,9 +400,12 @@ export function CartPanel({ lang, onCompleted }: Props) {
           : null,
       );
       await onCompleted(completed);
+      const attachedName = customer?.name?.trim() || null;
       clear();
       setSale(null);
       setReceipt(t.receiptSuccess);
+      setPreviewCustomerName(attachedName);
+      setPreviewSale(completed);
     } catch (err) {
       if (err instanceof Error && err.message === "SHIFT_REQUIRED") {
         setShiftOpen(false);
@@ -521,6 +529,16 @@ export function CartPanel({ lang, onCompleted }: Props) {
       id="cart-panel"
       className="fixed inset-x-3 bottom-3 z-30 flex max-h-[min(70dvh,36rem)] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-card)] md:static md:inset-auto md:bottom-auto md:z-auto md:h-full md:max-h-none md:min-h-0"
     >
+      <SaleReceiptPreview
+        sale={previewSale}
+        customerName={previewCustomerName}
+        lang={lang}
+        open={Boolean(previewSale)}
+        onClose={() => {
+          setPreviewSale(null);
+          setPreviewCustomerName(null);
+        }}
+      />
       <UnpackConfirmDialog
         lang={lang}
         product={unpackTarget}

@@ -11,6 +11,6 @@ import { MediaService } from "./media.service";
     { provide: CLOUDINARY_ADAPTER, useExisting: CloudinaryAdapter },
     MediaService,
   ],
-  exports: [MediaService],
+  exports: [MediaService, CloudinaryAdapter, CLOUDINARY_ADAPTER],
 })
 export class MediaModule {}

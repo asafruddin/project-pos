@@ -176,6 +176,13 @@
       "when": 1786770000000,
       "tag": "0024_platform_users",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1786780000000,
+      "tag": "0025_store_logo",
+      "breakpoints": true
     }
   ]
 }

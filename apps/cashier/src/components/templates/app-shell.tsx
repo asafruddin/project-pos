@@ -3,7 +3,6 @@
 import { Button } from "@pos-apps/ui/atoms";
 import {
   CalendarCheckIcon,
-  CoffeeIcon,
   HouseIcon,
   ReceiptIcon,
   ShoppingCartIcon,
@@ -15,13 +14,15 @@ import { useEffect, useState } from "react";
 import { SideNav, type NavSection } from "@/components/organisms/pos-nav";
 import { OpenShiftDialog } from "@/components/organisms/open-shift-dialog";
 import { PrefControls } from "@/components/molecules/settings-menu";
-import { getSession } from "@/lib/auth-token";
+import { getSession, getStoreIdentity } from "@/lib/auth-token";
+import { useStoreLogoSrc } from "@/lib/use-store-logo";
 import { requestLogout } from "@/lib/logout";
 import { copy, getLang, type LangPref } from "@/lib/preferences";
 import { SHIFT_CHANGED_EVENT } from "@/lib/shift-events";
 import { cn } from "@/lib/utils";
 import { ROLE_LABELS, type Role } from "@pos-apps/types";
 import { getOpenShift } from "@pos-apps/local-db";
+import { StoreLogo } from "@pos-apps/ui/molecules";
 
 type AppShellProps = {
   title: string;
@@ -51,10 +52,16 @@ export function AppShell({
   const t = copy(lang);
   const router = useRouter();
   const pathname = usePathname();
+  const [storeName, setStoreName] = useState("POS Apps");
+  const [storeLogoUrl, setStoreLogoUrl] = useState<string | null>(null);
+  const storeLogoSrc = useStoreLogoSrc(storeLogoUrl);
   const [roleLabel, setRoleLabel] = useState(t.brand);
   const [needsOpenShift, setNeedsOpenShift] = useState(false);
 
   useEffect(() => {
+    const identity = getStoreIdentity();
+    setStoreName(identity.storeName);
+    setStoreLogoUrl(identity.storeLogoUrl);
     const session = getSession();
     if (session && session.role in ROLE_LABELS) {
       setRoleLabel(ROLE_LABELS[session.role as Role]);
@@ -146,11 +153,9 @@ export function AppShell({
 
   const brand = (
     <div className="flex items-center gap-3">
-      <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-        <CoffeeIcon size={22} weight="fill" />
-      </div>
+      <StoreLogo src={storeLogoSrc} alt={storeName} />
       <div className="min-w-0">
-        <p className="truncate text-sm font-semibold text-foreground">POS Apps</p>
+        <p className="truncate text-sm font-semibold text-foreground">{storeName}</p>
         <p className="truncate text-xs text-muted-foreground">{t.brand}</p>
       </div>
     </div>
@@ -182,11 +187,7 @@ export function AppShell({
         compact
         className="flex h-full lg:hidden"
         sections={sections}
-        brand={
-          <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <CoffeeIcon size={22} weight="fill" />
-          </div>
-        }
+        brand={<StoreLogo src={storeLogoSrc} alt={storeName} />}
         footer={
           <Button
             type="button"
@@ -240,11 +241,15 @@ export function AppShell({
               <PrefControls onLangChange={onLangChange} tooltipSide="bottom" />
             </div>
             <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/50 py-1 pr-3 pl-1">
-              <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-xs font-semibold text-primary-foreground">
-                {initials || "POS"}
-              </div>
+              {storeLogoSrc ? (
+                <StoreLogo src={storeLogoSrc} alt={storeName} size="sm" />
+              ) : (
+                <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-xs font-semibold text-primary-foreground">
+                  {initials || "POS"}
+                </div>
+              )}
               <div className="hidden min-w-0 sm:block">
-                <p className="truncate text-sm leading-tight font-medium">POS Apps</p>
+                <p className="truncate text-sm leading-tight font-medium">{storeName}</p>
                 <p className="truncate text-xs text-muted-foreground">{roleLabel}</p>
               </div>
             </div>

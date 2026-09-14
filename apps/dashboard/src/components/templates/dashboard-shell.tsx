@@ -6,7 +6,6 @@ import {
   ChartLineUpIcon,
   ClipboardTextIcon,
   ClockCountdownIcon,
-  CoffeeIcon,
   HouseIcon,
   PackageIcon,
   PercentIcon,
@@ -24,6 +23,7 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { Button } from "@pos-apps/ui/atoms";
+import { StoreLogo } from "@pos-apps/ui/molecules";
 import { hasPermission, ROLE_LABELS, type Role } from "@pos-apps/types";
 import { DashboardHeader } from "@/components/organisms/dashboard-header";
 import { SideNav, type NavSection } from "@/components/organisms/pos-nav";
@@ -266,6 +266,13 @@ const PAGE_COPY_MATCHERS: Array<{
     },
   },
   {
+    test: (p) => /^\/stores\/[^/]+\/edit$/.test(p),
+    copy: {
+      title: "Ubah toko",
+      subtitle: "Nama dan gambar tampil di dashboard dan kasir setelah masuk.",
+    },
+  },
+  {
     test: (p) => /^\/stores\/[^/]+\/registers\/new$/.test(p),
     copy: {
       title: "Tambah register",
@@ -311,10 +318,14 @@ function roleLabel(role: string) {
 export function DashboardShell({
   role,
   permissions,
+  storeName,
+  storeLogoSrc,
   children,
 }: {
   role: string;
   permissions?: string[];
+  storeName?: string | null;
+  storeLogoSrc?: string | null;
   children: ReactNode;
 }) {
   const router = useRouter();
@@ -489,13 +500,12 @@ export function DashboardShell({
     ...(item.children ?? []),
   ]);
 
+  const brandName = storeName?.trim() || "POS Apps";
   const brand = (
-    <div className="flex items-center gap-3">
-      <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-        <CoffeeIcon size={22} weight="fill" />
-      </div>
+    <div className="flex min-w-0 items-center gap-3">
+      <StoreLogo src={storeLogoSrc} alt={brandName} />
       <div className="min-w-0">
-        <p className="truncate text-sm font-semibold text-foreground">POS Apps</p>
+        <p className="truncate text-sm font-semibold text-foreground">{brandName}</p>
         <p className="truncate text-xs text-muted-foreground">Dashboard</p>
       </div>
     </div>
@@ -524,11 +534,7 @@ export function DashboardShell({
         compact
         className="flex h-full md:hidden"
         sections={sections}
-        brand={
-          <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <CoffeeIcon size={22} weight="fill" />
-          </div>
-        }
+        brand={<StoreLogo src={storeLogoSrc} alt={brandName} />}
         footer={
           <Button
             type="button"
@@ -549,6 +555,8 @@ export function DashboardShell({
           title={copy.title}
           subtitle={copy.subtitle}
           roleLabel={roleLabel(role)}
+          storeName={brandName}
+          storeLogoSrc={storeLogoSrc}
           searchItems={searchItems}
         />
         <section className="flex min-h-0 flex-1 flex-col overflow-hidden p-4 sm:p-6">

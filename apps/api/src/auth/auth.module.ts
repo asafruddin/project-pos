@@ -15,7 +15,7 @@ import { RolesGuard } from "./roles.guard";
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService): JwtModuleOptions => {
-        const expiresIn = config.get<string>("JWT_EXPIRES_IN") ?? "8h";
+        const expiresIn = config.get<string>("JWT_EXPIRES_IN") ?? "12h";
         return {
           secret: config.getOrThrow<string>("JWT_SECRET"),
           signOptions: {

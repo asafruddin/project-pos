@@ -8,10 +8,12 @@ import {
   type ReactNode,
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import type { AuthMeResponse } from "@pos-apps/types";
+import type { AuthMeResponse, StoreRecord } from "@pos-apps/types";
+import { storeLogoFilePath } from "@pos-apps/types";
 import { DashboardShell } from "@/components/templates/dashboard-shell";
 import { DashboardSkeleton } from "@/components/molecules/dashboard-skeleton";
 import { authorizedFetch } from "@/lib/api-client";
+import { useAuthorizedImage } from "@/lib/use-authorized-image";
 import {
   getAccessToken,
   isAccessTokenExpired,
@@ -38,10 +40,14 @@ export function DashboardFrame({ children }: { children: ReactNode }) {
   const isLogin = pathname === "/login";
   const [ready, setReady] = useState(isLogin);
   const [me, setMe] = useState<AuthMeResponse | null>(null);
+  const [affiliatedStore, setAffiliatedStore] = useState<StoreRecord | null>(
+    null,
+  );
 
   useEffect(() => {
     if (isLogin) {
       setMe(null);
+      setAffiliatedStore(null);
       setReady(true);
       return;
     }
@@ -81,7 +87,35 @@ export function DashboardFrame({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [isLogin, router]);
+  }, [isLogin, router, pathname]);
+
+  useEffect(() => {
+    if (isLogin || !me?.store_id) {
+      setAffiliatedStore(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await authorizedFetch(`/stores/${me.store_id}`);
+        if (!res.ok || cancelled) return;
+        setAffiliatedStore((await res.json()) as StoreRecord);
+      } catch {
+        if (!cancelled) setAffiliatedStore(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isLogin, me?.store_id, pathname]);
+
+  const logoFilePath = affiliatedStore?.logo_secure_url
+    ? null
+    : affiliatedStore?.logo_public_id
+      ? `${storeLogoFilePath(affiliatedStore.store_id)}?v=${encodeURIComponent(affiliatedStore.logo_public_id)}`
+      : me?.store_logo_url;
+  const proxiedLogo = useAuthorizedImage(logoFilePath);
+  const storeLogoSrc = affiliatedStore?.logo_secure_url || proxiedLogo;
 
   if (isLogin) {
     return children;
@@ -91,9 +125,17 @@ export function DashboardFrame({ children }: { children: ReactNode }) {
     return <DashboardSkeleton />;
   }
 
+  const storeName =
+    affiliatedStore?.name?.trim() || me.store_name?.trim() || "POS Apps";
+
   return (
     <DashboardSessionContext.Provider value={me}>
-      <DashboardShell role={me.role} permissions={me.permissions}>
+      <DashboardShell
+        role={me.role}
+        permissions={me.permissions}
+        storeName={storeName}
+        storeLogoSrc={storeLogoSrc}
+      >
         {children}
       </DashboardShell>
     </DashboardSessionContext.Provider>

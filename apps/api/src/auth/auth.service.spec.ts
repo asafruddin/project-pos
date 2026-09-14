@@ -33,26 +33,43 @@ describe("AuthService", () => {
 
   it("returns Bearer token and role on valid credentials", async () => {
     const passwordHash = await hash("Admin123!", 10);
-    getDbMock.mockReturnValue({
-      select: () => ({
-        from: () => ({
-          where: () =>
-            Object.assign(Promise.resolve([]), {
-              limit: async () => [
-                {
-                  userId: "11111111-1111-4111-8111-111111111111",
-                  username: "admin",
-                  passwordHash,
-                  role: "catalog_admin",
-                  active: true,
-                  storeId: "00000000-0000-4000-8000-000000000001",
-                },
-              ],
-            }),
-          limit: async () => [],
+    const userRow = {
+      userId: "11111111-1111-4111-8111-111111111111",
+      username: "admin",
+      passwordHash,
+      role: "catalog_admin",
+      active: true,
+      storeId: "00000000-0000-4000-8000-000000000001",
+    };
+    getDbMock
+      .mockReturnValueOnce({
+        select: () => ({
+          from: () => ({
+            where: () =>
+              Object.assign(Promise.resolve([userRow]), {
+                limit: async () => [userRow],
+              }),
+            limit: async () => [],
+          }),
         }),
-      }),
-    } as never);
+      } as never)
+      .mockReturnValueOnce({
+        select: () => ({
+          from: () => ({
+            where: () => Object.assign(Promise.resolve([]), { limit: async () => [] }),
+            limit: async () => [],
+          }),
+        }),
+      } as never)
+      .mockReturnValueOnce({
+        select: () => ({
+          from: () => ({
+            where: () => ({
+              limit: async () => [{ name: "Store #1", logoPublicId: null }],
+            }),
+          }),
+        }),
+      } as never);
 
     const result = await service.login("admin", "Admin123!");
     expect(result.token_type).toBe("Bearer");
@@ -60,6 +77,8 @@ describe("AuthService", () => {
     expect(result.access_token).toBe("test.jwt.token");
     expect(result.user_id).toBe("11111111-1111-4111-8111-111111111111");
     expect(result.store_id).toBe("00000000-0000-4000-8000-000000000001");
+    expect(result.store_name).toBe("Store #1");
+    expect(result.store_logo_url).toBeNull();
     expect(result.permissions).toEqual(expect.arrayContaining(["users:create"]));
     expect(jwt.signAsync).toHaveBeenCalledWith(
       expect.objectContaining({

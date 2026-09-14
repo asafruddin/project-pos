@@ -70,3 +70,76 @@ body {
   color: var(--foreground);
   font-family: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
 }
+
+.sale-receipt-print {
+  display: none;
+}
+
+.sale-receipt-page {
+  width: 58mm;
+  max-width: 58mm;
+  margin-inline: auto;
+  border: 1px dashed var(--border);
+  border-radius: 0.75rem;
+  padding: 3mm 4mm;
+  box-sizing: border-box;
+  background: var(--card);
+}
+
+/* Chrome ignores `size: 58mm auto` (invalid). Two lengths required. */
+@page {
+  size: 58mm 120mm;
+  margin: 0;
+}
+
+@media print {
+  html,
+  body {
+    width: 58mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  body > *:not(.sale-receipt-print) {
+    display: none !important;
+  }
+
+  .sale-receipt-print {
+    display: block !important;
+    position: static;
+    inset: auto;
+    width: 58mm;
+    max-width: 58mm;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    color: #111;
+  }
+
+  .sale-receipt-page {
+    border: 0;
+    border-radius: 0;
+    padding: 3mm 4mm;
+    box-sizing: border-box;
+    background: transparent;
+    width: 58mm;
+    max-width: 58mm;
+    margin: 0;
+    break-after: page;
+  }
+
+  .sale-receipt-page:last-child {
+    break-after: auto;
+  }
+
+  .sale-receipt-print .text-muted-foreground {
+    color: #444 !important;
+  }
+
+  .sale-receipt-print img,
+  .sale-receipt-print .sale-receipt-logo {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}

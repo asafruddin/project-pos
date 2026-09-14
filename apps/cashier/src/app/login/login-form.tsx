@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import type { ApiErrorBody, LoginResponse } from "@pos-apps/types";
 import { hasPermission } from "@pos-apps/types";
 import { saveSession } from "@/lib/auth-token";
+import { prefetchStoreLogo } from "@/lib/use-store-logo";
 import { copy, type LangPref } from "@/lib/preferences";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
@@ -55,7 +56,11 @@ export function LoginForm({ lang }: { lang: LangPref }) {
         role: ok.role,
         userId: ok.user_id,
         permissions: ok.permissions ?? [],
+        storeId: ok.store_id,
+        storeName: ok.store_name,
+        storeLogoUrl: ok.store_logo_url,
       });
+      void prefetchStoreLogo(ok.store_logo_url);
       router.replace("/pin");
       router.refresh();
     } catch {

@@ -7,8 +7,11 @@ import {
   handleExpiredAccessToken,
   isAccessTokenExpired,
   logoutToLogin,
+  patchStoreIdentity,
 } from "@/lib/auth-token";
 import { API_URL } from "@/lib/api-client";
+import { prefetchStoreLogo } from "@/lib/use-store-logo";
+import type { AuthMeResponse } from "@pos-apps/types";
 
 const CHECK_MS = 30_000;
 
@@ -32,6 +35,17 @@ export function SessionGuard({ children }: { children: React.ReactNode }) {
         if (cancelled) return;
         if (res.status === 401) {
           logoutToLogin();
+          return;
+        }
+        if (res.ok) {
+          const me = (await res.json()) as AuthMeResponse;
+          if (cancelled) return;
+          patchStoreIdentity({
+            storeId: me.store_id,
+            storeName: me.store_name,
+            storeLogoUrl: me.store_logo_url,
+          });
+          void prefetchStoreLogo(me.store_logo_url);
         }
       } catch {
         // Network errors: do not logout (cashier may be offline).

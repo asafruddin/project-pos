@@ -78,12 +78,12 @@ export default function SalesPage() {
       ) : null}
 
       {!data || data.sales.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border bg-card px-4 py-8 text-sm text-muted-foreground shadow-[var(--shadow-card)]">
+        <div className="rounded-xl border border-dashed border-border bg-card px-4 py-8 text-sm text-muted-foreground shadow-card mt-3">
           Belum ada penjualan tersinkron. Daftar ini terisi setelah kasir
           mengunggah penjualan selesai — bukan mode offline kasir.
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-card)]">
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-card mt-3">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[20rem] border-collapse text-left text-sm">
               <thead>

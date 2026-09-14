@@ -8,13 +8,63 @@ const SHIFT_KEY = "pos_cashier_shift_ok";
 const EXPIRY_SKEW_MS = 5_000;
 
 const PERMS_KEY = "pos_cashier_permissions";
+const STORE_ID_KEY = "pos_cashier_store_id";
+const STORE_NAME_KEY = "pos_cashier_store_name";
+const STORE_LOGO_URL_KEY = "pos_cashier_store_logo_url";
+const STORE_LOGO_DATA_KEY = "pos_cashier_store_logo_data";
 
 export type CashierSession = {
   accessToken: string;
   role: string;
   userId: string;
   permissions?: string[];
+  storeId?: string | null;
+  storeName?: string | null;
+  storeLogoUrl?: string | null;
 };
+
+export type StoreIdentity = {
+  storeId: string | null;
+  storeName: string;
+  storeLogoUrl: string | null;
+  storeLogoDataUrl: string | null;
+};
+
+function readStoreIdentity(): StoreIdentity {
+  if (typeof window === "undefined") {
+    return {
+      storeId: null,
+      storeName: "POS Apps",
+      storeLogoUrl: null,
+      storeLogoDataUrl: null,
+    };
+  }
+  return {
+    storeId: localStorage.getItem(STORE_ID_KEY),
+    storeName: localStorage.getItem(STORE_NAME_KEY) || "POS Apps",
+    storeLogoUrl: localStorage.getItem(STORE_LOGO_URL_KEY),
+    storeLogoDataUrl: localStorage.getItem(STORE_LOGO_DATA_KEY),
+  };
+}
+
+export function getStoreIdentity(): StoreIdentity {
+  return readStoreIdentity();
+}
+
+function writeStoreIdentity(input: {
+  storeId?: string | null;
+  storeName?: string | null;
+  storeLogoUrl?: string | null;
+}): void {
+  if (input.storeId) localStorage.setItem(STORE_ID_KEY, input.storeId);
+  if (input.storeName) localStorage.setItem(STORE_NAME_KEY, input.storeName);
+  if (input.storeLogoUrl) {
+    localStorage.setItem(STORE_LOGO_URL_KEY, input.storeLogoUrl);
+  } else if (input.storeLogoUrl === null) {
+    localStorage.removeItem(STORE_LOGO_URL_KEY);
+    localStorage.removeItem(STORE_LOGO_DATA_KEY);
+  }
+}
 
 export function saveSession(session: CashierSession): void {
   localStorage.setItem(TOKEN_KEY, session.accessToken);
@@ -22,6 +72,33 @@ export function saveSession(session: CashierSession): void {
   localStorage.setItem(USER_ID_KEY, session.userId);
   localStorage.setItem(SHIFT_KEY, "1");
   localStorage.setItem(PERMS_KEY, JSON.stringify(session.permissions ?? []));
+  writeStoreIdentity({
+    storeId: session.storeId,
+    storeName: session.storeName,
+    storeLogoUrl: session.storeLogoUrl ?? null,
+  });
+}
+
+export function patchStoreIdentity(input: {
+  storeId?: string | null;
+  storeName?: string | null;
+  storeLogoUrl?: string | null;
+}): void {
+  if (typeof window === "undefined") return;
+  writeStoreIdentity(input);
+}
+
+export function cacheStoreLogoDataUrl(dataUrl: string | null): void {
+  if (typeof window === "undefined") return;
+  if (!dataUrl) {
+    localStorage.removeItem(STORE_LOGO_DATA_KEY);
+    return;
+  }
+  try {
+    localStorage.setItem(STORE_LOGO_DATA_KEY, dataUrl);
+  } catch {
+    /* quota — receipt can still use a live blob URL */
+  }
 }
 
 export function clearSession(): void {
@@ -30,6 +107,10 @@ export function clearSession(): void {
   localStorage.removeItem(USER_ID_KEY);
   localStorage.removeItem(SHIFT_KEY);
   localStorage.removeItem(PERMS_KEY);
+  localStorage.removeItem(STORE_ID_KEY);
+  localStorage.removeItem(STORE_NAME_KEY);
+  localStorage.removeItem(STORE_LOGO_URL_KEY);
+  localStorage.removeItem(STORE_LOGO_DATA_KEY);
   // PIN unlock is tab-scoped; clear so Menu stays gated after Sign out / Day Close.
   if (typeof sessionStorage !== "undefined") {
     sessionStorage.removeItem("pos_cashier_pin_unlocked");
@@ -70,7 +151,16 @@ export function getSession(): CashierSession | null {
       permissions = [];
     }
   }
-  return { accessToken, role, userId, permissions };
+  const store = readStoreIdentity();
+  return {
+    accessToken,
+    role,
+    userId,
+    permissions,
+    storeId: store.storeId,
+    storeName: store.storeName,
+    storeLogoUrl: store.storeLogoUrl,
+  };
 }
 
 function readJwtExp(token: string): number | null {

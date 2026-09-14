@@ -12,9 +12,10 @@ import {
 } from "@pos-apps/local-db";
 import { PinPad } from "@/components/organisms/pin-pad";
 import { PrefControls } from "@/components/molecules/settings-menu";
-import { clearSession, getAccessToken, getSession, isShiftAuthorized } from "@/lib/auth-token";
+import { clearSession, getAccessToken, getSession, getStoreIdentity, isShiftAuthorized } from "@/lib/auth-token";
 import { clearPinUnlock, isPinUnlocked, setPinUnlocked } from "@/lib/pin-session";
 import { applyTheme, copy, getLang } from "@/lib/preferences";
+import { useStoreLogoSrc } from "@/lib/use-store-logo";
 
 async function routeAfterPinUnlock(
   router: { replace: (href: string) => void },
@@ -34,11 +35,16 @@ export default function PinPage() {
     "loading",
   );
   const [offline, setOffline] = useState(false);
+  const [storeName, setStoreName] = useState("POS Apps");
+  const [storeLogoUrl, setStoreLogoUrl] = useState<string | null>(null);
   const submitting = useRef(false);
 
   useEffect(() => {
     applyTheme();
     document.documentElement.lang = getLang();
+    const identity = getStoreIdentity();
+    setStoreName(identity.storeName);
+    setStoreLogoUrl(identity.storeLogoUrl);
 
     async function gate() {
       if (isPinUnlocked()) {
@@ -131,6 +137,10 @@ export default function PinPage() {
       tooltipSide="bottom"
     />
   );
+  const storeLogoSrc = useStoreLogoSrc(
+    mode === "blocked" ? null : storeLogoUrl,
+  );
+  const brandTitle = mode === "blocked" ? "POS Apps" : storeName;
 
   if (mode === "loading") {
     return <AuthLoadingShell message={t.loading} />;
@@ -163,11 +173,12 @@ export default function PinPage() {
 
   return (
     <AuthSplitShell
-      brandTitle="POS Apps"
+      brandTitle={brandTitle}
       brandSubtitle={t.brand}
       heading={t.pinTitle}
       description={subtitle}
-      quoteBy={t.brand}
+      quoteBy={brandTitle}
+      logoSrc={storeLogoSrc}
       topRight={settings}
     >
       <div className="flex flex-col gap-6">

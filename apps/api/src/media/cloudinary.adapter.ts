@@ -1,3 +1,4 @@
+import { Injectable } from "@nestjs/common";
 import { v2 as cloudinary } from "cloudinary";
 
 export type CloudinaryUploadResult = {
@@ -19,6 +20,7 @@ export type CloudinaryPort = {
 export const CLOUDINARY_ADAPTER = "CLOUDINARY_ADAPTER";
 
 /** Sole Cloudinary SDK import in the API (AD-12). */
+@Injectable()
 export class CloudinaryAdapter implements CloudinaryPort {
   constructor() {
     const cloud_name = process.env.CLOUDINARY_CLOUD_NAME;

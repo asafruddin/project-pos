@@ -120,7 +120,7 @@ Env vars (see `.env.example`):
 
 - `DATABASE_URL` — Postgres connection string
 - `JWT_SECRET` — signing secret (required)
-- `JWT_EXPIRES_IN` — default `8h`
+- `JWT_EXPIRES_IN` — default `12h`
 - `CORS_ORIGIN` — default `http://localhost:3002,http://localhost:3000,http://localhost:3003`
 - `NEXT_PUBLIC_API_URL` — Dashboard → API base (default `http://localhost:3001`)
 - `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` — API-only Media Provider (Story 4.3)
