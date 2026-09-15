@@ -26,6 +26,7 @@ import {
   CLOUDINARY_ADAPTER,
   type CloudinaryPort,
 } from "../media/cloudinary.adapter";
+import { fetchRemoteBytes } from "../media/fetch-remote-bytes";
 
 const ALLOWED_MIME = new Set([
   "image/jpeg",
@@ -224,22 +225,14 @@ export class StoresService {
       });
     }
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-      if (!res.ok) {
-        throw new Error(`cdn ${res.status}`);
-      }
-      const bytes = Buffer.from(await res.arrayBuffer());
-      if (bytes.length > MAX_BYTES) {
-        throw new BadRequestException({
-          code: "MEDIA_TOO_LARGE",
-          message: "Ukuran gambar maksimal 8 MB.",
-        });
-      }
-      const rawType = res.headers.get("content-type") ?? "image/jpeg";
-      const mimeType = rawType.split(";")[0]?.trim() || "image/jpeg";
-      return { mimeType, bytes };
+      return await fetchRemoteBytes(url, MAX_BYTES);
     } catch (err) {
-      if (err instanceof BadRequestException) throw err;
+      if (
+        err instanceof BadRequestException ||
+        err instanceof BadGatewayException
+      ) {
+        throw err;
+      }
       throw new BadGatewayException({
         code: "MEDIA_UNAVAILABLE",
         message: "Gambar tidak dapat diambil.",
