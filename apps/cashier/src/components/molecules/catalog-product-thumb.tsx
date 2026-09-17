@@ -35,7 +35,7 @@ export function CatalogProductThumb({
     };
   }, [productId]);
 
-  const frame = cn("aspect-[4/3] w-full overflow-hidden bg-muted", className);
+  const frame = cn("aspect-square w-full overflow-hidden bg-muted", className);
 
   if (!src) {
     return (
@@ -47,9 +47,8 @@ export function CatalogProductThumb({
         aria-hidden
       >
         <ImageSquareIcon
-          size={40}
           weight="duotone"
-          className="text-muted-foreground/55"
+          className="size-[38%] max-h-10 max-w-10 text-muted-foreground/55"
         />
       </span>
     );

@@ -1,16 +1,21 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import {
   acceptCompleteSale,
+  cashTenderTotal,
   evaluateSplitTender,
   postVoid,
+  qrisTenderTotal,
   requireSaleShift,
   stackSaleDiscounts,
   storeCreditTenderTotal,
   tendersFromPayment,
 } from "@pos-apps/domain";
 import type {
+  PaymentMethod,
+  SalePayment,
   SalesListItem,
   SalesListResponse,
+  SalesTenderTotals,
   SyncSaleRequest,
   SyncSaleResponse,
   SyncVoidRequest,
@@ -37,6 +42,7 @@ export class SalesService {
         saleId: sales.saleId,
         completedAt: sales.completedAt,
         amountMinor: sales.amountMinor,
+        payment: sales.payment,
         voidedAt: saleVoids.voidedAt,
       })
       .from(sales)
@@ -49,13 +55,14 @@ export class SalesService {
       completed_at: r.completedAt.toISOString(),
       amount_minor: r.amountMinor,
       voided_at: r.voidedAt ? r.voidedAt.toISOString() : null,
+      payment: toListPayment(r.payment, r.amountMinor),
     }));
 
-    const daily_total_minor = items
-      .filter((s) => !s.voided_at)
-      .reduce((sum, s) => sum + s.amount_minor, 0);
+    const active = items.filter((s) => !s.voided_at);
+    const daily_total_minor = active.reduce((sum, s) => sum + s.amount_minor, 0);
+    const tender_totals = tenderTotalsFromSales(active);
 
-    return { sales: items, daily_total_minor };
+    return { sales: items, daily_total_minor, tender_totals };
   }
 
   async acceptSync(
@@ -448,6 +455,7 @@ function validateSyncRequest(request: SyncSaleRequest): void {
     (request.payment.method != null &&
       request.payment.method !== "cash" &&
       request.payment.method !== "store_credit" &&
+      request.payment.method !== "qris" &&
       request.payment.method !== "split") ||
     !Number.isInteger(request.payment.amount_minor) ||
     request.payment.amount_minor < 0 ||
@@ -524,6 +532,75 @@ function startOfUtcDay(d: Date): Date {
   return new Date(
     Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
   );
+}
+
+function toListPayment(
+  payment:
+    | {
+        method: PaymentMethod;
+        amount_minor: number;
+        tenders?: Array<{
+          method: "cash" | "store_credit" | "qris";
+          amount_minor: number;
+        }>;
+      }
+    | null
+    | undefined,
+  saleAmountMinor: number,
+): SalePayment {
+  const amount_minor =
+    payment && Number.isInteger(payment.amount_minor) && payment.amount_minor > 0
+      ? payment.amount_minor
+      : saleAmountMinor;
+  const snapshot = payment
+    ? { ...payment, amount_minor }
+    : { method: "cash" as const, amount_minor };
+  const tenders = tendersFromPayment(snapshot);
+  return {
+    method: listPaymentMethod(snapshot.method, tenders),
+    amount_minor,
+    tenders,
+  };
+}
+
+function listPaymentMethod(
+  stored: string | null | undefined,
+  tenders: Array<{ method: string; amount_minor: number }>,
+): PaymentMethod {
+  if (stored === "qris" || stored === "store_credit" || stored === "split") {
+    return stored;
+  }
+  const unique = [
+    ...new Set(
+      tenders.filter((row) => row.amount_minor > 0).map((row) => row.method),
+    ),
+  ];
+  if (unique.length > 1) return "split";
+  if (unique[0] === "qris" || unique[0] === "store_credit") return unique[0];
+  return "cash";
+}
+
+function tenderTotalsFromSales(items: SalesListItem[]): SalesTenderTotals {
+  const totals: SalesTenderTotals = {
+    cash_minor: 0,
+    qris_minor: 0,
+    store_credit_minor: 0,
+    cash_count: 0,
+    qris_count: 0,
+    store_credit_count: 0,
+  };
+  for (const item of items) {
+    const cash = cashTenderTotal(item.payment);
+    const qris = qrisTenderTotal(item.payment);
+    const credit = storeCreditTenderTotal(item.payment);
+    totals.cash_minor += cash;
+    totals.qris_minor += qris;
+    totals.store_credit_minor += credit;
+    if (cash > 0) totals.cash_count += 1;
+    if (qris > 0) totals.qris_count += 1;
+    if (credit > 0) totals.store_credit_count += 1;
+  }
+  return totals;
 }
 
 function validateVoidRequest(request: SyncVoidRequest): void {

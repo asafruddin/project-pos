@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   cashTenderTotal,
   evaluateSplitTender,
+  qrisTenderTotal,
   resolveSellingPrice,
   storeCreditTenderTotal,
   tendersFromPayment,
@@ -63,6 +64,7 @@ describe("evaluateSplitTender", () => {
       tenders: [{ method: "cash", amount_minor: 36000 }],
       cash_minor: 36000,
       store_credit_minor: 0,
+      qris_minor: 0,
     });
   });
 
@@ -128,6 +130,53 @@ describe("evaluateSplitTender", () => {
     });
     assert.equal(result.ok, true);
   });
+
+  it("accepts all-QRIS with no customer", () => {
+    const result = evaluateSplitTender({
+      payable_minor: 36000,
+      tenders: [{ method: "qris", amount_minor: 36000 }],
+    });
+    assert.deepEqual(result, {
+      ok: true,
+      method: "qris",
+      amount_minor: 36000,
+      tenders: [{ method: "qris", amount_minor: 36000 }],
+      cash_minor: 0,
+      store_credit_minor: 0,
+      qris_minor: 36000,
+    });
+  });
+
+  it("accepts QRIS + store credit as split", () => {
+    const result = evaluateSplitTender({
+      payable_minor: 50000,
+      customer_id: "c1",
+      store_credit_balance_minor: 20000,
+      tenders: [
+        { method: "qris", amount_minor: 30000 },
+        { method: "store_credit", amount_minor: 20000 },
+      ],
+    });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      assert.equal(result.method, "split");
+      assert.equal(result.qris_minor, 30000);
+      assert.equal(result.store_credit_minor, 20000);
+      assert.equal(result.cash_minor, 0);
+    }
+  });
+
+  it("rejects cash + QRIS on one sale", () => {
+    const result = evaluateSplitTender({
+      payable_minor: 1000,
+      tenders: [
+        { method: "cash", amount_minor: 400 },
+        { method: "qris", amount_minor: 600 },
+      ],
+    });
+    assert.equal(result.ok, false);
+    if (!result.ok) assert.equal(result.code, "TENDER_CASH_QRIS_MIX");
+  });
 });
 
 describe("tendersFromPayment", () => {
@@ -152,5 +201,20 @@ describe("tendersFromPayment", () => {
     );
     assert.equal(storeCreditTenderTotal(undefined), 0);
     assert.deepEqual(tendersFromPayment({ method: "card", amount_minor: 1000 }), []);
+    assert.deepEqual(tendersFromPayment({ method: "qris", amount_minor: 12000 }), [
+      { method: "qris", amount_minor: 12000 },
+    ]);
+    assert.equal(
+      qrisTenderTotal({
+        method: "split",
+        amount_minor: 50000,
+        tenders: [
+          { method: "qris", amount_minor: 30000 },
+          { method: "store_credit", amount_minor: 20000 },
+        ],
+      }),
+      30000,
+    );
+    assert.equal(qrisTenderTotal({ method: "cash", amount_minor: 36000 }), 0);
   });
 });

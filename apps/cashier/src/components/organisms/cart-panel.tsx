@@ -10,6 +10,8 @@ import {
 } from "@pos-apps/ui/molecules";
 import {
   ArchiveTrayIcon,
+  CaretDownIcon,
+  CaretUpIcon,
   MinusIcon,
   PauseIcon,
   PlayIcon,
@@ -52,6 +54,8 @@ import { authorizedFetch } from "@/lib/api-client";
 import { formatIdr, parseGroupedInt } from "@/lib/money";
 import { copy, type LangPref } from "@/lib/preferences";
 import { SHIFT_CHANGED_EVENT } from "@/lib/shift-events";
+import { CART_TOGGLE_EVENT } from "@/lib/cart-events";
+import { cn } from "@/lib/utils";
 import { canOfferUnpack, performUnpack } from "@/lib/unpack";
 
 type Props = {
@@ -106,8 +110,23 @@ export function CartPanel({ lang, onCompleted }: Props) {
   );
   const [unpackBusy, setUnpackBusy] = useState(false);
   const [unpackError, setUnpackError] = useState<string | null>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [payMethod, setPayMethod] = useState<"cash" | "qris">("cash");
   const lineTotal = lines.reduce((sum, line) => sum + line.priceMinor * line.qty, 0);
+  const itemCount = lines.reduce((sum, line) => sum + line.qty, 0);
   const parkedBadge = parked.length > 99 ? "99+" : String(parked.length);
+
+  useEffect(() => {
+    if (sale) setMobileOpen(true);
+  }, [sale]);
+
+  useEffect(() => {
+    function onToggle() {
+      setMobileOpen((open) => !open);
+    }
+    window.addEventListener(CART_TOGGLE_EVENT, onToggle);
+    return () => window.removeEventListener(CART_TOGGLE_EVENT, onToggle);
+  }, []);
 
   useEffect(() => {
     void listCatalogProducts().then((rows) => {
@@ -242,6 +261,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
       return;
     }
     setShiftOpen(true);
+    setPayMethod("cash");
     try {
       setProgram(await getLoyaltyProgram());
       setPromos(await getCachedPromotions());
@@ -364,12 +384,13 @@ export function CartPanel({ lang, onCompleted }: Props) {
           )
         : 0;
       const cash = payableSale - credit;
+      const remainderMethod = payMethod;
       const completed = await completeSale(
         sale.saleId,
         {
           tenders: [
             ...(cash > 0 || credit === 0
-              ? [{ method: "cash" as const, amountMinor: cash }]
+              ? [{ method: remainderMethod, amountMinor: cash }]
               : []),
             ...(credit > 0
               ? [{ method: "store_credit" as const, amountMinor: credit }]
@@ -403,6 +424,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
       const attachedName = customer?.name?.trim() || null;
       clear();
       setSale(null);
+      setPayMethod("cash");
       setReceipt(t.receiptSuccess);
       setPreviewCustomerName(attachedName);
       setPreviewSale(completed);
@@ -422,7 +444,8 @@ export function CartPanel({ lang, onCompleted }: Props) {
         setError(t.tenderFailBalance);
       } else if (
         err instanceof Error &&
-        err.message === "TENDER_SUM_MISMATCH"
+        (err.message === "TENDER_SUM_MISMATCH" ||
+          err.message === "TENDER_CASH_QRIS_MIX")
       ) {
         setError(t.tenderFailSum);
       } else if (
@@ -444,6 +467,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
     try {
       await discardIncompleteSale(sale.saleId);
       setSale(null);
+      setPayMethod("cash");
     } finally {
       endWork();
     }
@@ -524,10 +548,67 @@ export function CartPanel({ lang, onCompleted }: Props) {
     }
   }
 
+  const cartActions = (
+    <span className="flex items-center gap-2">
+      {!sale ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="size-9 rounded-xl md:size-10"
+          disabled={busy}
+          aria-label={
+            customer ? `${t.customerAttach}: ${customer.name}` : t.customerAttach
+          }
+          title={customer ? customer.name : t.customerAttach}
+          onClick={() => setCustomerPickerOpen(true)}
+        >
+          {customer ? (
+            <UserCircleCheckIcon size={19} weight="duotone" className="text-primary" />
+          ) : (
+            <UserPlusIcon size={19} weight="duotone" />
+          )}
+        </Button>
+      ) : null}
+      {parked.length > 0 ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="relative size-9 rounded-xl md:size-10"
+          onClick={() => setParkedDialogOpen(true)}
+          aria-label={`${t.parked}: ${parkedBadge}`}
+          title={`${t.parked}: ${parkedBadge}`}
+        >
+          <ArchiveTrayIcon size={19} weight="duotone" />
+          <span className="absolute -top-1.5 -right-1.5 min-w-5 rounded-full bg-primary px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-primary-foreground">
+            {parkedBadge}
+          </span>
+        </Button>
+      ) : null}
+    </span>
+  );
+
   return (
+    <>
+      {mobileOpen ? (
+        <button
+          type="button"
+          className="fixed inset-x-0 top-0 z-20 h-[calc(100dvh-4.75rem-env(safe-area-inset-bottom))] bg-black/40 md:hidden"
+          aria-label={t.cartCollapse}
+          onClick={() => {
+            if (!sale) setMobileOpen(false);
+          }}
+        />
+      ) : null}
     <aside
       id="cart-panel"
-      className="fixed inset-x-3 bottom-3 z-30 flex max-h-[min(70dvh,36rem)] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-card)] md:static md:inset-auto md:bottom-auto md:z-auto md:h-full md:max-h-none md:min-h-0"
+      className={cn(
+        "fixed inset-x-3 z-30 flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-card)] md:static md:inset-auto md:bottom-auto md:z-auto md:h-full md:max-h-none md:min-h-0",
+        mobileOpen
+          ? "bottom-[calc(4.75rem+env(safe-area-inset-bottom))] max-h-[min(68dvh,34rem)]"
+          : "bottom-[calc(4.75rem+env(safe-area-inset-bottom))] max-h-none",
+      )}
     >
       <SaleReceiptPreview
         sale={previewSale}
@@ -620,50 +701,59 @@ export function CartPanel({ lang, onCompleted }: Props) {
           </ul>
         </DialogContent>
       </Dialog>
-      <h2 className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3 text-lg font-semibold tracking-tight text-foreground sm:px-5">
+      <button
+        type="button"
+        className="flex w-full shrink-0 items-center gap-2.5 px-3 py-2.5 text-left md:hidden"
+        aria-expanded={mobileOpen}
+        aria-controls="cart-panel-body"
+        onClick={() => setMobileOpen((open) => !open)}
+      >
+        <span className="relative inline-flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <ShoppingCartIcon size={20} weight="duotone" />
+          {itemCount > 0 ? (
+            <span className="absolute -top-1 -right-1 min-w-4 rounded-full bg-primary px-1 text-center text-[10px] font-bold leading-4 text-primary-foreground">
+              {itemCount > 99 ? "99+" : itemCount}
+            </span>
+          ) : null}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-semibold">{t.cart}</span>
+          <span className="block truncate text-xs text-muted-foreground">
+            {itemCount > 0
+              ? t.cartItemCount.replace("{count}", String(itemCount))
+              : t.cartEmpty}
+          </span>
+        </span>
+        {itemCount > 0 ? (
+          <span className="shrink-0 text-sm font-semibold tabular-nums">
+            {formatIdr(payable, lang)}
+          </span>
+        ) : null}
+        {mobileOpen ? (
+          <CaretDownIcon size={18} weight="bold" className="shrink-0 text-muted-foreground" />
+        ) : (
+          <CaretUpIcon size={18} weight="bold" className="shrink-0 text-muted-foreground" />
+        )}
+      </button>
+      <h2 className="hidden shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3 text-lg font-semibold tracking-tight text-foreground md:flex sm:px-5">
         <span className="flex items-center gap-2">
           <ShoppingCartIcon size={22} weight="duotone" className="text-primary" />
           {t.cart}
         </span>
-        <span className="flex items-center gap-2">
-          {!sale ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="size-10 rounded-xl"
-              disabled={busy}
-              aria-label={
-                customer ? `${t.customerAttach}: ${customer.name}` : t.customerAttach
-              }
-              title={customer ? customer.name : t.customerAttach}
-              onClick={() => setCustomerPickerOpen(true)}
-            >
-              {customer ? (
-                <UserCircleCheckIcon size={19} weight="duotone" className="text-primary" />
-              ) : (
-                <UserPlusIcon size={19} weight="duotone" />
-              )}
-            </Button>
-          ) : null}
-          {parked.length > 0 ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="relative size-10 rounded-xl"
-              onClick={() => setParkedDialogOpen(true)}
-              aria-label={`${t.parked}: ${parkedBadge}`}
-              title={`${t.parked}: ${parkedBadge}`}
-            >
-              <ArchiveTrayIcon size={19} weight="duotone" />
-              <span className="absolute -top-1.5 -right-1.5 min-w-5 rounded-full bg-primary px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-primary-foreground">
-                {parkedBadge}
-              </span>
-            </Button>
-          ) : null}
-        </span>
+        {cartActions}
       </h2>
+      <div
+        id="cart-panel-body"
+        className={cn(
+          "min-h-0 flex-1 flex-col",
+          mobileOpen ? "flex border-t border-border md:border-t-0" : "hidden md:flex",
+        )}
+      >
+      {mobileOpen ? (
+        <div className="flex shrink-0 items-center justify-end gap-2 px-3 py-2 md:hidden">
+          {cartActions}
+        </div>
+      ) : null}
       {receipt ? (
         <p className="shrink-0 border-b border-border px-4 py-3 text-sm sm:px-5" role="status">
           {receipt}
@@ -680,9 +770,41 @@ export function CartPanel({ lang, onCompleted }: Props) {
       {sale ? (
         <div className="mt-1 min-h-0 flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
           <p className="font-medium">
-            {appliedCredit > 0 ? t.storeCredit : t.cashPayment}{" "}
+            {payMethod === "qris"
+              ? t.qrisPayment
+              : appliedCredit > 0
+                ? t.storeCredit
+                : t.cashPayment}{" "}
             {formatIdr(payable, lang)}
           </p>
+          {payable - appliedCredit > 0 ? (
+            <div
+              className="inline-flex rounded-xl border border-border bg-background p-1"
+              role="group"
+              aria-label={t.qrisPayment}
+            >
+              <Button
+                type="button"
+                variant={payMethod === "cash" ? "default" : "ghost"}
+                className="h-9 rounded-lg px-3 text-sm"
+                aria-pressed={payMethod === "cash"}
+                disabled={busy}
+                onClick={() => setPayMethod("cash")}
+              >
+                {t.cashTender}
+              </Button>
+              <Button
+                type="button"
+                variant={payMethod === "qris" ? "default" : "ghost"}
+                className="h-9 rounded-lg px-3 text-sm"
+                aria-pressed={payMethod === "qris"}
+                disabled={busy}
+                onClick={() => setPayMethod("qris")}
+              >
+                {t.qris}
+              </Button>
+            </div>
+          ) : null}
           <div className="space-y-2 text-sm">
             {promoEval.discount_minor > 0 ? (
               <p className="flex justify-between">
@@ -861,7 +983,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
             onOpenChange={setCustomerPickerOpen}
           />
           {lines.length === 0 ? (
-            <div className="flex min-h-40 flex-1 flex-col items-center justify-center gap-2 py-8 text-center">
+            <div className="flex min-h-24 flex-1 flex-col items-center justify-center gap-2 py-6 text-center md:min-h-40 md:py-8">
               <ShoppingCartIcon
                 size={40}
                 weight="duotone"
@@ -971,6 +1093,8 @@ export function CartPanel({ lang, onCompleted }: Props) {
           ) : null}
         </div>
       )}
+      </div>
     </aside>
+    </>
   );
 }

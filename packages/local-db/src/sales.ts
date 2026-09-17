@@ -57,9 +57,9 @@ export async function discardIncompleteSale(saleId: string): Promise<void> {
 export async function completeSale(
   saleId: string,
   payment: {
-    method?: "cash" | "store_credit" | "split";
+    method?: "cash" | "store_credit" | "qris" | "split";
     amountMinor?: number;
-    tenders?: Array<{ method: "cash" | "store_credit"; amountMinor: number }>;
+    tenders?: Array<{ method: "cash" | "store_credit" | "qris"; amountMinor: number }>;
   },
   loyalty?: { redeemPoints?: number; discountMinor?: number } | null,
   promotions?: {

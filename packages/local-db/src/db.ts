@@ -57,9 +57,9 @@ export type LocalSaleRecord = {
   completedAt?: string;
   status: "incomplete" | "complete";
   payment?: {
-    method: "cash" | "store_credit" | "split";
+    method: "cash" | "store_credit" | "qris" | "split";
     amountMinor: number;
-    tenders?: Array<{ method: "cash" | "store_credit"; amountMinor: number }>;
+    tenders?: Array<{ method: "cash" | "store_credit" | "qris"; amountMinor: number }>;
   };
   lines: LocalSaleLine[];
   /** Optional Customer attach (FR-71). Sale may complete without this. */

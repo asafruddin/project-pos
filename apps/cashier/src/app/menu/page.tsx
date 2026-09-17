@@ -11,7 +11,7 @@ import {
   toSelectValue,
   fromSelectValue,
 } from "@pos-apps/ui/molecules";
-import { ListIcon, SquaresFourIcon } from "@phosphor-icons/react";
+import { ListIcon, MagnifyingGlassIcon, SquaresFourIcon } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -395,7 +395,7 @@ export default function MenuPage() {
       }
       aside={<CartPanel lang={lang} onCompleted={handleCompleted} />}
     >
-      <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="flex min-h-0 flex-1 flex-col gap-2 md:gap-4">
       {!online ? (
         <p className="shrink-0 rounded-2xl border border-border bg-secondary/70 px-3 py-2 text-sm text-muted-foreground">
           {t.offlineMode} — {t.offlineKeep}
@@ -428,53 +428,58 @@ export default function MenuPage() {
       ) : null}
 
       {products.length > 0 ? (
-        <div className="shrink-0 space-y-3 rounded-2xl border border-border/70 bg-muted/30 p-3 sm:p-4">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="grid gap-1.5 sm:col-span-2 xl:col-span-2">
-              <Label htmlFor="catalog-search">{t.catalogSearch}</Label>
-              <Input
-                id="catalog-search"
-                type="search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t.catalogSearchPlaceholder}
-                autoComplete="off"
-                className="h-11 rounded-xl bg-background"
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="catalog-category">{t.catalogFilterCategory}</Label>
-              <Select
-                value={toSelectValue(categoryFilter)}
-                onValueChange={(value) => setCategoryFilter(fromSelectValue(value))}
+        <div className="shrink-0 space-y-2 md:space-y-3 md:rounded-2xl md:border md:border-border/70 md:bg-muted/30 md:p-4">
+          <div className="relative">
+            <MagnifyingGlassIcon
+              size={18}
+              className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
+            />
+            <Label htmlFor="catalog-search" className="sr-only">
+              {t.catalogSearch}
+            </Label>
+            <Input
+              id="catalog-search"
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t.catalogSearchPlaceholder}
+              autoComplete="off"
+              className="h-10 rounded-xl bg-muted/50 pr-3 pl-9 md:h-11 md:bg-background"
+            />
+          </div>
+          <div className="flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden">
+            <Button
+              type="button"
+              size="sm"
+              variant={categoryFilter === "" ? "default" : "outline"}
+              className="h-8 shrink-0 rounded-full px-3 text-xs"
+              onClick={() => setCategoryFilter("")}
+            >
+              {t.catalogFilterAllCategories}
+            </Button>
+            {categories.map((name) => (
+              <Button
+                key={name}
+                type="button"
+                size="sm"
+                variant={categoryFilter === name ? "default" : "outline"}
+                className="h-8 max-w-40 shrink-0 truncate rounded-full px-3 text-xs"
+                onClick={() => setCategoryFilter(name)}
               >
-                <SelectTrigger
-                  id="catalog-category"
-                  className="h-11 rounded-xl bg-background"
-                >
-                  <SelectValue placeholder={t.catalogFilterAllCategories} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={toSelectValue("")}>
-                    {t.catalogFilterAllCategories}
-                  </SelectItem>
-                  {categories.map((name) => (
-                    <SelectItem key={name} value={name}>
-                      {name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="catalog-stock">{t.catalogFilterStock}</Label>
+                {name}
+              </Button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 md:hidden">
               <Select
                 value={stockFilter}
                 onValueChange={(value) => setStockFilter(value as StockFilter)}
               >
                 <SelectTrigger
-                  id="catalog-stock"
-                  className="h-11 rounded-xl bg-background"
+                  id="catalog-stock-mobile"
+                  aria-label={t.catalogFilterStock}
+                  className="h-9 rounded-xl bg-muted/50 text-xs"
                 >
                   <SelectValue />
                 </SelectTrigger>
@@ -484,18 +489,14 @@ export default function MenuPage() {
                   <SelectItem value="out">{t.catalogFilterOutOfStock}</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div className="grid min-w-[12rem] flex-1 gap-1.5 sm:max-w-xs">
-              <Label htmlFor="catalog-sort">{t.catalogSort}</Label>
               <Select
                 value={sortBy}
                 onValueChange={(value) => setSortBy(value as CatalogSort)}
               >
                 <SelectTrigger
-                  id="catalog-sort"
-                  className="h-11 rounded-xl bg-background"
+                  id="catalog-sort-mobile"
+                  aria-label={t.catalogSort}
+                  className="h-9 rounded-xl bg-muted/50 text-xs"
                 >
                   <SelectValue />
                 </SelectTrigger>
@@ -508,8 +509,74 @@ export default function MenuPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="hidden min-w-0 flex-1 grid-cols-3 gap-3 md:grid">
+              <div className="grid gap-1.5">
+                <Label htmlFor="catalog-category">{t.catalogFilterCategory}</Label>
+                <Select
+                  value={toSelectValue(categoryFilter)}
+                  onValueChange={(value) => setCategoryFilter(fromSelectValue(value))}
+                >
+                  <SelectTrigger
+                    id="catalog-category"
+                    className="h-11 rounded-xl bg-background"
+                  >
+                    <SelectValue placeholder={t.catalogFilterAllCategories} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={toSelectValue("")}>
+                      {t.catalogFilterAllCategories}
+                    </SelectItem>
+                    {categories.map((name) => (
+                      <SelectItem key={name} value={name}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="catalog-stock">{t.catalogFilterStock}</Label>
+                <Select
+                  value={stockFilter}
+                  onValueChange={(value) => setStockFilter(value as StockFilter)}
+                >
+                  <SelectTrigger
+                    id="catalog-stock"
+                    className="h-11 rounded-xl bg-background"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t.catalogFilterAllStock}</SelectItem>
+                    <SelectItem value="in">{t.catalogFilterInStock}</SelectItem>
+                    <SelectItem value="out">{t.catalogFilterOutOfStock}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="catalog-sort">{t.catalogSort}</Label>
+                <Select
+                  value={sortBy}
+                  onValueChange={(value) => setSortBy(value as CatalogSort)}
+                >
+                  <SelectTrigger
+                    id="catalog-sort"
+                    className="h-11 rounded-xl bg-background"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="name-asc">{t.catalogSortNameAsc}</SelectItem>
+                    <SelectItem value="name-desc">{t.catalogSortNameDesc}</SelectItem>
+                    <SelectItem value="price-asc">{t.catalogSortPriceAsc}</SelectItem>
+                    <SelectItem value="price-desc">{t.catalogSortPriceDesc}</SelectItem>
+                    <SelectItem value="stock-desc">{t.catalogSortStockDesc}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <div
-              className="inline-flex rounded-xl border border-border bg-background p-1"
+              className="inline-flex shrink-0 rounded-xl border border-border bg-background p-0.5 md:p-1"
               role="group"
               aria-label={t.catalogViewGrid}
             >
@@ -517,25 +584,25 @@ export default function MenuPage() {
                 type="button"
                 variant={viewMode === "grid" ? "default" : "ghost"}
                 size="icon"
-                className="size-10 rounded-lg"
+                className="size-8 rounded-lg md:size-10"
                 aria-pressed={viewMode === "grid"}
                 aria-label={t.catalogViewGrid}
                 title={t.catalogViewGrid}
                 onClick={() => setCatalogView("grid")}
               >
-                <SquaresFourIcon size={20} />
+                <SquaresFourIcon size={18} />
               </Button>
               <Button
                 type="button"
                 variant={viewMode === "list" ? "default" : "ghost"}
                 size="icon"
-                className="size-10 rounded-lg"
+                className="size-8 rounded-lg md:size-10"
                 aria-pressed={viewMode === "list"}
                 aria-label={t.catalogViewList}
                 title={t.catalogViewList}
                 onClick={() => setCatalogView("list")}
               >
-                <ListIcon size={20} />
+                <ListIcon size={18} />
               </Button>
             </div>
           </div>
@@ -570,7 +637,7 @@ export default function MenuPage() {
           <ul
             className={
               viewMode === "grid"
-                ? "grid min-h-0 flex-1 auto-rows-min grid-cols-1 content-start gap-3 overflow-y-auto pb-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
+                ? "grid min-h-0 flex-1 auto-rows-min grid-cols-3 content-start gap-1.5 overflow-y-auto pb-2 sm:gap-2 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
                 : "flex min-h-0 flex-1 flex-col content-start gap-2 overflow-y-auto pb-2"
             }
           >
@@ -609,7 +676,7 @@ export default function MenuPage() {
                     }}
                     className={
                       viewMode === "grid"
-                        ? `group relative flex h-full w-full flex-col items-stretch gap-0 overflow-hidden rounded-2xl border-border/80 p-0 text-left whitespace-normal shadow-none transition-colors hover:border-primary/40 hover:bg-accent/40 ${selectedQty > 0 ? "border-primary bg-accent/30 ring-1 ring-primary/20" : ""}`
+                        ? `group relative flex h-full w-full flex-col items-stretch gap-0 overflow-hidden rounded-xl border-border/80 p-0 text-left whitespace-normal shadow-none transition-colors hover:border-primary/40 hover:bg-accent/40 md:rounded-2xl ${selectedQty > 0 ? "border-primary bg-accent/30 ring-1 ring-primary/20" : ""}`
                         : `group relative flex h-full w-full flex-row items-center gap-3 rounded-2xl border-border/80 p-2.5 text-left whitespace-normal shadow-none transition-colors hover:border-primary/40 hover:bg-accent/40 sm:gap-4 sm:p-3 ${selectedQty > 0 ? "border-primary bg-accent/30 ring-1 ring-primary/20" : ""}`
                     }
                     title={
@@ -622,45 +689,68 @@ export default function MenuPage() {
                   >
                     {selectedQty > 0 ? (
                       <span
-                        className="absolute top-2 right-2 z-10 inline-flex min-w-8 items-center justify-center rounded-full bg-primary px-2 py-1 text-sm font-bold leading-none text-primary-foreground shadow-md"
+                        className="absolute top-1 right-1 z-10 inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1 py-0.5 text-[10px] font-bold leading-none text-primary-foreground shadow-md md:top-2 md:right-2 md:min-w-8 md:px-2 md:py-1 md:text-sm"
                         aria-label={`${selectedQty} dipilih`}
                       >
                         {selectedQty}
                       </span>
                     ) : null}
-                    <CatalogProductThumb
-                      productId={p.productId}
-                      alt=""
+                    <span
                       className={
-                        viewMode === "list"
-                          ? "aspect-square size-16 w-16 shrink-0 rounded-xl sm:size-[4.5rem] sm:w-[4.5rem]"
-                          : "aspect-[4/3] max-h-36 rounded-none"
+                        viewMode === "list" ? "relative shrink-0" : "relative block"
                       }
-                    />
+                    >
+                      <CatalogProductThumb
+                        productId={p.productId}
+                        alt=""
+                        className={
+                          viewMode === "list"
+                            ? "aspect-square size-16 w-16 shrink-0 rounded-xl sm:size-[4.5rem] sm:w-[4.5rem]"
+                            : "aspect-square rounded-none"
+                        }
+                      />
+                      {viewMode === "grid" ? (
+                        <span className="absolute bottom-1 left-1 rounded bg-black/65 px-1 py-px text-[10px] font-medium text-white md:hidden">
+                          {t.stock} {p.stockQty}
+                        </span>
+                      ) : null}
+                    </span>
                     <span
                       className={
                         viewMode === "grid"
-                          ? "flex min-w-0 flex-col gap-1 px-3 pt-2 pb-2.5"
+                          ? "flex min-w-0 flex-col gap-0.5 px-1.5 py-1.5 md:gap-1 md:px-3 md:pt-2 md:pb-2.5"
                           : "flex min-w-0 flex-1 flex-col gap-1 py-0.5"
                       }
                     >
-                      <span className="truncate text-base font-semibold tracking-tight text-foreground">
+                      <span
+                        className={
+                          viewMode === "grid"
+                            ? "line-clamp-2 text-[11px] leading-tight font-semibold tracking-tight text-foreground md:truncate md:text-base"
+                            : "truncate text-base font-semibold tracking-tight text-foreground"
+                        }
+                      >
                         {p.name}
                       </span>
-                      <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                      <span
+                        className={
+                          viewMode === "grid"
+                            ? "flex flex-col gap-0.5 text-[11px] md:flex-row md:flex-wrap md:items-center md:gap-x-2 md:gap-y-1 md:text-sm"
+                            : "flex flex-wrap items-center gap-x-2 gap-y-1 text-sm"
+                        }
+                      >
                         {p.unitName ? (
-                          <span className="rounded-md bg-secondary px-1.5 py-0.5 text-xs font-medium text-secondary-foreground">
+                          <span className="hidden rounded-md bg-secondary px-1.5 py-0.5 text-xs font-medium text-secondary-foreground md:inline-flex">
                             {p.unitName}
                           </span>
                         ) : null}
-                        <span className="font-medium text-foreground">
+                        <span className="font-semibold text-primary md:font-medium md:text-foreground">
                           {priceLabel}
                         </span>
-                        <span className="text-muted-foreground">
+                        <span className="hidden text-muted-foreground md:inline">
                           {t.stock}: {p.stockQty}
                         </span>
                         {unpackable ? (
-                          <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
+                          <span className="rounded-md bg-primary/10 px-1 py-px text-[10px] font-medium text-primary md:px-1.5 md:py-0.5 md:text-xs">
                             {t.unpackTitle}
                           </span>
                         ) : null}
@@ -671,7 +761,7 @@ export default function MenuPage() {
               );
             })}
           </ul>
-          <div className="mt-auto flex w-full shrink-0 flex-wrap items-center justify-between gap-3 border-t border-border pt-3 pb-28 md:pb-0">
+          <div className="mt-auto flex w-full shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border pt-2 md:gap-3 md:pt-3">
             <p className="text-sm text-muted-foreground">
               {formatTemplate(t.catalogShowing, {
                 from: (page - 1) * CATALOG_PAGE_SIZE + 1,
@@ -683,7 +773,7 @@ export default function MenuPage() {
               <Button
                 type="button"
                 variant="secondary"
-                className="min-h-11 rounded-xl"
+                className="min-h-9 rounded-xl px-3 md:min-h-11"
                 disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
               >
@@ -698,7 +788,7 @@ export default function MenuPage() {
               <Button
                 type="button"
                 variant="secondary"
-                className="min-h-11 rounded-xl"
+                className="min-h-9 rounded-xl px-3 md:min-h-11"
                 disabled={page >= totalPages}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               >

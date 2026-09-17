@@ -215,6 +215,31 @@ describe("expectedCashFromLocal", () => {
     assert.equal(result.cash_sales_minor, 30000);
     assert.equal(result.expected_cash_minor, 130000);
   });
+
+  it("does not count QRIS sales toward expected drawer cash", () => {
+    const result = expectedCashFromLocal({
+      shift: openShift,
+      sales: [
+        {
+          saleId: "s4",
+          deviceId: "d",
+          createdAt: "2026-08-13T08:00:00.000Z",
+          completedAt: "2026-08-13T08:00:00.000Z",
+          status: "complete",
+          payment: {
+            method: "qris",
+            amountMinor: 45000,
+            tenders: [{ method: "qris", amountMinor: 45000 }],
+          },
+          lines: [],
+          shiftId: "shift-1",
+        },
+      ],
+      movements: [],
+    });
+    assert.equal(result.cash_sales_minor, 0);
+    assert.equal(result.expected_cash_minor, 100000);
+  });
 });
 
 describe("closeShiftIn", () => {

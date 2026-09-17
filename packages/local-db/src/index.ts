@@ -26,6 +26,7 @@ export {
   stackSaleDiscounts,
   cashTenderTotal,
   storeCreditTenderTotal,
+  qrisTenderTotal,
 } from "@pos-apps/domain";
 export {
   createSalt,
@@ -80,7 +81,7 @@ export {
   dayCloseSummaryFrom,
   getDayCloseSummary,
 } from "./day-close.js";
-export type { DayCloseShiftCash, DayCloseSummary } from "./day-close.js";
+export type { DayCloseQrisSale, DayCloseShiftCash, DayCloseSummary } from "./day-close.js";
 export { evaluateVoid, restoreCatalogQty } from "./void-sale.js";
 export {
   buildParkedCart,

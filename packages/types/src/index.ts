@@ -769,21 +769,8 @@ export type ProductListResponse = {
   meta: ProductListMeta;
 };
 
-/** Synced sales read model shell (populated later by AcceptCompleteSale). */
-export type SalesListItem = {
-  sale_id: string;
-  completed_at: string;
-  amount_minor: number;
-  voided_at?: string | null;
-};
-
-export type SalesListResponse = {
-  sales: SalesListItem[];
-  daily_total_minor: number;
-};
-
-export type TenderMethod = "cash" | "store_credit";
-export type PaymentMethod = "cash" | "store_credit" | "split";
+export type TenderMethod = "cash" | "store_credit" | "qris";
+export type PaymentMethod = "cash" | "store_credit" | "qris" | "split";
 
 export type SaleTender = {
   method: TenderMethod;
@@ -794,6 +781,30 @@ export type SalePayment = {
   method: PaymentMethod;
   amount_minor: number;
   tenders?: SaleTender[];
+};
+
+export type SalesTenderTotals = {
+  cash_minor: number;
+  qris_minor: number;
+  store_credit_minor: number;
+  cash_count: number;
+  qris_count: number;
+  store_credit_count: number;
+};
+
+/** Synced sales read model shell (populated later by AcceptCompleteSale). */
+export type SalesListItem = {
+  sale_id: string;
+  completed_at: string;
+  amount_minor: number;
+  voided_at?: string | null;
+  payment: SalePayment;
+};
+
+export type SalesListResponse = {
+  sales: SalesListItem[];
+  daily_total_minor: number;
+  tender_totals: SalesTenderTotals;
 };
 
 export type PriceOverride = {

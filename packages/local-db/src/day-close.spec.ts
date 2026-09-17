@@ -73,7 +73,70 @@ describe("dayCloseSummaryFrom", () => {
     assert.equal(summary.shiftCountedTotalMinor, 140000);
     assert.equal(summary.shiftDifferenceTotalMinor, -5000);
     assert.equal(summary.pendingSyncCount, 1);
+    assert.equal(summary.qrisTotalMinor, 0);
+    assert.equal(summary.qrisTransactionCount, 0);
     assert.notEqual(summary.totalMinor, summary.shiftExpectedTotalMinor);
+  });
+
+  it("sums QRIS tenders separately from cash and skips voids", () => {
+    const cash: LocalSaleRecord = {
+      saleId: "sale-cash",
+      deviceId: "d",
+      createdAt: "2026-08-13T08:00:00.000Z",
+      completedAt: "2026-08-13T08:00:00.000Z",
+      status: "complete",
+      payment: { method: "cash", amountMinor: 25000 },
+      lines: [],
+      shiftId: "sh-1",
+    };
+    const qris: LocalSaleRecord = {
+      saleId: "sale-qris",
+      deviceId: "d",
+      createdAt: "2026-08-13T09:00:00.000Z",
+      completedAt: "2026-08-13T09:00:00.000Z",
+      status: "complete",
+      payment: {
+        method: "qris",
+        amountMinor: 40000,
+        tenders: [{ method: "qris", amountMinor: 40000 }],
+      },
+      lines: [],
+      shiftId: "sh-1",
+    };
+    const split: LocalSaleRecord = {
+      saleId: "sale-split",
+      deviceId: "d",
+      createdAt: "2026-08-13T10:00:00.000Z",
+      completedAt: "2026-08-13T10:00:00.000Z",
+      status: "complete",
+      payment: {
+        method: "split",
+        amountMinor: 50000,
+        tenders: [
+          { method: "qris", amountMinor: 30000 },
+          { method: "store_credit", amountMinor: 20000 },
+        ],
+      },
+      lines: [],
+      shiftId: "sh-1",
+    };
+    const voided: LocalSaleRecord = {
+      ...qris,
+      saleId: "sale-void-qris",
+      voidedAt: "2026-08-13T11:00:00.000Z",
+    };
+    const summary = dayCloseSummaryFrom({
+      sales: [cash, qris, split, voided],
+      pendingSyncSaleIds: [],
+      openShift: null,
+      closedShifts: [closedToday],
+    });
+    assert.equal(summary.qrisTotalMinor, 70000);
+    assert.equal(summary.qrisTransactionCount, 2);
+    assert.deepEqual(
+      summary.qrisSales.map((row) => row.saleId),
+      ["sale-qris", "sale-split"],
+    );
   });
 });
 

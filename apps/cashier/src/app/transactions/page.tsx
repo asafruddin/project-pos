@@ -439,6 +439,7 @@ function discountMinor(sale: LocalSaleRecord): number {
 function payLabel(sale: LocalSaleRecord, t: ReturnType<typeof copy>): string {
   const method = sale.payment?.method;
   if (method === "store_credit") return t.storeCredit;
+  if (method === "qris") return t.qris;
   if (method === "split") return t.txPaySplit;
   return t.cashTender;
 }
@@ -452,7 +453,12 @@ function payDetail(
   if (!tenders?.length) return payLabel(sale, t);
   return tenders
     .map((row) => {
-      const label = row.method === "store_credit" ? t.storeCredit : t.cashTender;
+      const label =
+        row.method === "store_credit"
+          ? t.storeCredit
+          : row.method === "qris"
+            ? t.qris
+            : t.cashTender;
       return `${label} ${formatIdr(row.amountMinor, lang)}`;
     })
     .join(" · ");

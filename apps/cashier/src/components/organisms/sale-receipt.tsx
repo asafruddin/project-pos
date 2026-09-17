@@ -275,7 +275,9 @@ function SaleReceiptCopy({
               <dt>
                 {tender.method === "store_credit"
                   ? t.storeCredit
-                  : t.cashTender}
+                  : tender.method === "qris"
+                    ? t.qris
+                    : t.cashTender}
               </dt>
               <dd>{formatIdr(tender.amountMinor, lang)}</dd>
             </div>

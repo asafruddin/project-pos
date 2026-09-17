@@ -1402,10 +1402,14 @@ export function dayCloseCashFromShifts(
   );
 }
 
-const TENDER_METHODS: ReadonlySet<string> = new Set(["cash", "store_credit"]);
+const TENDER_METHODS: ReadonlySet<string> = new Set([
+  "cash",
+  "store_credit",
+  "qris",
+]);
 
-export type TenderMethod = "cash" | "store_credit";
-export type PaymentMethod = "cash" | "store_credit" | "split";
+export type TenderMethod = "cash" | "store_credit" | "qris";
+export type PaymentMethod = "cash" | "store_credit" | "qris" | "split";
 
 export type TenderLine = {
   method: TenderMethod;
@@ -1461,6 +1465,9 @@ export function tendersFromPayment(
   if (payment.method === "store_credit") {
     return [{ method: "store_credit", amount_minor }];
   }
+  if (payment.method === "qris") {
+    return [{ method: "qris", amount_minor }];
+  }
   if (
     payment.method == null ||
     payment.method === "cash" ||
@@ -1490,6 +1497,14 @@ export function storeCreditTenderTotal(
     .reduce((sum, row) => sum + row.amount_minor, 0);
 }
 
+export function qrisTenderTotal(
+  payment: PaymentSnapshot | null | undefined,
+): number {
+  return tendersFromPayment(payment)
+    .filter((row) => row.method === "qris" && isNonNegativeInt(row.amount_minor))
+    .reduce((sum, row) => sum + row.amount_minor, 0);
+}
+
 export type EvaluateSplitTenderInput = {
   payable_minor: number;
   customer_id?: string | null;
@@ -1505,6 +1520,7 @@ export type EvaluateSplitTenderOk = {
   tenders: TenderLine[];
   cash_minor: number;
   store_credit_minor: number;
+  qris_minor: number;
 };
 
 export type EvaluateSplitTenderErr = {
@@ -1512,6 +1528,7 @@ export type EvaluateSplitTenderErr = {
   code:
     | "TENDER_SUM_MISMATCH"
     | "TENDER_METHOD_UNSUPPORTED"
+    | "TENDER_CASH_QRIS_MIX"
     | "TENDER_STORE_CREDIT_REQUIRES_CUSTOMER"
     | "TENDER_STORE_CREDIT_EXCEEDS_BALANCE";
   message: string;
@@ -1521,7 +1538,7 @@ export type EvaluateSplitTenderResult =
   | EvaluateSplitTenderOk
   | EvaluateSplitTenderErr;
 
-/** Cash + Store Credit only; sums must equal payable (FR-110). */
+/** Cash, QRIS, and Store Credit; sums must equal payable. Cash + QRIS is not allowed. */
 export function evaluateSplitTender(
   input: EvaluateSplitTenderInput,
 ): EvaluateSplitTenderResult {
@@ -1546,7 +1563,7 @@ export function evaluateSplitTender(
       return {
         ok: false,
         code: "TENDER_METHOD_UNSUPPORTED",
-        message: "Hanya tunai dan kredit toko.",
+        message: "Hanya tunai, QRIS, dan kredit toko.",
       };
     }
     if (!isNonNegativeInt(row.amount_minor)) {
@@ -1562,7 +1579,15 @@ export function evaluateSplitTender(
 
   const cash_minor = merged.get("cash") ?? 0;
   const store_credit_minor = merged.get("store_credit") ?? 0;
-  const amount_minor = cash_minor + store_credit_minor;
+  const qris_minor = merged.get("qris") ?? 0;
+  if (cash_minor > 0 && qris_minor > 0) {
+    return {
+      ok: false,
+      code: "TENDER_CASH_QRIS_MIX",
+      message: "Tidak bisa gabung tunai dan QRIS.",
+    };
+  }
+  const amount_minor = cash_minor + store_credit_minor + qris_minor;
   if (amount_minor !== input.payable_minor) {
     return {
       ok: false,
@@ -1598,6 +1623,9 @@ export function evaluateSplitTender(
   if (merged.has("cash")) {
     tenders.push({ method: "cash", amount_minor: cash_minor });
   }
+  if (qris_minor > 0) {
+    tenders.push({ method: "qris", amount_minor: qris_minor });
+  }
   if (store_credit_minor > 0) {
     tenders.push({ method: "store_credit", amount_minor: store_credit_minor });
   }
@@ -1605,12 +1633,18 @@ export function evaluateSplitTender(
     tenders.push({ method: "cash", amount_minor: 0 });
   }
 
+  const used =
+    Number(cash_minor > 0) +
+    Number(store_credit_minor > 0) +
+    Number(qris_minor > 0);
   const method: PaymentMethod =
-    store_credit_minor > 0 && cash_minor > 0
+    used > 1
       ? "split"
-      : store_credit_minor > 0
-        ? "store_credit"
-        : "cash";
+      : qris_minor > 0
+        ? "qris"
+        : store_credit_minor > 0
+          ? "store_credit"
+          : "cash";
 
   return {
     ok: true,
@@ -1619,6 +1653,7 @@ export function evaluateSplitTender(
     tenders,
     cash_minor,
     store_credit_minor,
+    qris_minor,
   };
 }
 

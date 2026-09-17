@@ -11,18 +11,20 @@ import {
 } from "@phosphor-icons/react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { SideNav, type NavSection } from "@/components/organisms/pos-nav";
+import { BottomNav, SideNav, type NavSection } from "@/components/organisms/pos-nav";
 import { OpenShiftDialog } from "@/components/organisms/open-shift-dialog";
 import { PrefControls } from "@/components/molecules/settings-menu";
 import { getSession, getStoreIdentity } from "@/lib/auth-token";
 import { useStoreLogoSrc } from "@/lib/use-store-logo";
 import { requestLogout } from "@/lib/logout";
+import { toggleCashierCart } from "@/lib/cart-events";
 import { copy, getLang, type LangPref } from "@/lib/preferences";
 import { SHIFT_CHANGED_EVENT } from "@/lib/shift-events";
 import { cn } from "@/lib/utils";
 import { ROLE_LABELS, type Role } from "@pos-apps/types";
 import { getOpenShift } from "@pos-apps/local-db";
 import { StoreLogo } from "@pos-apps/ui/molecules";
+import { useCart } from "@/components/providers/cart-context";
 
 type AppShellProps = {
   title: string;
@@ -34,8 +36,6 @@ type AppShellProps = {
   aside?: React.ReactNode;
   lang?: LangPref;
   onLangChange?: () => void;
-  /** Scroll target for mobile cart FAB. */
-  cartAnchorId?: string;
 };
 
 export function AppShell({
@@ -47,11 +47,12 @@ export function AppShell({
   aside,
   lang = getLang(),
   onLangChange,
-  cartAnchorId = "cart-panel",
 }: AppShellProps) {
   const t = copy(lang);
   const router = useRouter();
   const pathname = usePathname();
+  const { lines } = useCart();
+  const cartCount = lines.reduce((sum, line) => sum + line.qty, 0);
   const [storeName, setStoreName] = useState("POS Apps");
   const [storeLogoUrl, setStoreLogoUrl] = useState<string | null>(null);
   const storeLogoSrc = useStoreLogoSrc(storeLogoUrl);
@@ -183,26 +184,6 @@ export function AppShell({
         }
       />
 
-      <SideNav
-        compact
-        className="flex h-full lg:hidden"
-        sections={sections}
-        brand={<StoreLogo src={storeLogoSrc} alt={storeName} />}
-        footer={
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="mx-auto h-10 w-10 rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive"
-            onClick={logout}
-            aria-label={t.logout}
-            title={t.logout}
-          >
-            <SignOutIcon size={18} weight="bold" />
-          </Button>
-        }
-      />
-
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <header className="flex shrink-0 flex-col gap-3 border-b border-border bg-card px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:gap-6">
           <div className="min-w-0 flex-1">
@@ -222,23 +203,37 @@ export function AppShell({
                 type="button"
                 variant="outline"
                 size="icon"
-                className="lg:hidden"
+                className="relative lg:hidden"
                 aria-label={t.cart}
                 onClick={() => {
                   if (pathname !== "/menu") {
                     router.push("/menu");
                     return;
                   }
-                  document
-                    .getElementById(cartAnchorId)
-                    ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                  toggleCashierCart();
                 }}
               >
                 <ShoppingCartIcon size={18} weight="bold" />
+                {cartCount > 0 ? (
+                  <span className="absolute -top-1 -right-1 min-w-4 rounded-full bg-primary px-1 text-center text-[10px] font-bold leading-4 text-primary-foreground">
+                    {cartCount > 99 ? "99+" : cartCount}
+                  </span>
+                ) : null}
               </Button>
             ) : null}
-            <div className="lg:hidden">
+            <div className="flex items-center gap-1 lg:hidden">
               <PrefControls onLangChange={onLangChange} tooltipSide="bottom" />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={logout}
+                aria-label={t.logout}
+                title={t.logout}
+              >
+                <SignOutIcon size={18} weight="bold" />
+              </Button>
             </div>
             <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/50 py-1 pr-3 pl-1">
               {storeLogoSrc ? (
@@ -258,7 +253,9 @@ export function AppShell({
 
         <section
           className={cn(
-            "min-h-0 flex-1 p-4 sm:p-6",
+            "min-h-0 flex-1 p-3 pb-[calc(5.25rem+env(safe-area-inset-bottom))] sm:p-5 sm:pb-[calc(5.25rem+env(safe-area-inset-bottom))] lg:p-6",
+            aside &&
+              "max-md:pb-[calc(9.5rem+env(safe-area-inset-bottom))] md:pb-5 lg:pb-6",
             aside ? "overflow-hidden" : "overflow-y-auto",
           )}
         >
@@ -272,7 +269,7 @@ export function AppShell({
           >
             <div
               className={cn(
-                "flex min-w-0 flex-col rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-card)] sm:p-5",
+                "flex min-w-0 flex-col rounded-xl border border-border bg-card p-3 shadow-[var(--shadow-card)] sm:p-5",
                 aside && "min-h-0 overflow-hidden",
               )}
             >
@@ -286,6 +283,7 @@ export function AppShell({
           </div>
         </section>
       </div>
+      <BottomNav items={sections.flatMap((section) => section.items)} />
       {needsOpenShift ? (
         <OpenShiftDialog lang={lang} onOpened={() => setNeedsOpenShift(false)} />
       ) : null}

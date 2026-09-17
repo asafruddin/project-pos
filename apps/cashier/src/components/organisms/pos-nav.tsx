@@ -102,8 +102,8 @@ export function SideNav({
 }
 
 /**
- * Mobile/tablet floating bottom navigation with optional center FAB.
- * Hidden on large screens when sidebar is used.
+ * Mobile/tablet bottom navigation with optional center FAB.
+ * Hidden on large screens when the sidebar is used.
  */
 export function BottomNav({
   items,
@@ -129,20 +129,20 @@ export function BottomNav({
       <Link
         href={item.href}
         className={cn(
-          "flex min-w-[3.5rem] flex-col items-center gap-1 rounded-xl px-2 py-1 text-[11px] font-medium transition-colors",
+          "flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-1 text-[11px] leading-tight font-medium transition-colors",
           active ? "text-primary" : "text-muted-foreground",
         )}
       >
         <span
           className={cn(
             "inline-flex h-9 w-9 items-center justify-center rounded-xl",
-            active ? "bg-primary text-primary-foreground" : "",
+            active ? "bg-primary text-primary-foreground shadow-sm" : "",
           )}
           aria-hidden
         >
           {item.icon}
         </span>
-        {item.label}
+        <span className="max-w-full truncate text-center">{item.label}</span>
       </Link>
     );
   }
@@ -150,45 +150,51 @@ export function BottomNav({
   return (
     <nav
       className={cn(
-        "fixed inset-x-3 bottom-3 z-40 flex items-end justify-between gap-1 rounded-2xl border border-border bg-card/95 px-2 py-2 shadow-[var(--shadow-card)] backdrop-blur-md lg:hidden",
+        "fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-1 pt-1.5 pb-[max(0.4rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:hidden",
         className,
       )}
       aria-label="Main"
     >
-      <div className="flex flex-1 items-end justify-around">
-        {left.map((item) => (
-          <Item key={item.href} item={item} />
-        ))}
-      </div>
-
       {fab ? (
-        <div className="relative -mt-8 px-1">
-          {fab.href ? (
-            <Link
-              href={fab.href}
-              className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-primary text-lg font-semibold text-primary-foreground shadow-lg shadow-primary/25"
-              aria-label={fab.label}
-            >
-              {fab.icon ?? "+"}
-            </Link>
-          ) : (
-            <Button
-              type="button"
-              onClick={fab.onClick}
-              className="h-14 w-14 rounded-full shadow-lg shadow-primary/25"
-              aria-label={fab.label}
-            >
-              {fab.icon ?? "+"}
-            </Button>
-          )}
+        <div className="flex items-end justify-between gap-1">
+          <div className="flex flex-1 items-end justify-around">
+            {left.map((item) => (
+              <Item key={item.href} item={item} />
+            ))}
+          </div>
+          <div className="relative -mt-8 px-1">
+            {fab.href ? (
+              <Link
+                href={fab.href}
+                className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-primary text-lg font-semibold text-primary-foreground shadow-lg shadow-primary/25"
+                aria-label={fab.label}
+              >
+                {fab.icon ?? "+"}
+              </Link>
+            ) : (
+              <Button
+                type="button"
+                onClick={fab.onClick}
+                className="h-14 w-14 rounded-full shadow-lg shadow-primary/25"
+                aria-label={fab.label}
+              >
+                {fab.icon ?? "+"}
+              </Button>
+            )}
+          </div>
+          <div className="flex flex-1 items-end justify-around">
+            {right.map((item) => (
+              <Item key={item.href} item={item} />
+            ))}
+          </div>
         </div>
-      ) : null}
-
-      <div className="flex flex-1 items-end justify-around">
-        {right.map((item) => (
-          <Item key={item.href} item={item} />
-        ))}
-      </div>
+      ) : (
+        <div className="flex items-stretch justify-around gap-0.5">
+          {items.map((item) => (
+            <Item key={item.href} item={item} />
+          ))}
+        </div>
+      )}
     </nav>
   );
 }

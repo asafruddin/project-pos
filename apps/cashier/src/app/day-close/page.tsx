@@ -8,6 +8,7 @@ import {
   dayCloseGate,
   getDayCloseSummary,
   type DayCloseSummary,
+  type LocalSaleRecord,
 } from "@pos-apps/local-db";
 import { AppShell } from "@/components/templates/app-shell";
 import { clearSession } from "@/lib/auth-token";
@@ -118,6 +119,15 @@ export default function DayClosePage() {
                 {formatIdr(summary.shiftCountedTotalMinor, lang)}
               </dd>
             </div>
+            <div className="rounded-xl border border-border bg-background/70 p-4">
+              <dt className="text-sm text-muted-foreground">{t.dayCloseQris}</dt>
+              <dd className="mt-1 text-xl font-semibold">
+                {formatIdr(summary.qrisTotalMinor, lang)}
+              </dd>
+              <dd className="mt-1 text-sm text-muted-foreground">
+                {summary.qrisTransactionCount} {t.dayCloseTxCount.toLowerCase()}
+              </dd>
+            </div>
           </dl>
 
           <div className="space-y-2 rounded-2xl border border-border bg-background/70 p-4">
@@ -152,6 +162,34 @@ export default function DayClosePage() {
                 {t.dayCloseShiftCounted}: {formatIdr(summary.shiftCountedTotalMinor, lang)}
                 {" · "}
                 {t.dayCloseShiftDiff}: {formatIdr(summary.shiftDifferenceTotalMinor, lang)}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="space-y-2 rounded-2xl border border-border bg-background/70 p-4">
+            <p className="text-sm font-medium">{t.dayCloseQris}</p>
+            {summary.qrisSales.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t.dayCloseQrisEmpty}</p>
+            ) : (
+              <ul className="space-y-2 text-sm">
+                {summary.qrisSales.map((row) => (
+                  <li key={row.saleId} className="rounded-xl border border-border px-3 py-2">
+                    <p className="text-muted-foreground">
+                      {new Date(row.completedAt).toLocaleTimeString(
+                        lang === "en" ? "en-US" : "id-ID",
+                        { hour: "2-digit", minute: "2-digit" },
+                      )}
+                    </p>
+                    <p className="font-medium">
+                      {t.qris}: {formatIdr(row.amountMinor, lang)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {summary.qrisSales.length > 1 ? (
+              <p className="text-sm font-medium">
+                {t.qris}: {formatIdr(summary.qrisTotalMinor, lang)}
               </p>
             ) : null}
           </div>
@@ -265,6 +303,9 @@ export default function DayClosePage() {
                         <span className="rounded-md bg-secondary px-2 py-0.5 text-xs">
                           {sale.voidedAt ? t.voided : t.dayCloseStatusDone}
                         </span>
+                        <span className="rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                          {payLabel(sale, t)}
+                        </span>
                         {waiting ? (
                           <span className="rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground">
                             {t.waitingUpload}
@@ -315,4 +356,12 @@ export default function DayClosePage() {
       )}
     </AppShell>
   );
+}
+
+function payLabel(sale: LocalSaleRecord, t: ReturnType<typeof copy>): string {
+  const method = sale.payment?.method;
+  if (method === "store_credit") return t.storeCredit;
+  if (method === "qris") return t.qris;
+  if (method === "split") return t.txPaySplit;
+  return t.cashTender;
 }

@@ -1,4 +1,4 @@
-import { dayCloseCashFromShifts, evaluateDayClose } from "@pos-apps/domain";
+import { dayCloseCashFromShifts, evaluateDayClose, qrisTenderTotal } from "@pos-apps/domain";
 import {
   openLocalDb,
   type LocalSaleRecord,
@@ -16,6 +16,12 @@ export type DayCloseShiftCash = {
   differenceMinor: number;
 };
 
+export type DayCloseQrisSale = {
+  saleId: string;
+  completedAt: string;
+  amountMinor: number;
+};
+
 export type DayCloseSummary = {
   sales: LocalSaleRecord[];
   totalMinor: number;
@@ -27,6 +33,9 @@ export type DayCloseSummary = {
   shiftExpectedTotalMinor: number;
   shiftCountedTotalMinor: number;
   shiftDifferenceTotalMinor: number;
+  qrisTotalMinor: number;
+  qrisTransactionCount: number;
+  qrisSales: DayCloseQrisSale[];
 };
 
 export function closedShiftsForLocalDay(
@@ -52,6 +61,22 @@ function toShiftCash(row: LocalShiftRecord): DayCloseShiftCash {
   };
 }
 
+function paymentSnapshot(sale: LocalSaleRecord) {
+  return {
+    method: sale.payment?.method,
+    amount_minor: sale.payment?.amountMinor,
+    tenders: sale.payment?.tenders?.map((row) => ({
+      method: row.method,
+      amount_minor: row.amountMinor,
+    })),
+  };
+}
+
+function qrisAmount(sale: LocalSaleRecord): number {
+  if (sale.status !== "complete" || sale.voidedAt) return 0;
+  return qrisTenderTotal(paymentSnapshot(sale));
+}
+
 export function dayCloseSummaryFrom(input: {
   sales: LocalSaleRecord[];
   pendingSyncSaleIds: string[];
@@ -63,6 +88,18 @@ export function dayCloseSummaryFrom(input: {
     (sum, sale) => sum + (sale.payment?.amountMinor ?? 0),
     0,
   );
+  const qrisSales = active
+    .map((sale) => {
+      const amountMinor = qrisAmount(sale);
+      if (amountMinor <= 0) return null;
+      return {
+        saleId: sale.saleId,
+        completedAt: sale.completedAt ?? sale.createdAt,
+        amountMinor,
+      };
+    })
+    .filter((row): row is DayCloseQrisSale => row !== null);
+  const qrisTotalMinor = qrisSales.reduce((sum, row) => sum + row.amountMinor, 0);
   const closedShifts = input.closedShifts.map(toShiftCash);
   const cash = dayCloseCashFromShifts(
     closedShifts.map((row) => ({
@@ -82,6 +119,9 @@ export function dayCloseSummaryFrom(input: {
     shiftExpectedTotalMinor: cash.expected_cash_minor,
     shiftCountedTotalMinor: cash.counted_cash_minor,
     shiftDifferenceTotalMinor: cash.difference_minor,
+    qrisTotalMinor,
+    qrisTransactionCount: qrisSales.length,
+    qrisSales,
   };
 }
 

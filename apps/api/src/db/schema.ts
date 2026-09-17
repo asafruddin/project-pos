@@ -499,9 +499,9 @@ export const sales = pgTable("sales", {
     .default("00000000-0000-4000-8000-000000000002"),
   payment: jsonb("payment")
     .$type<{
-      method: "cash" | "store_credit" | "split";
+      method: "cash" | "store_credit" | "qris" | "split";
       amount_minor: number;
-      tenders?: Array<{ method: "cash" | "store_credit"; amount_minor: number }>;
+      tenders?: Array<{ method: "cash" | "store_credit" | "qris"; amount_minor: number }>;
     }>()
     .notNull()
     .default({ method: "cash", amount_minor: 0 }),
