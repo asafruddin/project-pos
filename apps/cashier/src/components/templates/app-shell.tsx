@@ -3,6 +3,7 @@
 import { Button } from "@pos-apps/ui/atoms";
 import {
   CalendarCheckIcon,
+  GearIcon,
   HouseIcon,
   ReceiptIcon,
   ShoppingCartIcon,
@@ -10,6 +11,7 @@ import {
   UserCircleIcon,
 } from "@phosphor-icons/react";
 import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BottomNav, SideNav, type NavSection } from "@/components/organisms/pos-nav";
 import { OpenShiftDialog } from "@/components/organisms/open-shift-dialog";
@@ -71,7 +73,9 @@ export function AppShell({
 
   useEffect(() => {
     const skip =
-      pathname.startsWith("/shift") || pathname.startsWith("/day-close");
+      pathname.startsWith("/shift") ||
+      pathname.startsWith("/day-close") ||
+      pathname.startsWith("/settings");
     if (skip) {
       setNeedsOpenShift(false);
       return;
@@ -147,6 +151,13 @@ export function AppShell({
           label: t.dayClose,
           icon: <CalendarCheckIcon size={20} weight="duotone" />,
           match: (p) => p.startsWith("/day-close"),
+        },
+        {
+          href: "/settings",
+          label: t.settings,
+          icon: <GearIcon size={20} weight="duotone" />,
+          match: (p) => p.startsWith("/settings"),
+          showInBottomNav: false,
         },
       ],
     },
@@ -225,6 +236,17 @@ export function AppShell({
               <PrefControls onLangChange={onLangChange} tooltipSide="bottom" />
               <Button
                 type="button"
+                variant="outline"
+                size="icon"
+                className="size-9"
+                asChild
+              >
+                <Link href="/settings" aria-label={t.settings} title={t.settings}>
+                  <GearIcon size={18} weight="duotone" />
+                </Link>
+              </Button>
+              <Button
+                type="button"
                 variant="ghost"
                 size="icon"
                 className="text-destructive hover:bg-destructive/10 hover:text-destructive"
@@ -283,7 +305,11 @@ export function AppShell({
           </div>
         </section>
       </div>
-      <BottomNav items={sections.flatMap((section) => section.items)} />
+      <BottomNav
+        items={sections
+          .flatMap((section) => section.items)
+          .filter((item) => item.showInBottomNav !== false)}
+      />
       {needsOpenShift ? (
         <OpenShiftDialog lang={lang} onOpened={() => setNeedsOpenShift(false)} />
       ) : null}

@@ -11,11 +11,16 @@ import {
 } from "@pos-apps/ui/molecules";
 import type { LocalSaleRecord } from "@pos-apps/local-db";
 import { createPortal } from "react-dom";
+import { useState } from "react";
 import { StoreLogo } from "@pos-apps/ui/molecules";
 import { formatIdr } from "@/lib/money";
 import { copy, type LangPref } from "@/lib/preferences";
 import { getStoreIdentity } from "@/lib/auth-token";
 import { useStoreLogoSrc } from "@/lib/use-store-logo";
+import {
+  canPrintViaBluetooth,
+  printSaleViaBluetooth,
+} from "@/lib/printer";
 
 const RECEIPT_WIDTH_MM = 58;
 
@@ -316,11 +321,14 @@ export function SaleReceiptPreview({
   const store = getStoreIdentity();
   const storeLogoSrc = useStoreLogoSrc(store.storeLogoUrl);
   const storeName = store.storeName;
+  const [printing, setPrinting] = useState(false);
 
   if (!sale) return null;
 
+  const currentSale = sale;
+
   const copyProps = {
-    sale,
+    sale: currentSale,
     customerName,
     lang,
     storeName,
@@ -338,7 +346,24 @@ export function SaleReceiptPreview({
         )
       : null;
 
-  function printReceipt() {
+  async function printReceipt() {
+    if (printing) return;
+    if (canPrintViaBluetooth()) {
+      setPrinting(true);
+      try {
+        await printSaleViaBluetooth({
+          sale: currentSale,
+          customerName,
+          lang,
+          storeName,
+        });
+        return;
+      } catch {
+        // BLE failed — fall through to the browser print dialog.
+      } finally {
+        setPrinting(false);
+      }
+    }
     printThermalReceipt();
   }
 
@@ -364,8 +389,8 @@ export function SaleReceiptPreview({
             <Button type="button" variant="secondary" onClick={onClose}>
               {t.receiptClose}
             </Button>
-            <Button type="button" onClick={printReceipt}>
-              {t.printReceipt}
+            <Button type="button" onClick={() => void printReceipt()} disabled={printing}>
+              {printing ? t.printerPrinting : t.printReceipt}
             </Button>
           </DialogFooter>
         </DialogContent>

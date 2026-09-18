@@ -10,6 +10,8 @@ export type NavItem = {
   label: string;
   icon: React.ReactNode;
   match?: (pathname: string) => boolean;
+  /** When false, the item stays in the sidebar but is omitted from BottomNav. */
+  showInBottomNav?: boolean;
 };
 
 export type NavSection = {
