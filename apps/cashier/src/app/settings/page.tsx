@@ -2,20 +2,25 @@
 
 import { AuthLoadingShell } from "@pos-apps/ui/organisms";
 import { Button } from "@pos-apps/ui/atoms";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/templates/app-shell";
 import { getStoreIdentity } from "@/lib/auth-token";
 import { isPinUnlocked } from "@/lib/pin-session";
 import { applyTheme, copy, getLang } from "@/lib/preferences";
 import {
+  PrinterAdapterError,
+  PrinterChooserBlockedError,
+  PrinterGestureError,
+  PrinterInsecureError,
   PrinterPairCancelledError,
   PrinterReconnectError,
-  canUseWebBluetooth,
-  clearSavedBlePrinter,
-  getSavedBlePrinter,
+  getBluetoothAvailability,
+  getBluetoothEnvironment,
   pairBluetoothPrinter,
   printBluetoothTestPage,
+  clearSavedBlePrinter,
+  getSavedBlePrinter,
   type SavedBlePrinter,
 } from "@/lib/printer";
 
@@ -24,9 +29,13 @@ export default function SettingsPage() {
   const [lang, setLang] = useState(getLang());
   const t = copy(lang);
   const [ready, setReady] = useState(false);
+  const [secure, setSecure] = useState(true);
+  const [chromeFamily, setChromeFamily] = useState(true);
   const [supported, setSupported] = useState(false);
+  const [available, setAvailable] = useState<boolean | null>(null);
   const [printer, setPrinter] = useState<SavedBlePrinter | null>(null);
   const [busy, setBusy] = useState<"pair" | "test" | "remove" | null>(null);
+  const pairingRef = useRef(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,29 +46,55 @@ export default function SettingsPage() {
       router.replace("/pin");
       return;
     }
-    setSupported(canUseWebBluetooth());
+    const env = getBluetoothEnvironment();
+    setSupported(env.supported);
+    setSecure(env.secure);
+    setChromeFamily(env.chromeFamily);
     setPrinter(getSavedBlePrinter());
     setReady(true);
+    void getBluetoothAvailability().then(setAvailable);
   }, [router]);
 
-  async function addPrinter() {
+  function addPrinter() {
+    if (pairingRef.current) return;
+    pairingRef.current = true;
+    let pending: ReturnType<typeof pairBluetoothPrinter>;
+    try {
+      pending = pairBluetoothPrinter();
+    } catch (err) {
+      pairingRef.current = false;
+      setMessage(null);
+      setError(pairErrorCopy(err));
+      return;
+    }
     setBusy("pair");
     setError(null);
     setMessage(t.printerPairing);
-    try {
-      const saved = await pairBluetoothPrinter();
-      setPrinter(saved);
-      setMessage(t.printerReady.replace("{name}", saved.name));
-    } catch (err) {
-      setMessage(null);
-      if (err instanceof PrinterPairCancelledError) {
-        setError(t.printerPairCancel);
-        return;
-      }
-      setError(t.printerPairFail);
-    } finally {
-      setBusy(null);
-    }
+    void pending
+      .then((saved) => {
+        setPrinter(saved);
+        setMessage(t.printerReady.replace("{name}", saved.name));
+      })
+      .catch((err: unknown) => {
+        setMessage(null);
+        if (err instanceof PrinterPairCancelledError) {
+          setError(null);
+          return;
+        }
+        setError(pairErrorCopy(err));
+      })
+      .finally(() => {
+        pairingRef.current = false;
+        setBusy(null);
+      });
+  }
+
+  function pairErrorCopy(err: unknown): string {
+    if (err instanceof PrinterInsecureError) return t.printerInsecure;
+    if (err instanceof PrinterAdapterError) return t.printerAdapterOff;
+    if (err instanceof PrinterChooserBlockedError) return t.printerChooserBlocked;
+    if (err instanceof PrinterGestureError) return t.printerGesture;
+    return t.printerPairFail;
   }
 
   async function testPrint() {
@@ -102,6 +137,8 @@ export default function SettingsPage() {
       ? t.printerReady.replace("{name}", printer.name)
       : t.printerNone;
 
+  const canPair = supported && secure && busy === null;
+
   return (
     <AppShell
       title={t.settings}
@@ -121,6 +158,22 @@ export default function SettingsPage() {
           <p className="font-medium text-foreground">{status}</p>
         </div>
 
+        {!chromeFamily ? (
+          <p className="text-sm text-warning" role="status">
+            {t.printerNeedChrome}
+          </p>
+        ) : null}
+        {!secure ? (
+          <p className="text-sm text-warning" role="status">
+            {t.printerInsecure}
+          </p>
+        ) : null}
+        {available === false ? (
+          <p className="text-sm text-warning" role="status">
+            {t.printerAdapterOff}
+          </p>
+        ) : null}
+
         {error ? (
           <p className="text-sm text-destructive" role="alert">
             {error}
@@ -135,8 +188,18 @@ export default function SettingsPage() {
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
-            onClick={() => void addPrinter()}
-            disabled={!supported || busy !== null}
+            onPointerDown={(event) => {
+              if (event.button !== 0) return;
+              addPrinter();
+            }}
+            onClick={(event) => {
+              if (event.detail !== 0) {
+                event.preventDefault();
+                return;
+              }
+              addPrinter();
+            }}
+            disabled={!canPair}
           >
             {busy === "pair" ? t.printerPairing : t.printerAdd}
           </Button>

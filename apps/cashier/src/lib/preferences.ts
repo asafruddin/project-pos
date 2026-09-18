@@ -75,10 +75,20 @@ export function copy(lang: LangPref) {
       printerTest: "Test print",
       printerRemove: "Remove printer",
       printerHint:
-        "Use Chrome on desktop or Android. The printer must be BLE ESC/POS (58mm), not Classic Bluetooth. iOS keeps the system print dialog.",
+        "Open this page in Google Chrome (desktop or Android), not an in-app preview. Chrome shows a device list — there is no separate “Allow Bluetooth” popup. The printer must be BLE ESC/POS (58mm). iOS uses the system print dialog.",
       printerPairing: "Waiting for printer…",
       printerPrinting: "Printing…",
       printerPairCancel: "Printer selection cancelled.",
+      printerAdapterOff:
+        "Bluetooth is off. Turn it on, then tap Add printer again.",
+      printerChooserBlocked:
+        "Chrome did not open a Bluetooth list. Use Google Chrome in a normal window (not an editor preview), allow Bluetooth for Chrome in system settings, then tap Add printer again.",
+      printerInsecure:
+        "Bluetooth pairing needs https or localhost. Do not use a plain http LAN address.",
+      printerNeedChrome:
+        "Open this cashier in Google Chrome (normal window). In-app previews cannot show a Bluetooth device list.",
+      printerGesture:
+        "Tap Add printer again so the browser can open the device list.",
       printerPairFail: "Could not add the printer. Try again and pick a BLE ESC/POS printer.",
       printerNeedPairAgain: "Saved printer is no longer allowed. Add it again.",
       printerTestOk: "Test print sent.",
@@ -365,10 +375,20 @@ export function copy(lang: LangPref) {
     printerTest: "Cetak uji",
     printerRemove: "Hapus printer",
     printerHint:
-      "Gunakan Chrome di desktop atau Android. Printer harus BLE ESC/POS (58mm), bukan Bluetooth Classic. iOS tetap memakai dialog cetak sistem.",
+      "Buka halaman ini di Google Chrome (desktop atau Android), bukan pratinjau di editor. Chrome menampilkan daftar perangkat — tidak ada popup “Izinkan Bluetooth” terpisah. Printer harus BLE ESC/POS (58mm). iOS memakai dialog cetak sistem.",
     printerPairing: "Menunggu printer…",
     printerPrinting: "Mencetak…",
     printerPairCancel: "Pemilihan printer dibatalkan.",
+    printerAdapterOff:
+      "Bluetooth mati. Nyalakan Bluetooth, lalu ketuk Tambah printer lagi.",
+    printerChooserBlocked:
+      "Chrome tidak membuka daftar Bluetooth. Buka kasir di Google Chrome (jendela biasa, bukan pratinjau editor), izinkan Bluetooth untuk Chrome di pengaturan sistem, lalu ketuk Tambah printer lagi.",
+    printerInsecure:
+      "Pemasangan Bluetooth membutuhkan https atau localhost. Jangan pakai alamat http LAN.",
+    printerNeedChrome:
+      "Buka kasir ini di Google Chrome (jendela biasa). Pratinjau di editor tidak dapat menampilkan daftar Bluetooth.",
+    printerGesture:
+      "Ketuk Tambah printer lagi agar peramban dapat membuka daftar perangkat.",
     printerPairFail:
       "Tidak dapat menambah printer. Coba lagi dan pilih printer BLE ESC/POS.",
     printerNeedPairAgain: "Izin printer tersimpan sudah hilang. Tambahkan lagi.",

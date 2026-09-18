@@ -1,7 +1,13 @@
 export { canUseWebBluetooth } from "./bluetooth";
 export {
+  PrinterAdapterError,
+  PrinterChooserBlockedError,
+  PrinterGestureError,
+  PrinterInsecureError,
   PrinterPairCancelledError,
   PrinterReconnectError,
+  getBluetoothAvailability,
+  getBluetoothEnvironment,
   pairBluetoothPrinter,
 } from "./bluetooth";
 export {

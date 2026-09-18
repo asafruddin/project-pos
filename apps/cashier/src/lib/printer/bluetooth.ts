@@ -36,8 +36,10 @@ type BleApi = {
   requestDevice(options: {
     acceptAllDevices?: boolean;
     optionalServices?: string[];
+    filters?: Array<{ name?: string; namePrefix?: string; services?: string[] }>;
   }): Promise<BleDevice>;
   getDevices?(): Promise<BleDevice[]>;
+  getAvailability?(): Promise<boolean>;
 };
 
 /** Common BLE ESC/POS / UART services on 58mm printers. */
@@ -68,10 +70,102 @@ export class PrinterPairCancelledError extends Error {
   }
 }
 
+export class PrinterAdapterError extends Error {
+  constructor() {
+    super("PRINTER_ADAPTER_UNAVAILABLE");
+    this.name = "PrinterAdapterError";
+  }
+}
+
+export class PrinterGestureError extends Error {
+  constructor() {
+    super("PRINTER_USER_GESTURE_REQUIRED");
+    this.name = "PrinterGestureError";
+  }
+}
+
+export class PrinterInsecureError extends Error {
+  constructor() {
+    super("PRINTER_INSECURE_CONTEXT");
+    this.name = "PrinterInsecureError";
+  }
+}
+
+export class PrinterChooserBlockedError extends Error {
+  constructor(detail?: string) {
+    super(detail || "PRINTER_CHOOSER_BLOCKED");
+    this.name = "PrinterChooserBlockedError";
+  }
+}
+
 export class PrinterReconnectError extends Error {
   constructor() {
     super("PRINTER_NEED_PAIR_AGAIN");
     this.name = "PrinterReconnectError";
+  }
+}
+
+function errorName(error: unknown): string {
+  if (error instanceof DOMException || error instanceof Error) return error.name;
+  return "";
+}
+
+function errorMessage(error: unknown): string {
+  if (error instanceof DOMException || error instanceof Error) return error.message;
+  return "";
+}
+
+function classifyRequestDeviceError(
+  error: unknown,
+  available: boolean | null,
+): Error {
+  const name = errorName(error);
+  const message = errorMessage(error);
+  if (name === "SecurityError" || name === "NotAllowedError") {
+    return new PrinterGestureError();
+  }
+  if (name === "NotFoundError") {
+    if (/cancel|chooser/i.test(message)) {
+      return new PrinterPairCancelledError();
+    }
+    if (available === false || /adapter not available|bluetooth adapter/i.test(message)) {
+      return new PrinterAdapterError();
+    }
+    return new PrinterChooserBlockedError(message);
+  }
+  if (/adapter not available|bluetooth adapter/i.test(message)) {
+    return new PrinterAdapterError();
+  }
+  return error instanceof Error ? error : new Error("PRINTER_PAIR_FAIL");
+}
+
+export type BluetoothEnvironment = {
+  supported: boolean;
+  secure: boolean;
+  chromeFamily: boolean;
+  available: boolean | null;
+};
+
+export function getBluetoothEnvironment(): Omit<BluetoothEnvironment, "available"> {
+  const ua = typeof navigator === "undefined" ? "" : navigator.userAgent;
+  const chromeFamily =
+    /\b(Chrome|Chromium|Edg|OPR)\//.test(ua) &&
+    !/iPhone|iPad|iPod/.test(ua) &&
+    !/Electron/i.test(ua);
+  return {
+    supported: canUseWebBluetooth(),
+    secure: typeof window !== "undefined" && window.isSecureContext,
+    chromeFamily,
+  };
+}
+
+export async function getBluetoothAvailability(): Promise<boolean | null> {
+  const api = bluetoothApi();
+  if (!api?.getAvailability) return null;
+  try {
+    return await api.getAvailability();
+  } catch {
+    return null;
   }
 }
 
@@ -182,20 +276,40 @@ async function writeChunks(
   }
 }
 
-export async function pairBluetoothPrinter(): Promise<SavedBlePrinter> {
+/**
+ * Must be called in the same synchronous turn as a click so Chrome can open
+ * the chooser. Do not `await` anything before this returns its Promise.
+ *
+ * Chrome never shows a site “Allow Bluetooth?” bar. The device chooser is the
+ * permission UI. If it never appears, Chromium aborted (no adapter, OS block,
+ * or an embedded browser that cannot host the chooser).
+ */
+export function pairBluetoothPrinter(): Promise<SavedBlePrinter> {
+  if (typeof window !== "undefined" && !window.isSecureContext) {
+    return Promise.reject(new PrinterInsecureError());
+  }
   const api = bluetooth();
+  const devicePromise = api.requestDevice({
+    acceptAllDevices: true,
+    optionalServices: OPTIONAL_SERVICES,
+  });
+  const availabilityPromise =
+    typeof api.getAvailability === "function"
+      ? api.getAvailability().catch(() => null)
+      : Promise.resolve(null);
+  return finishPairing(devicePromise, availabilityPromise);
+}
+
+async function finishPairing(
+  devicePromise: Promise<BleDevice>,
+  availabilityPromise: Promise<boolean | null>,
+): Promise<SavedBlePrinter> {
   let device: BleDevice;
   try {
-    device = await api.requestDevice({
-      acceptAllDevices: true,
-      optionalServices: OPTIONAL_SERVICES,
-    });
+    device = await devicePromise;
   } catch (error) {
-    const name = error instanceof DOMException ? error.name : "";
-    if (name === "NotFoundError") {
-      throw new PrinterPairCancelledError();
-    }
-    throw error;
+    const available = await availabilityPromise;
+    throw classifyRequestDeviceError(error, available);
   }
 
   const server = await connectDevice(device);
