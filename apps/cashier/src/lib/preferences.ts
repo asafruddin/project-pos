@@ -180,6 +180,8 @@ export function copy(lang: LangPref) {
       receiptKitchenCopy: "Kitchen",
       printReceipt: "Print",
       receiptClose: "Close",
+      receiptThanks:
+        "Thank you for ordering and visiting {store}.",
       checkoutFail: "Could not start checkout.",
       receiptFail: "Could not complete the sale. Try again.",
       qtyUp: "Increase",
@@ -483,6 +485,8 @@ export function copy(lang: LangPref) {
     receiptKitchenCopy: "Dapur",
     printReceipt: "Cetak",
     receiptClose: "Tutup",
+    receiptThanks:
+      "Terima kasih sudah memesan dan berkunjung ke {store}.",
     checkoutFail: "Tidak dapat memulai pembayaran.",
     receiptFail: "Tidak dapat menyelesaikan penjualan. Coba lagi.",
     qtyUp: "Tambah",

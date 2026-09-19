@@ -112,6 +112,11 @@ function encodeCustomerCopy(
   builder.bold(true);
   builder.text(padRow(t.total, money(payable, input.lang)));
   builder.bold(false);
+  builder.feed(1);
+  builder.align("center");
+  builder.text(
+    t.receiptThanks.replace("{store}", input.storeName.trim() || "POS"),
+  );
   return builder.cut().build();
 }
 

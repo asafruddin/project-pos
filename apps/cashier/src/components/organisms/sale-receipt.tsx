@@ -353,6 +353,11 @@ function SaleReceiptCopy({
           )}
         </p>
       )}
+      {!kitchen ? (
+        <p className="mt-4 text-center text-xs leading-snug">
+          {t.receiptThanks.replace("{store}", storeName.trim() || "POS")}
+        </p>
+      ) : null}
     </article>
   );
 }
