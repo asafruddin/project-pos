@@ -105,6 +105,7 @@ export {
 export { getLoyaltyProgram, replaceLoyaltyProgram } from "./loyalty.js";
 export { getCachedPromotions, replacePromotions } from "./promotions.js";
 export {
+  adoptServerOpenShift,
   getOpenShift,
   listPendingShiftOpens,
   markShiftSynced,

@@ -13,6 +13,7 @@ export type ShiftStore = {
   list(): Promise<LocalShiftRecord[]>;
   put(row: LocalShiftRecord): Promise<void>;
   get(shiftId: string): Promise<LocalShiftRecord | undefined>;
+  delete(shiftId: string): Promise<void>;
 };
 
 export type ShiftOutboxStore = {
@@ -73,6 +74,9 @@ async function deviceShiftStore(): Promise<ShiftStore> {
     async get(shiftId) {
       return db.get("shifts", shiftId);
     },
+    async delete(shiftId) {
+      await db.delete("shifts", shiftId);
+    },
   };
 }
 
@@ -118,4 +122,87 @@ export async function listPendingShiftOpens(): Promise<LocalShiftRecord[]> {
 
 export async function markShiftSynced(shiftId: string): Promise<void> {
   await (await deviceShiftOutbox()).delete(shiftId);
+}
+
+export type ServerOpenShift = {
+  shiftId: string;
+  storeId: string;
+  registerId: string;
+  openedAt: string;
+  openingCashMinor: number;
+};
+
+/**
+ * Server already has an open shift on this register. Join it instead of
+ * retrying a rejected local open forever (SHIFT_ALREADY_OPEN).
+ */
+export async function adoptOpenShiftIn(
+  store: ShiftStore,
+  outbox: ShiftOutboxStore,
+  localShiftId: string,
+  server: ServerOpenShift,
+  rewire?: (fromShiftId: string, toShiftId: string) => Promise<void>,
+): Promise<LocalShiftRecord> {
+  const adopted: LocalShiftRecord = {
+    shiftId: server.shiftId,
+    storeId: server.storeId,
+    registerId: server.registerId,
+    openedAt: server.openedAt,
+    openingCashMinor: server.openingCashMinor,
+    status: "open",
+  };
+  const existing = await store.get(server.shiftId);
+  await store.put(
+    existing?.status === "open"
+      ? { ...existing, status: "open" }
+      : existing
+        ? { ...existing, ...adopted, status: "open", closedAt: undefined }
+        : adopted,
+  );
+  if (localShiftId !== server.shiftId) {
+    await rewire?.(localShiftId, server.shiftId);
+    const local = await store.get(localShiftId);
+    if (local) await store.delete(localShiftId);
+  }
+  await outbox.delete(localShiftId);
+  await outbox.delete(server.shiftId);
+  return (await store.get(server.shiftId)) ?? adopted;
+}
+
+async function rewireShiftDependents(
+  fromShiftId: string,
+  toShiftId: string,
+): Promise<void> {
+  if (fromShiftId === toShiftId) return;
+  const db = await openLocalDb();
+  const tx = db.transaction(
+    ["sales", "cashMovements", "shiftCloseOutbox"],
+    "readwrite",
+  );
+  for (const sale of await tx.objectStore("sales").getAll()) {
+    if (sale.shiftId === fromShiftId) {
+      await tx.objectStore("sales").put({ ...sale, shiftId: toShiftId });
+    }
+  }
+  for (const row of await tx.objectStore("cashMovements").getAll()) {
+    if (row.shiftId === fromShiftId) {
+      await tx.objectStore("cashMovements").put({ ...row, shiftId: toShiftId });
+    }
+  }
+  const close = await tx.objectStore("shiftCloseOutbox").get(fromShiftId);
+  if (close) await tx.objectStore("shiftCloseOutbox").delete(fromShiftId);
+  await tx.done;
+}
+
+export async function adoptServerOpenShift(
+  localShiftId: string,
+  server: ServerOpenShift,
+): Promise<LocalShiftRecord> {
+  return adoptOpenShiftIn(
+    await deviceShiftStore(),
+    await deviceShiftOutbox(),
+    localShiftId,
+    server,
+    rewireShiftDependents,
+  );
 }

@@ -80,9 +80,9 @@ export function copy(lang: LangPref) {
       printerPrinting: "Printing…",
       printerPairCancel: "Printer selection cancelled.",
       printerAdapterOff:
-        "Bluetooth is off. Turn it on, then tap Add printer again.",
+        "Chrome cannot use Bluetooth yet. Device Bluetooth can already be on — allow Bluetooth for Chrome in system settings, then restart Chrome.",
       printerChooserBlocked:
-        "Chrome did not open a Bluetooth list. Use Google Chrome in a normal window (not an editor preview), allow Bluetooth for Chrome in system settings, then tap Add printer again.",
+        "Chrome cannot use this computer’s Bluetooth yet. Keep Bluetooth on, then: macOS System Settings → Privacy & Security → Bluetooth → enable Google Chrome (Android: Nearby devices). Restart Chrome and tap Add printer again. Do not use an editor preview.",
       printerInsecure:
         "Bluetooth pairing needs https or localhost. Do not use a plain http LAN address.",
       printerNeedChrome:
@@ -380,9 +380,9 @@ export function copy(lang: LangPref) {
     printerPrinting: "Mencetak…",
     printerPairCancel: "Pemilihan printer dibatalkan.",
     printerAdapterOff:
-      "Bluetooth mati. Nyalakan Bluetooth, lalu ketuk Tambah printer lagi.",
+      "Chrome belum bisa memakai Bluetooth. Bluetooth perangkat bisa sudah nyala — izinkan Bluetooth untuk Chrome di pengaturan sistem, lalu restart Chrome.",
     printerChooserBlocked:
-      "Chrome tidak membuka daftar Bluetooth. Buka kasir di Google Chrome (jendela biasa, bukan pratinjau editor), izinkan Bluetooth untuk Chrome di pengaturan sistem, lalu ketuk Tambah printer lagi.",
+      "Chrome belum bisa memakai Bluetooth komputer ini. Biarkan Bluetooth menyala, lalu: macOS Pengaturan Sistem → Privasi & Keamanan → Bluetooth → aktifkan Google Chrome (Android: Perangkat di dekat). Restart Chrome, lalu ketuk Tambah printer lagi. Jangan pakai pratinjau editor.",
     printerInsecure:
       "Pemasangan Bluetooth membutuhkan https atau localhost. Jangan pakai alamat http LAN.",
     printerNeedChrome:

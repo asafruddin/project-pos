@@ -9,7 +9,7 @@ import {
   logoutToLogin,
   patchStoreIdentity,
 } from "@/lib/auth-token";
-import { API_URL } from "@/lib/api-client";
+import { getApiUrl } from "@/lib/api-client";
 import { prefetchStoreLogo } from "@/lib/use-store-logo";
 import type { AuthMeResponse } from "@pos-apps/types";
 
@@ -29,7 +29,7 @@ export function SessionGuard({ children }: { children: React.ReactNode }) {
 
     async function validateRemote(token: string) {
       try {
-        const res = await fetch(`${API_URL}/auth/me`, {
+        const res = await fetch(`${getApiUrl()}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (cancelled) return;

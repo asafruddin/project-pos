@@ -115,26 +115,17 @@ function errorMessage(error: unknown): string {
   return "";
 }
 
-function classifyRequestDeviceError(
-  error: unknown,
-  available: boolean | null,
-): Error {
+function classifyRequestDeviceError(error: unknown): Error {
   const name = errorName(error);
   const message = errorMessage(error);
   if (name === "SecurityError" || name === "NotAllowedError") {
     return new PrinterGestureError();
   }
   if (name === "NotFoundError") {
-    if (/cancel|chooser/i.test(message)) {
+    if (/cancel|chooser/i.test(message) && !/adapter/i.test(message)) {
       return new PrinterPairCancelledError();
     }
-    if (available === false || /adapter not available|bluetooth adapter/i.test(message)) {
-      return new PrinterAdapterError();
-    }
     return new PrinterChooserBlockedError(message);
-  }
-  if (/adapter not available|bluetooth adapter/i.test(message)) {
-    return new PrinterAdapterError();
   }
   return error instanceof Error ? error : new Error("PRINTER_PAIR_FAIL");
 }
@@ -293,23 +284,17 @@ export function pairBluetoothPrinter(): Promise<SavedBlePrinter> {
     acceptAllDevices: true,
     optionalServices: OPTIONAL_SERVICES,
   });
-  const availabilityPromise =
-    typeof api.getAvailability === "function"
-      ? api.getAvailability().catch(() => null)
-      : Promise.resolve(null);
-  return finishPairing(devicePromise, availabilityPromise);
+  return finishPairing(devicePromise);
 }
 
 async function finishPairing(
   devicePromise: Promise<BleDevice>,
-  availabilityPromise: Promise<boolean | null>,
 ): Promise<SavedBlePrinter> {
   let device: BleDevice;
   try {
     device = await devicePromise;
   } catch (error) {
-    const available = await availabilityPromise;
-    throw classifyRequestDeviceError(error, available);
+    throw classifyRequestDeviceError(error);
   }
 
   const server = await connectDevice(device);

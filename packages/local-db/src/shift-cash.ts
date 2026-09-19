@@ -243,6 +243,9 @@ async function deviceShifts(): Promise<ShiftStore> {
     async get(shiftId) {
       return db.get("shifts", shiftId);
     },
+    async delete(shiftId) {
+      await db.delete("shifts", shiftId);
+    },
   };
 }
 

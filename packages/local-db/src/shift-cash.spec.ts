@@ -37,6 +37,9 @@ function memoryShifts(seed: LocalShiftRecord[] = []): ShiftStore {
     async get(shiftId) {
       return rows.get(shiftId);
     },
+    async delete(shiftId) {
+      rows.delete(shiftId);
+    },
   };
 }
 

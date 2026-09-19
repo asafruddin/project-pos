@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import {
+  adoptOpenShiftIn,
   getOpenShiftFrom,
   openShiftIn,
   toSyncShiftRequest,
@@ -27,6 +28,9 @@ function memoryShifts(seed: LocalShiftRecord[] = []): ShiftStore & {
     },
     async get(shiftId) {
       return rows.get(shiftId);
+    },
+    async delete(shiftId) {
+      rows.delete(shiftId);
     },
   };
 }
@@ -81,6 +85,43 @@ describe("openShiftIn", () => {
       () => openShiftIn(memoryShifts([open]), memoryOutbox(), 1),
       /SHIFT_ALREADY_OPEN/,
     );
+  });
+});
+
+describe("adoptOpenShiftIn", () => {
+  it("joins the server open shift and drops the rejected local open", async () => {
+    const local: LocalShiftRecord = {
+      shiftId: "local-open",
+      storeId: "s",
+      registerId: "r",
+      openedAt: "2026-09-18T01:00:00.000Z",
+      openingCashMinor: 50000,
+      status: "open",
+    };
+    const store = memoryShifts([local]);
+    const outbox = memoryOutbox([{ shiftId: local.shiftId, enqueuedAt: local.openedAt }]);
+    const rewired: string[] = [];
+    const adopted = await adoptOpenShiftIn(
+      store,
+      outbox,
+      local.shiftId,
+      {
+        shiftId: "server-open",
+        storeId: "s",
+        registerId: "r",
+        openedAt: "2026-09-16T08:56:50.229Z",
+        openingCashMinor: 20000,
+      },
+      async (from, to) => {
+        rewired.push(`${from}->${to}`);
+      },
+    );
+    assert.equal(adopted.shiftId, "server-open");
+    assert.equal(adopted.openingCashMinor, 20000);
+    assert.equal(store.rows.has("local-open"), false);
+    assert.equal(outbox.rows.size, 0);
+    assert.deepEqual(rewired, ["local-open->server-open"]);
+    assert.equal(getOpenShiftFrom([...store.rows.values()])?.shiftId, "server-open");
   });
 });
 

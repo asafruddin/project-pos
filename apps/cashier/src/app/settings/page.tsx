@@ -9,13 +9,11 @@ import { getStoreIdentity } from "@/lib/auth-token";
 import { isPinUnlocked } from "@/lib/pin-session";
 import { applyTheme, copy, getLang } from "@/lib/preferences";
 import {
-  PrinterAdapterError,
   PrinterChooserBlockedError,
   PrinterGestureError,
   PrinterInsecureError,
   PrinterPairCancelledError,
   PrinterReconnectError,
-  getBluetoothAvailability,
   getBluetoothEnvironment,
   pairBluetoothPrinter,
   printBluetoothTestPage,
@@ -32,7 +30,6 @@ export default function SettingsPage() {
   const [secure, setSecure] = useState(true);
   const [chromeFamily, setChromeFamily] = useState(true);
   const [supported, setSupported] = useState(false);
-  const [available, setAvailable] = useState<boolean | null>(null);
   const [printer, setPrinter] = useState<SavedBlePrinter | null>(null);
   const [busy, setBusy] = useState<"pair" | "test" | "remove" | null>(null);
   const pairingRef = useRef(false);
@@ -52,7 +49,6 @@ export default function SettingsPage() {
     setChromeFamily(env.chromeFamily);
     setPrinter(getSavedBlePrinter());
     setReady(true);
-    void getBluetoothAvailability().then(setAvailable);
   }, [router]);
 
   function addPrinter() {
@@ -91,7 +87,6 @@ export default function SettingsPage() {
 
   function pairErrorCopy(err: unknown): string {
     if (err instanceof PrinterInsecureError) return t.printerInsecure;
-    if (err instanceof PrinterAdapterError) return t.printerAdapterOff;
     if (err instanceof PrinterChooserBlockedError) return t.printerChooserBlocked;
     if (err instanceof PrinterGestureError) return t.printerGesture;
     return t.printerPairFail;
@@ -166,11 +161,6 @@ export default function SettingsPage() {
         {!secure ? (
           <p className="text-sm text-warning" role="status">
             {t.printerInsecure}
-          </p>
-        ) : null}
-        {available === false ? (
-          <p className="text-sm text-warning" role="status">
-            {t.printerAdapterOff}
           </p>
         ) : null}
 

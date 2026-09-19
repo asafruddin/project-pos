@@ -199,7 +199,13 @@ export default function MenuPage() {
     if (result.pendingCount) setSyncStatus("pending");
     else if (result.uploaded) setSyncStatus("synced");
     else setSyncStatus("idle");
-    setSyncError(result.failed ? copy(lang).syncFail : null);
+    setSyncError(
+      result.failed
+        ? result.errorMessage
+          ? `${copy(lang).syncFail} ${result.errorMessage}`
+          : copy(lang).syncFail
+        : null,
+    );
     if (navigator.onLine) {
       try {
         const res = await authorizedFetch("/customers");
