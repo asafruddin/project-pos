@@ -91,7 +91,7 @@ export class EscPosBuilder {
   }
 
   cut(): this {
-    this.feed(3);
+    this.feed(6);
     this.chunks.push(new Uint8Array([GS, 0x56, 0x00]));
     return this;
   }

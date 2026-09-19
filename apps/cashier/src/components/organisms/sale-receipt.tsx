@@ -63,7 +63,7 @@ function thermalPrintCss(heightMm: number): string {
       width: 100% !important;
       max-width: none !important;
       margin: 0 !important;
-      padding: 2mm 2.5mm !important;
+      padding: 2mm 2.5mm 16mm 2.5mm !important;
       border: 0 !important;
       border-radius: 0 !important;
       background: #fff !important;
@@ -148,7 +148,7 @@ function printThermalReceipt() {
     clone.querySelectorAll(".sale-receipt-page"),
   ) as HTMLElement[];
   const maxPx = Math.max(1, ...pages.map((page) => page.scrollHeight));
-  const heightMm = Math.max(90, Math.ceil(pxToMm(maxPx) + 10));
+  const heightMm = Math.max(90, Math.ceil(pxToMm(maxPx) + 22));
 
   const pageStyle = doc.createElement("style");
   pageStyle.textContent = thermalPrintCss(heightMm);
