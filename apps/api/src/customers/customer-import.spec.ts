@@ -53,7 +53,7 @@ describe("parseCustomerImportFile", () => {
     expect(parsed.rows[0]?.phone).toBe("08123456789");
   });
 
-  it("rejects a row without phone or email", async () => {
+  it("accepts a row with name only", async () => {
     const parsed = await parseCustomerImportFile({
       buffer: csvFromRows([
         ["name", "phone", "email"],
@@ -63,8 +63,14 @@ describe("parseCustomerImportFile", () => {
     });
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
-    expect(parsed.rows).toHaveLength(0);
-    expect(parsed.errors[0]?.message).toContain("telepon atau email");
+    expect(parsed.rows).toHaveLength(1);
+    expect(parsed.errors).toHaveLength(0);
+    expect(parsed.rows[0]).toMatchObject({
+      name: "Sari",
+      phone: null,
+      email: null,
+      key: "Sari",
+    });
   });
 
   it("skips empty rows", async () => {

@@ -619,13 +619,6 @@ export const customers = pgTable(
   },
   (t) => [
     check("customers_name_check", sql`char_length(trim(${t.name})) > 0`),
-    check(
-      "customers_contact_check",
-      sql`(
-        (${t.phone} IS NOT NULL AND char_length(trim(${t.phone})) > 0)
-        OR (${t.email} IS NOT NULL AND char_length(trim(${t.email})) > 0)
-      )`,
-    ),
     check("customers_store_credit_check", sql`${t.storeCreditMinor} >= 0`),
   ],
 );

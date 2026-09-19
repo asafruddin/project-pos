@@ -51,7 +51,7 @@ export function CustomerAttach({ lang, disabled, open, onOpenChange }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [warn, setWarn] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const canCreate = Boolean(name.trim() && (phone.trim() || email.trim()));
+  const canCreate = Boolean(name.trim());
 
   async function refreshMatches(q: string) {
     const rows = await listCachedCustomers();

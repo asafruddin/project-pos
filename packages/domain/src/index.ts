@@ -1047,10 +1047,7 @@ export type CustomerProfileOk = {
 };
 export type CustomerProfileErr = {
   ok: false;
-  code:
-    | "CUSTOMER_NAME_REQUIRED"
-    | "CUSTOMER_CONTACT_REQUIRED"
-    | "CUSTOMER_INVALID_EMAIL";
+  code: "CUSTOMER_NAME_REQUIRED" | "CUSTOMER_INVALID_EMAIL";
   message: string;
 };
 export type CustomerProfileResult = CustomerProfileOk | CustomerProfileErr;
@@ -1062,7 +1059,7 @@ function blankToNull(value: string | null | undefined): string | null {
 }
 
 /**
- * Name + one of phone/email required (FR-70). Missing group never fails (FR-73).
+ * Name required; phone and email optional (FR-70). Missing group never fails (FR-73).
  */
 export function evaluateCustomerProfile(
   input: CustomerProfileInput,
@@ -1087,13 +1084,6 @@ export function evaluateCustomerProfile(
         message: "Email tidak valid.",
       };
     }
-  }
-  if (!phone && !email) {
-    return {
-      ok: false,
-      code: "CUSTOMER_CONTACT_REQUIRED",
-      message: "Isi nomor telepon atau email.",
-    };
   }
   return {
     ok: true,

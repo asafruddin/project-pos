@@ -16,7 +16,7 @@ export default function CustomerImportPage() {
       uploadPath="/customers/import"
       csvFilename="pelanggan-impor-template.csv"
       xlsxFilename="pelanggan-impor-template.xlsx"
-      templateDescription="Kolom: name, phone, email, notes, group_name, store_credit_minor. Wajib nama plus telepon atau email."
+      templateDescription="Kolom: name, phone, email, notes, group_name, store_credit_minor. Nama wajib; telepon dan email opsional."
       uploadDescription="Telepon yang sudah ada akan diperbarui (jika kosong, email). Maksimal 1.000 baris."
       submitLabel="Impor pelanggan"
       updatedHeading="Telepon/email yang diperbarui"

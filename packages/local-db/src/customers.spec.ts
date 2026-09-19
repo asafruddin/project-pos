@@ -116,11 +116,20 @@ describe("queueCustomerCreateIn", () => {
     });
   });
 
-  it("rejects missing contact", async () => {
-    await assert.rejects(
-      () => queueCustomerCreateIn(memoryCache(), memoryOutbox(), { name: "Sari" }),
-      /CUSTOMER_CONTACT_REQUIRED/,
-    );
+  it("queues a name-only customer without phone or email", async () => {
+    const cache = memoryCache();
+    const outbox = memoryOutbox();
+    const row = await queueCustomerCreateIn(cache, outbox, { name: "Sari" });
+    assert.equal(row.name, "Sari");
+    assert.equal(row.phone, null);
+    assert.equal(row.email, null);
+    assert.deepEqual(toCreateCustomerRequest([...outbox.rows.values()][0]!), {
+      customer_id: row.customerId,
+      name: "Sari",
+      phone: null,
+      email: null,
+      notes: null,
+    });
   });
 });
 

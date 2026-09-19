@@ -622,7 +622,11 @@ export class CustomersService {
     }
 
     for (const row of rows) {
-      const matchKey = row.phone ? `phone:${row.phone}` : `email:${row.email ?? ""}`;
+      const matchKey = row.phone
+        ? `phone:${row.phone}`
+        : row.email
+          ? `email:${row.email}`
+          : `new:${row.row}`;
       if (ambiguous.has(matchKey)) {
         errors.push({
           row: row.row,

@@ -131,8 +131,8 @@ describe("CustomersService", () => {
   it("create maps domain validation errors", async () => {
     evaluateMock.mockReturnValue({
       ok: false,
-      code: "CUSTOMER_CONTACT_REQUIRED",
-      message: "Isi nomor telepon atau email.",
+      code: "CUSTOMER_NAME_REQUIRED",
+      message: "Nama pelanggan wajib diisi.",
     });
     await expect(
       service.create({ name: "Sari" }, { role: "cashier" }),

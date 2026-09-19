@@ -103,7 +103,7 @@ function parseDataRow(
 
   const parsed: CustomerImportParsedRow = {
     row: rowNumber,
-    key: profile.phone ?? profile.email ?? "",
+    key: profile.phone ?? profile.email ?? profile.name,
     name: profile.name,
     phone: profile.phone,
     email: profile.email,

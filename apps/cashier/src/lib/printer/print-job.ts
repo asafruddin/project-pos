@@ -120,28 +120,6 @@ function encodeCustomerCopy(
   return builder.cut().build();
 }
 
-function encodeKitchenCopy(
-  sale: LocalSaleRecord,
-  input: { customerName: string | null; lang: LangPref },
-): Uint8Array {
-  const t = copy(input.lang);
-  const builder = new EscPosBuilder().init().align("center").bold(true);
-  builder.text(t.receiptKitchenCopy);
-  builder.bold(false);
-  builder.text(formatSaleTime(sale.completedAt ?? sale.createdAt, input.lang));
-  builder.text(shortSaleId(sale.saleId));
-  builder.text(input.customerName?.trim() || t.txWalkIn);
-  builder.align("left").separator();
-  for (const line of sale.lines) {
-    builder.text(`${line.qty} x ${line.name}`);
-  }
-  builder.separator();
-  const count = sale.lines.reduce((sum, line) => sum + line.qty, 0);
-  builder.align("right");
-  builder.text(t.holdLineCount.replace("{count}", String(count)));
-  return builder.cut().build();
-}
-
 export function canPrintViaBluetooth(): boolean {
   return canUseWebBluetooth() && Boolean(getSavedBlePrinter());
 }
@@ -152,12 +130,7 @@ export async function printSaleViaBluetooth(input: {
   lang: LangPref;
   storeName: string;
 }): Promise<void> {
-  const customer = encodeCustomerCopy(input.sale, input);
-  const kitchen = encodeKitchenCopy(input.sale, input);
-  const payload = new Uint8Array(customer.length + kitchen.length);
-  payload.set(customer, 0);
-  payload.set(kitchen, customer.length);
-  await printBytesToSavedPrinter(payload);
+  await printBytesToSavedPrinter(encodeCustomerCopy(input.sale, input));
 }
 
 export async function printBluetoothTestPage(storeName: string): Promise<void> {

@@ -33,14 +33,22 @@ describe("evaluateCustomerProfile", () => {
     }
   });
 
-  it("rejects missing name, missing contact, and invalid email", () => {
+  it("accepts name only when phone and email are empty", () => {
+    const result = evaluateCustomerProfile({ name: "Sari" });
+    assert.deepEqual(result, {
+      ok: true,
+      name: "Sari",
+      phone: null,
+      email: null,
+      notes: null,
+      group_name: null,
+    });
+  });
+
+  it("rejects missing name and invalid email", () => {
     const noName = evaluateCustomerProfile({ name: "  ", phone: "0812" });
     assert.equal(noName.ok, false);
     if (!noName.ok) assert.equal(noName.code, "CUSTOMER_NAME_REQUIRED");
-
-    const noContact = evaluateCustomerProfile({ name: "Sari" });
-    assert.equal(noContact.ok, false);
-    if (!noContact.ok) assert.equal(noContact.code, "CUSTOMER_CONTACT_REQUIRED");
 
     const badEmail = evaluateCustomerProfile({ name: "Sari", email: "not-an-email" });
     assert.equal(badEmail.ok, false);

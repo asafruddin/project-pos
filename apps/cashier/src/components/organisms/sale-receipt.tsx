@@ -227,14 +227,12 @@ function SaleReceiptCopy({
   sale,
   customerName,
   lang,
-  variant,
   storeName,
   storeLogoSrc,
 }: {
   sale: LocalSaleRecord;
   customerName: string | null;
   lang: LangPref;
-  variant: "customer" | "kitchen";
   storeName: string;
   storeLogoSrc: string | null;
 }) {
@@ -242,40 +240,25 @@ function SaleReceiptCopy({
   const time = formatSaleTime(sale.completedAt ?? sale.createdAt, lang);
   const ref = shortSaleId(sale.saleId);
   const walkIn = !customerName;
-  const kitchen = variant === "kitchen";
   const discounts = discountRows(sale, t);
   const payable = sale.payment?.amountMinor ?? saleSubtotal(sale);
   const tenders = sale.payment?.tenders ?? [];
 
   return (
-    <article
-      className={
-        kitchen
-          ? "sale-receipt-page sale-receipt-kitchen"
-          : "sale-receipt-page sale-receipt-customer"
-      }
-    >
+    <article className="sale-receipt-page sale-receipt-customer">
       <header className="text-center">
-        {!kitchen ? (
-          <div className="mb-2 flex flex-col items-center gap-2">
-            <StoreLogo
-              src={storeLogoSrc}
-              alt={storeName}
-              size="lg"
-              className="sale-receipt-logo mx-auto"
-            />
-            <p className="text-base font-bold tracking-wide">{storeName}</p>
-          </div>
-        ) : (
-          <p className="text-base font-bold tracking-wide">
-            {t.receiptKitchenCopy}
-          </p>
-        )}
-        {!kitchen ? (
-          <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
-            {t.receiptCustomerCopy}
-          </p>
-        ) : null}
+        <div className="mb-2 flex flex-col items-center gap-2">
+          <StoreLogo
+            src={storeLogoSrc}
+            alt={storeName}
+            size="lg"
+            className="sale-receipt-logo mx-auto"
+          />
+          <p className="text-base font-bold tracking-wide">{storeName}</p>
+        </div>
+        <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
+          {t.receiptCustomerCopy}
+        </p>
         <p className="mt-2 text-xs">{time}</p>
         <p className="font-mono text-xs">{ref}</p>
         {sale.voidedAt ? (
@@ -292,72 +275,53 @@ function SaleReceiptCopy({
             key={line.productId}
             className="flex items-start justify-between gap-3"
           >
-            {kitchen ? (
-              <span>
-                {line.qty} × {line.name}
+            <span className="min-w-0 flex-1">
+              {line.name}
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                {line.qty} × {formatIdr(line.priceMinor, lang)}
               </span>
-            ) : (
-              <>
-                <span className="min-w-0 flex-1">
-                  {line.name}
-                  <span className="mt-0.5 block text-xs text-muted-foreground">
-                    {line.qty} × {formatIdr(line.priceMinor, lang)}
-                  </span>
-                </span>
-                <span className="shrink-0 font-medium">
-                  {formatIdr(lineTotal(line.qty, line.priceMinor), lang)}
-                </span>
-              </>
-            )}
+            </span>
+            <span className="shrink-0 font-medium">
+              {formatIdr(lineTotal(line.qty, line.priceMinor), lang)}
+            </span>
           </li>
         ))}
       </ul>
 
-      {!kitchen ? (
-        <dl className="mt-3 space-y-1 text-sm">
-          <div className="flex justify-between gap-3">
-            <dt>{t.total}</dt>
-            <dd>{formatIdr(saleSubtotal(sale), lang)}</dd>
+      <dl className="mt-3 space-y-1 text-sm">
+        <div className="flex justify-between gap-3">
+          <dt>{t.total}</dt>
+          <dd>{formatIdr(saleSubtotal(sale), lang)}</dd>
+        </div>
+        {discounts.map((row) => (
+          <div key={row.label} className="flex justify-between gap-3">
+            <dt>{row.label}</dt>
+            <dd>−{formatIdr(row.amount, lang)}</dd>
           </div>
-          {discounts.map((row) => (
-            <div key={row.label} className="flex justify-between gap-3">
-              <dt>{row.label}</dt>
-              <dd>−{formatIdr(row.amount, lang)}</dd>
-            </div>
-          ))}
-          {tenders.map((tender, index) => (
-            <div
-              key={`${tender.method}-${index}`}
-              className="flex justify-between gap-3"
-            >
-              <dt>
-                {tender.method === "store_credit"
-                  ? t.storeCredit
-                  : tender.method === "qris"
-                    ? t.qris
-                    : t.cashTender}
-              </dt>
-              <dd>{formatIdr(tender.amountMinor, lang)}</dd>
-            </div>
-          ))}
-          <div className="flex justify-between gap-3 border-t border-border pt-2 font-semibold">
-            <dt>{t.total}</dt>
-            <dd>{formatIdr(payable, lang)}</dd>
+        ))}
+        {tenders.map((tender, index) => (
+          <div
+            key={`${tender.method}-${index}`}
+            className="flex justify-between gap-3"
+          >
+            <dt>
+              {tender.method === "store_credit"
+                ? t.storeCredit
+                : tender.method === "qris"
+                  ? t.qris
+                  : t.cashTender}
+            </dt>
+            <dd>{formatIdr(tender.amountMinor, lang)}</dd>
           </div>
-        </dl>
-      ) : (
-        <p className="mt-3 text-right text-sm font-medium">
-          {t.holdLineCount.replace(
-            "{count}",
-            String(sale.lines.reduce((sum, line) => sum + line.qty, 0)),
-          )}
-        </p>
-      )}
-      {!kitchen ? (
-        <p className="mt-4 text-center text-xs leading-snug">
-          {t.receiptThanks.replace("{store}", storeName.trim() || "POS")}
-        </p>
-      ) : null}
+        ))}
+        <div className="flex justify-between gap-3 border-t border-border pt-2 font-semibold">
+          <dt>{t.total}</dt>
+          <dd>{formatIdr(payable, lang)}</dd>
+        </div>
+      </dl>
+      <p className="mt-4 text-center text-xs leading-snug">
+        {t.receiptThanks.replace("{store}", storeName.trim() || "POS")}
+      </p>
     </article>
   );
 }
@@ -397,8 +361,7 @@ export function SaleReceiptPreview({
     typeof document !== "undefined"
       ? createPortal(
           <div className="sale-receipt-print" aria-hidden>
-            <SaleReceiptCopy {...copyProps} variant="customer" />
-            <SaleReceiptCopy {...copyProps} variant="kitchen" />
+            <SaleReceiptCopy {...copyProps} />
           </div>,
           document.body,
         )
@@ -440,8 +403,7 @@ export function SaleReceiptPreview({
             <DialogDescription>{t.receiptPreviewHint}</DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
-            <SaleReceiptCopy {...copyProps} variant="customer" />
-            <SaleReceiptCopy {...copyProps} variant="kitchen" />
+            <SaleReceiptCopy {...copyProps} />
           </div>
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={onClose}>
