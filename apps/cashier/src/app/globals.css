@@ -88,17 +88,20 @@ body {
 
 /* Chrome ignores `size: 58mm auto` (invalid). Two lengths required. */
 @page {
-  size: 58mm 120mm;
+  size: 58mm 200mm;
   margin: 0;
 }
 
 @media print {
   html,
   body {
-    width: 58mm !important;
+    width: 100% !important;
+    max-width: none !important;
     margin: 0 !important;
     padding: 0 !important;
     background: #fff !important;
+    color: #111 !important;
+    font-size: 11pt !important;
   }
 
   body > *:not(.sale-receipt-print) {
@@ -109,8 +112,8 @@ body {
     display: block !important;
     position: static;
     inset: auto;
-    width: 58mm;
-    max-width: 58mm;
+    width: 100% !important;
+    max-width: none !important;
     margin: 0;
     padding: 0;
     background: #fff;
@@ -120,13 +123,26 @@ body {
   .sale-receipt-page {
     border: 0;
     border-radius: 0;
-    padding: 3mm 4mm;
+    padding: 2mm 2.5mm !important;
     box-sizing: border-box;
-    background: transparent;
-    width: 58mm;
-    max-width: 58mm;
+    background: #fff;
+    width: 100% !important;
+    max-width: none !important;
     margin: 0;
     break-after: page;
+    font-size: 11pt;
+  }
+
+  .sale-receipt-page .text-xs {
+    font-size: 9.5pt !important;
+  }
+
+  .sale-receipt-page .text-sm {
+    font-size: 11pt !important;
+  }
+
+  .sale-receipt-page .text-base {
+    font-size: 13pt !important;
   }
 
   .sale-receipt-page:last-child {
@@ -134,11 +150,13 @@ body {
   }
 
   .sale-receipt-print .text-muted-foreground {
-    color: #444 !important;
+    color: #333 !important;
   }
 
   .sale-receipt-print img,
   .sale-receipt-print .sale-receipt-logo {
+    max-width: 28mm !important;
+    max-height: 16mm !important;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }

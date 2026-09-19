@@ -28,7 +28,85 @@ function pxToMm(px: number): number {
   return (px * 25.4) / 96;
 }
 
-/** Chrome ignores `@page size: 58mm auto` and keeps A4. Print from an iframe with two explicit lengths. */
+function thermalPrintCss(heightMm: number): string {
+  return `
+    @page {
+      size: ${RECEIPT_WIDTH_MM}mm ${heightMm}mm;
+      margin: 0;
+    }
+    html {
+      color-scheme: light !important;
+      width: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      background: #fff !important;
+    }
+    body {
+      width: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      background: #fff !important;
+      color: #111 !important;
+      font-size: 11pt !important;
+      line-height: 1.35 !important;
+    }
+    .sale-receipt-print {
+      display: block !important;
+      width: 100% !important;
+      max-width: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      background: #fff !important;
+      color: #111 !important;
+    }
+    .sale-receipt-page {
+      width: 100% !important;
+      max-width: none !important;
+      margin: 0 !important;
+      padding: 2mm 2.5mm !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+      background: #fff !important;
+      color: #111 !important;
+      box-sizing: border-box !important;
+      break-after: page;
+    }
+    .sale-receipt-page:last-child { break-after: auto; }
+    .sale-receipt-page .text-xs { font-size: 9.5pt !important; }
+    .sale-receipt-page .text-sm { font-size: 11pt !important; }
+    .sale-receipt-page .text-base { font-size: 13pt !important; }
+    .sale-receipt-print .text-muted-foreground { color: #333 !important; }
+    .sale-receipt-logo,
+    .sale-receipt-print img {
+      max-width: 28mm !important;
+      max-height: 16mm !important;
+      width: auto !important;
+      height: auto !important;
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+  `;
+}
+
+function waitForPrintImages(doc: Document): Promise<void> {
+  const images = Array.from(doc.images);
+  if (!images.length) return Promise.resolve();
+  return Promise.all(
+    images.map(
+      (img) =>
+        new Promise<void>((resolve) => {
+          if (img.complete) {
+            resolve();
+            return;
+          }
+          img.onload = () => resolve();
+          img.onerror = () => resolve();
+        }),
+    ),
+  ).then(() => undefined);
+}
+
+/** Chrome often still paginates A4. Fill 100% of the page box so 58mm roll printers are not shrunk. */
 function printThermalReceipt() {
   const source = document.querySelector(".sale-receipt-print");
   if (!(source instanceof HTMLElement)) {
@@ -39,8 +117,7 @@ function printThermalReceipt() {
   const iframe = document.createElement("iframe");
   iframe.setAttribute("aria-hidden", "true");
   iframe.setAttribute("title", "receipt-print");
-  iframe.style.cssText =
-    "position:fixed;right:0;bottom:0;width:58mm;height:1px;border:0;opacity:0;pointer-events:none";
+  iframe.style.cssText = `position:fixed;left:0;top:0;width:${RECEIPT_WIDTH_MM}mm;height:100vh;border:0;opacity:0;pointer-events:none;background:#fff`;
   document.body.appendChild(iframe);
 
   const doc = iframe.contentDocument;
@@ -63,55 +140,31 @@ function printThermalReceipt() {
   const clone = source.cloneNode(true) as HTMLElement;
   clone.removeAttribute("aria-hidden");
   clone.style.display = "block";
-  clone.style.width = `${RECEIPT_WIDTH_MM}mm`;
-  doc.body.style.margin = "0";
-  doc.body.style.width = `${RECEIPT_WIDTH_MM}mm`;
-  doc.documentElement.style.width = `${RECEIPT_WIDTH_MM}mm`;
+  clone.style.width = "100%";
+  clone.style.maxWidth = "none";
   doc.body.appendChild(clone);
 
   const pages = Array.from(
     clone.querySelectorAll(".sale-receipt-page"),
   ) as HTMLElement[];
   const maxPx = Math.max(1, ...pages.map((page) => page.scrollHeight));
-  const heightMm = Math.max(80, Math.ceil(pxToMm(maxPx) + 8));
+  const heightMm = Math.max(90, Math.ceil(pxToMm(maxPx) + 10));
 
   const pageStyle = doc.createElement("style");
-  pageStyle.textContent = `
-    @page { size: ${RECEIPT_WIDTH_MM}mm ${heightMm}mm; margin: 0; }
-    html, body {
-      width: ${RECEIPT_WIDTH_MM}mm !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      background: #fff !important;
-    }
-    .sale-receipt-print {
-      display: block !important;
-      width: ${RECEIPT_WIDTH_MM}mm;
-      max-width: ${RECEIPT_WIDTH_MM}mm;
-      padding: 0;
-    }
-    .sale-receipt-page {
-      width: ${RECEIPT_WIDTH_MM}mm;
-      max-width: ${RECEIPT_WIDTH_MM}mm;
-      box-sizing: border-box;
-      padding: 3mm 4mm;
-      break-after: page;
-      border: 0;
-      background: transparent;
-    }
-    .sale-receipt-page:last-child { break-after: auto; }
-  `;
+  pageStyle.textContent = thermalPrintCss(heightMm);
   doc.head.appendChild(pageStyle);
 
   const cleanup = () => {
     iframe.remove();
   };
   iframe.contentWindow?.addEventListener("afterprint", cleanup);
-  window.setTimeout(() => {
-    iframe.contentWindow?.focus();
-    iframe.contentWindow?.print();
-    window.setTimeout(cleanup, 60_000);
-  }, 80);
+  void waitForPrintImages(doc).then(() => {
+    window.setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      window.setTimeout(cleanup, 60_000);
+    }, 120);
+  });
 }
 
 export function shortSaleId(saleId: string): string {
