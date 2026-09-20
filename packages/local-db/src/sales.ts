@@ -15,6 +15,7 @@ const DEVICE_ID_KEY = "deviceId";
 export type CreateIncompleteSaleInput = {
   lines: LocalSaleLine[];
   customerId?: string | null;
+  guestName?: string | null;
 };
 
 export async function getDeviceId(): Promise<string> {
@@ -37,6 +38,7 @@ export async function createIncompleteSale(
     status: "incomplete",
     lines: input.lines,
     customerId: input.customerId ?? null,
+    guestName: input.guestName?.trim() || null,
   };
   const db = await openLocalDb();
   await db.put("sales", sale);
@@ -409,6 +411,7 @@ export function toSyncSaleRequest(sale: LocalSaleRecord): SyncSaleRequest {
       price_minor: line.priceMinor,
     })),
     ...(sale.customerId ? { customer_id: sale.customerId } : {}),
+    ...(sale.guestName?.trim() ? { guest_name: sale.guestName.trim() } : {}),
     ...(sale.shiftId ? { shift_id: sale.shiftId } : {}),
     ...(sale.loyalty &&
     (sale.loyalty.redeemPoints > 0 || sale.loyalty.discountMinor > 0)

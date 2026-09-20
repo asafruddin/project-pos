@@ -270,9 +270,7 @@ export default function TransactionsPage() {
                       </p>
                     </TableCell>
                     <TableCell className="px-3 py-3">
-                      {sale.customerId
-                        ? (customerNames[sale.customerId] ?? t.customerTitle)
-                        : t.txWalkIn}
+                      {saleReceiptName(sale, customerNames) ?? t.txWalkIn}
                     </TableCell>
                     <TableCell className="px-3 py-3">
                       <span title={payDetail(sale, lang, t)}>
@@ -403,11 +401,7 @@ export default function TransactionsPage() {
       ) : null}
       <SaleReceiptPreview
         sale={previewSale}
-        customerName={
-          previewSale?.customerId
-            ? (customerNames[previewSale.customerId] ?? null)
-            : null
-        }
+        customerName={previewSale ? saleReceiptName(previewSale, customerNames) : null}
         lang={lang}
         open={Boolean(previewSale)}
         onClose={() => setPreviewSale(null)}
@@ -425,6 +419,16 @@ async function fetchTodaySales() {
     rows,
     names: Object.fromEntries(customers.map((row) => [row.customerId, row.name])),
   };
+}
+
+function saleReceiptName(
+  sale: LocalSaleRecord,
+  names: Record<string, string>,
+): string | null {
+  const guest = sale.guestName?.trim();
+  if (guest) return guest;
+  if (sale.customerId) return names[sale.customerId] ?? null;
+  return null;
 }
 
 function discountMinor(sale: LocalSaleRecord): number {

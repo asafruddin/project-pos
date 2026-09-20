@@ -18,8 +18,6 @@ import {
   PlusIcon,
   ShoppingCartIcon,
   TrashSimpleIcon,
-  UserCircleCheckIcon,
-  UserPlusIcon,
   XIcon,
 } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
@@ -28,12 +26,10 @@ import {
   createIncompleteSale,
   discardIncompleteSale,
   discardParkedCart,
-  evaluateLoyaltyRedeem,
   evaluateManagerDiscount,
   evaluatePromotions,
   evaluateVoucher,
   getCachedPromotions,
-  getLoyaltyProgram,
   getOpenShift,
   getParkedCart,
   listCatalogProducts,
@@ -45,9 +41,8 @@ import {
   type LocalSaleRecord,
   type ParkedCartRecord,
 } from "@pos-apps/local-db";
-import type { LoyaltyProgram, Promotion, Voucher } from "@pos-apps/types";
+import type { Promotion, Voucher } from "@pos-apps/types";
 import { useCart } from "@/components/providers/cart-context";
-import { CustomerAttach, restoreCartCustomer } from "@/components/organisms/customer-attach";
 import { SaleReceiptPreview } from "@/components/organisms/sale-receipt";
 import { UnpackConfirmDialog } from "@/components/organisms/unpack-confirm-dialog";
 import { authorizedFetch } from "@/lib/api-client";
@@ -75,12 +70,11 @@ function parkedQty(parked: ParkedCartRecord): number {
 
 export function CartPanel({ lang, onCompleted }: Props) {
   const t = copy(lang);
-  const { lines, setQty, clear, replaceLines, customer, setCustomer, add, raiseStockCap } =
+  const { lines, setQty, clear, replaceLines, guestName, setGuestName, add, raiseStockCap } =
     useCart();
   const [sale, setSale] = useState<LocalSaleRecord | null>(null);
   const [parked, setParked] = useState<ParkedCartRecord[]>([]);
   const [parkedDialogOpen, setParkedDialogOpen] = useState(false);
-  const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [shiftOpen, setShiftOpen] = useState(false);
   const inFlight = useRef(false);
@@ -90,12 +84,9 @@ export function CartPanel({ lang, onCompleted }: Props) {
   const [previewCustomerName, setPreviewCustomerName] = useState<string | null>(
     null,
   );
-  const [creditMinor, setCreditMinor] = useState(0);
-  const [redeemInput, setRedeemInput] = useState(0);
   const [online, setOnline] = useState(
     typeof navigator !== "undefined" ? navigator.onLine : true,
   );
-  const [program, setProgram] = useState<LoyaltyProgram | null>(null);
   const [promos, setPromos] = useState<Promotion[]>([]);
   const [couponCode, setCouponCode] = useState("");
   const [voucherCode, setVoucherCode] = useState("");
@@ -135,12 +126,6 @@ export function CartPanel({ lang, onCompleted }: Props) {
   }, [lines]);
 
   useEffect(() => {
-    setCreditMinor(0);
-    setRedeemInput(0);
-  }, [customer?.customerId]);
-
-  useEffect(() => {
-    void getLoyaltyProgram().then(setProgram);
     void getCachedPromotions().then(setPromos);
     const onOnline = () => setOnline(true);
     const onOffline = () => setOnline(false);
@@ -161,7 +146,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
       price_minor: line.priceMinor,
     })),
     coupon_code: couponCode,
-    customer_group: customer?.groupName ?? null,
+    customer_group: null,
     local_hour: new Date().getHours(),
   });
   const afterPromo = lineTotal - promoEval.discount_minor;
@@ -177,47 +162,13 @@ export function CartPanel({ lang, onCompleted }: Props) {
           payable_minor: afterManager,
         })
       : { ok: true as const, applied_minor: 0, remaining_minor: 0, skipped: true };
-  const afterVoucher = afterManager - voucherEval.applied_minor;
-  const canRedeem =
-    online &&
-    Boolean(customer) &&
-    Boolean(program?.enabled) &&
-    (customer?.loyaltyPoints ?? 0) > 0;
-  const maxRedeem = canRedeem && program
-    ? Math.min(
-        customer?.loyaltyPoints ?? 0,
-        Math.floor(afterVoucher / Math.max(1, program.point_value_minor)),
-      )
-    : 0;
-  const redeemed = canRedeem
-    ? evaluateLoyaltyRedeem({
-        program: {
-          enabled: program!.enabled,
-          earn_per_minor: program!.earn_per_minor,
-          point_value_minor: program!.point_value_minor,
-          expire_days: program!.expire_days,
-          tiers: program!.tiers,
-        },
-        points_balance: customer?.loyaltyPoints ?? 0,
-        redeem_points: Math.min(Math.max(0, redeemInput), maxRedeem),
-        payable_minor: afterVoucher,
-      })
-    : { ok: true as const, redeem_points: 0, discount_minor: 0, skipped: true };
-  const discount =
-    redeemed.ok && !redeemed.skipped ? redeemed.discount_minor : 0;
-  const appliedRedeem =
-    redeemed.ok && !redeemed.skipped ? redeemed.redeem_points : 0;
   const payable = stackSaleDiscounts({
     line_total_minor: lineTotal,
     promo_discount_minor: promoEval.discount_minor,
     manager_discount_minor: managerEval.discount_minor,
     voucher_minor: voucherEval.applied_minor,
-    loyalty_discount_minor: discount,
+    loyalty_discount_minor: 0,
   });
-  const creditBalance = customer?.storeCreditMinor ?? 0;
-  const maxCredit = Math.max(0, Math.min(creditBalance, payable));
-  const appliedCredit = customer ? Math.min(Math.max(0, creditMinor), maxCredit) : 0;
-  const cashMinor = payable - appliedCredit;
 
   function beginWork(): boolean {
     if (inFlight.current) return false;
@@ -261,10 +212,9 @@ export function CartPanel({ lang, onCompleted }: Props) {
       return;
     }
     setShiftOpen(true);
-    setPayMethod("cash");
-    try {
-      setProgram(await getLoyaltyProgram());
-      setPromos(await getCachedPromotions());
+      setPayMethod("cash");
+      try {
+        setPromos(await getCachedPromotions());
       setSale(
         await createIncompleteSale({
           lines: lines.map(({ productId, name, priceMinor, qty }) => ({
@@ -273,7 +223,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
             priceMinor,
             qty,
           })),
-          customerId: customer?.customerId ?? null,
+          guestName,
         }),
       );
     } catch {
@@ -292,7 +242,6 @@ export function CartPanel({ lang, onCompleted }: Props) {
         0,
       );
       const livePromos = await getCachedPromotions();
-      const liveProgram = await getLoyaltyProgram();
       const livePromo = evaluatePromotions({
         promotions: livePromos,
         lines: sale.lines.map((line) => ({
@@ -301,7 +250,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
           price_minor: line.priceMinor,
         })),
         coupon_code: couponCode,
-        customer_group: customer?.groupName ?? null,
+        customer_group: null,
         local_hour: new Date().getHours(),
       });
       const afterPromoSale = lineTotalSale - livePromo.discount_minor;
@@ -342,64 +291,20 @@ export function CartPanel({ lang, onCompleted }: Props) {
           return;
         }
       }
-      const afterVoucherSale = afterManagerSale - liveVoucher.applied_minor;
-      const liveRedeem =
-        customer && liveProgram?.enabled && navigator.onLine
-          ? evaluateLoyaltyRedeem({
-            program: {
-              enabled: liveProgram.enabled,
-              earn_per_minor: liveProgram.earn_per_minor,
-              point_value_minor: liveProgram.point_value_minor,
-              expire_days: liveProgram.expire_days,
-              tiers: liveProgram.tiers,
-            },
-            points_balance: customer?.loyaltyPoints ?? 0,
-            redeem_points: Math.min(
-              Math.max(0, redeemInput),
-              Math.min(
-                customer?.loyaltyPoints ?? 0,
-                Math.floor(
-                  afterVoucherSale / Math.max(1, liveProgram.point_value_minor),
-                ),
-              ),
-            ),
-            payable_minor: afterVoucherSale,
-          })
-        : { ok: true as const, redeem_points: 0, discount_minor: 0, skipped: true };
-      const loyaltyDiscount =
-        liveRedeem.ok && !liveRedeem.skipped ? liveRedeem.discount_minor : 0;
-      const loyaltyRedeem =
-        liveRedeem.ok && !liveRedeem.skipped ? liveRedeem.redeem_points : 0;
       const payableSale = stackSaleDiscounts({
         line_total_minor: lineTotalSale,
         promo_discount_minor: livePromo.discount_minor,
         manager_discount_minor: liveManager.discount_minor,
         voucher_minor: liveVoucher.applied_minor,
-        loyalty_discount_minor: loyaltyDiscount,
+        loyalty_discount_minor: 0,
       });
-      const credit = customer
-        ? Math.min(
-            Math.max(0, creditMinor),
-            Math.max(0, Math.min(creditBalance, payableSale)),
-          )
-        : 0;
-      const cash = payableSale - credit;
       const remainderMethod = payMethod;
       const completed = await completeSale(
         sale.saleId,
         {
-          tenders: [
-            ...(cash > 0 || credit === 0
-              ? [{ method: remainderMethod, amountMinor: cash }]
-              : []),
-            ...(credit > 0
-              ? [{ method: "store_credit" as const, amountMinor: credit }]
-              : []),
-          ],
+          tenders: [{ method: remainderMethod, amountMinor: payableSale }],
         },
-        loyaltyRedeem > 0 || loyaltyDiscount > 0
-          ? { redeemPoints: loyaltyRedeem, discountMinor: loyaltyDiscount }
-          : null,
+        null,
         livePromo.discount_minor > 0 ||
           liveVoucher.applied_minor > 0 ||
           liveManager.discount_minor > 0 ||
@@ -421,12 +326,12 @@ export function CartPanel({ lang, onCompleted }: Props) {
           : null,
       );
       await onCompleted(completed);
-      const attachedName = customer?.name?.trim() || null;
+      const printedName = guestName?.trim() || null;
       clear();
       setSale(null);
       setPayMethod("cash");
       setReceipt(t.receiptSuccess);
-      setPreviewCustomerName(attachedName);
+      setPreviewCustomerName(printedName);
       setPreviewSale(completed);
     } catch (err) {
       if (err instanceof Error && err.message === "SHIFT_REQUIRED") {
@@ -486,8 +391,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
           qty,
         })),
         {
-          customerId: customer?.customerId ?? null,
-          customerName: customer?.name ?? null,
+          customerName: guestName?.trim() || null,
         },
       );
       clear();
@@ -528,7 +432,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
           };
         }),
       );
-      setCustomer(await restoreCartCustomer(record.customerId ?? null));
+      setGuestName(record.customerName ?? null);
       await discardParkedCart(parkId);
       setParkedDialogOpen(false);
     } catch {
@@ -550,46 +454,57 @@ export function CartPanel({ lang, onCompleted }: Props) {
     }
   }
 
-  const cartActions = (
-    <span className="flex items-center gap-2">
-      {!sale ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          className="size-9 rounded-xl md:size-10"
+  function parkedButton() {
+    if (!parked.length) return null;
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        className="relative size-9 rounded-xl md:size-10"
+        onClick={() => setParkedDialogOpen(true)}
+        aria-label={`${t.parked}: ${parkedBadge}`}
+        title={`${t.parked}: ${parkedBadge}`}
+      >
+        <ArchiveTrayIcon size={19} weight="duotone" />
+        <span className="absolute -top-1.5 -right-1.5 min-w-5 rounded-full bg-primary px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-primary-foreground">
+          {parkedBadge}
+        </span>
+      </Button>
+    );
+  }
+
+  const receiptNameField = !sale ? (
+    <div className="mb-3">
+      <Label htmlFor="cart-receipt-name">{t.receiptName}</Label>
+      <div className="relative mt-1.5">
+        <Input
+          id="cart-receipt-name"
+          value={guestName ?? ""}
           disabled={busy}
-          aria-label={
-            customer ? `${t.customerAttach}: ${customer.name}` : t.customerAttach
-          }
-          title={customer ? customer.name : t.customerAttach}
-          onClick={() => setCustomerPickerOpen(true)}
-        >
-          {customer ? (
-            <UserCircleCheckIcon size={19} weight="duotone" className="text-primary" />
-          ) : (
-            <UserPlusIcon size={19} weight="duotone" />
-          )}
-        </Button>
-      ) : null}
-      {parked.length > 0 ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          className="relative size-9 rounded-xl md:size-10"
-          onClick={() => setParkedDialogOpen(true)}
-          aria-label={`${t.parked}: ${parkedBadge}`}
-          title={`${t.parked}: ${parkedBadge}`}
-        >
-          <ArchiveTrayIcon size={19} weight="duotone" />
-          <span className="absolute -top-1.5 -right-1.5 min-w-5 rounded-full bg-primary px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-primary-foreground">
-            {parkedBadge}
-          </span>
-        </Button>
-      ) : null}
-    </span>
-  );
+          placeholder={t.receiptNamePh}
+          maxLength={80}
+          autoComplete="name"
+          className="h-11 rounded-xl pr-11"
+          onChange={(e) => setGuestName(e.target.value)}
+        />
+        {guestName ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute top-1/2 right-1 size-9 -translate-y-1/2 rounded-lg text-muted-foreground"
+            disabled={busy}
+            aria-label={t.receiptNameClear}
+            onClick={() => setGuestName(null)}
+          >
+            <XIcon size={16} weight="bold" />
+          </Button>
+        ) : null}
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">{t.receiptNameHint}</p>
+    </div>
+  ) : null;
 
   return (
     <>
@@ -608,7 +523,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
       className={cn(
         "fixed inset-x-3 z-30 flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-card)] md:static md:inset-auto md:bottom-auto md:z-auto md:h-full md:max-h-none md:min-h-0",
         mobileOpen
-          ? "bottom-[calc(4.75rem+env(safe-area-inset-bottom))] max-h-[min(68dvh,34rem)]"
+          ? "top-12 bottom-[calc(4.75rem+env(safe-area-inset-bottom))]"
           : "bottom-[calc(4.75rem+env(safe-area-inset-bottom))] max-h-none",
       )}
     >
@@ -742,7 +657,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
           <ShoppingCartIcon size={22} weight="duotone" className="text-primary" />
           {t.cart}
         </span>
-        {cartActions}
+        {parkedButton()}
       </h2>
       <div
         id="cart-panel-body"
@@ -751,9 +666,9 @@ export function CartPanel({ lang, onCompleted }: Props) {
           mobileOpen ? "flex border-t border-border md:border-t-0" : "hidden md:flex",
         )}
       >
-      {mobileOpen ? (
+      {mobileOpen && parked.length > 0 ? (
         <div className="flex shrink-0 items-center justify-end gap-2 px-3 py-2 md:hidden">
-          {cartActions}
+          {parkedButton()}
         </div>
       ) : null}
       {receipt ? (
@@ -770,16 +685,13 @@ export function CartPanel({ lang, onCompleted }: Props) {
         </p>
       ) : null}
       {sale ? (
-        <div className="mt-1 min-h-0 flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
           <p className="font-medium">
-            {payMethod === "qris"
-              ? t.qrisPayment
-              : appliedCredit > 0
-                ? t.storeCredit
-                : t.cashPayment}{" "}
+            {payMethod === "qris" ? t.qrisPayment : t.cashPayment}{" "}
             {formatIdr(payable, lang)}
           </p>
-          {payable - appliedCredit > 0 ? (
+          {payable > 0 ? (
             <div
               className="inline-flex rounded-xl border border-border bg-background p-1"
               role="group"
@@ -890,100 +802,35 @@ export function CartPanel({ lang, onCompleted }: Props) {
               </Label>
             ) : null}
           </div>
-          {customer ? (
-            <div className="space-y-2 text-sm">
-              {(customer.loyaltyPoints ?? 0) > 0 || customer.loyaltyTier ? (
-                <p className="text-muted-foreground">
-                  {t.loyaltyPoints}: {customer.loyaltyPoints ?? 0}
-                  {customer.loyaltyTier ? ` · ${customer.loyaltyTier}` : ""}
-                </p>
-              ) : null}
-              {canRedeem ? (
-                <Label className="flex items-center justify-between gap-2 font-normal">
-                  <span>{t.loyaltyRedeem}</span>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={maxRedeem}
-                    step={1}
-                    value={appliedRedeem}
-                    disabled={busy || maxRedeem <= 0}
-                    className="h-8 w-32 text-right"
-                    onChange={(e) => {
-                      const next = parseGroupedInt(e.target.value);
-                      setRedeemInput(
-                        Number.isInteger(next)
-                          ? Math.min(Math.max(0, next), maxRedeem)
-                          : 0,
-                      );
-                    }}
-                  />
-                </Label>
-              ) : customer && !online ? (
-                <p className="text-muted-foreground">{t.loyaltyOffline}</p>
-              ) : null}
-              {discount > 0 ? (
-                <p className="flex justify-between">
-                  <span>{t.loyaltyDiscount}</span>
-                  <span>-{formatIdr(discount, lang)}</span>
-                </p>
-              ) : null}
-              <p className="text-muted-foreground">
-                {t.storeCreditBalance}: {formatIdr(creditBalance, lang)}
-              </p>
-              <Label className="flex items-center justify-between gap-2 font-normal">
-                <span>{t.storeCredit}</span>
-                <Input
-                  type="number"
-                  min={0}
-                  max={maxCredit}
-                  step={1}
-                  value={appliedCredit}
-                  disabled={busy || maxCredit <= 0}
-                  className="h-8 w-32 text-right"
-                  onChange={(e) => {
-                    const next = parseGroupedInt(e.target.value);
-                    setCreditMinor(
-                      Number.isInteger(next)
-                        ? Math.min(Math.max(0, next), maxCredit)
-                        : 0,
-                    );
-                  }}
-                />
-              </Label>
-              <p className="flex justify-between">
-                <span>{t.cashTender}</span>
-                <span>{formatIdr(cashMinor, lang)}</span>
-              </p>
-            </div>
-          ) : null}
-          <p className="text-sm text-muted-foreground">{t.receiptHint}</p>
-          <Button
-            className="h-12 min-h-12 w-full rounded-xl"
-            disabled={busy}
-            onClick={() => void confirmReceipt()}
-          >
-            {busy ? t.pending : t.confirmReceipt}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            className="h-auto min-h-12 w-full text-sm text-muted-foreground"
-            disabled={busy}
-            onClick={() => void cancelCheckout()}
-          >
-            {t.cancelCheckout}
-          </Button>
+          </div>
+          <div className="shrink-0 border-t border-border px-4 py-4 sm:px-5">
+            <p className="text-sm text-muted-foreground">{t.receiptHint}</p>
+            <Button
+              className="mt-4 h-12 min-h-12 w-full rounded-xl"
+              disabled={busy}
+              onClick={() => void confirmReceipt()}
+            >
+              {busy ? t.pending : t.confirmReceipt}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="mt-2 h-auto min-h-12 w-full text-sm text-muted-foreground"
+              disabled={busy}
+              onClick={() => void cancelCheckout()}
+            >
+              {t.cancelCheckout}
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col">
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pt-4 sm:px-5 sm:pt-5">
-          <CustomerAttach
-            lang={lang}
-            disabled={busy}
-            open={customerPickerOpen}
-            onOpenChange={setCustomerPickerOpen}
-          />
+          {receiptNameField ? (
+            <div className="shrink-0 px-4 pt-4 sm:px-5 sm:pt-5">
+              {receiptNameField}
+            </div>
+          ) : null}
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pt-1 sm:px-5">
           {lines.length === 0 ? (
             <div className="flex min-h-24 flex-1 flex-col items-center justify-center gap-2 py-6 text-center md:min-h-40 md:py-8">
               <ShoppingCartIcon

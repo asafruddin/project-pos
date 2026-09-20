@@ -250,6 +250,52 @@ describe("SalesService.acceptSync", () => {
     );
   });
 
+  it("stores guest_name and leaves customer_id null", async () => {
+    acceptCompleteSaleMock.mockReturnValue({
+      ok: true,
+      products: [
+        {
+          product_id: "22222222-2222-4222-8222-222222222222",
+          stock_qty: 0,
+        },
+      ],
+    });
+    const insertValues = jest.fn().mockResolvedValue(undefined);
+    getDbMock.mockReturnValue({
+      transaction: async (fn: (tx: unknown) => Promise<unknown>) =>
+        fn({
+          select: () => ({
+            from: () => ({
+              where: () => ({
+                limit: async () => [],
+                for: async () => [
+                  {
+                    product_id: "22222222-2222-4222-8222-222222222222",
+                    stock_qty: 2,
+                  },
+                ],
+              }),
+            }),
+          }),
+          update: () => ({
+            set: () => ({
+              where: async () => undefined,
+            }),
+          }),
+          insert: () => ({
+            values: insertValues,
+          }),
+        }),
+    } as never);
+
+    await expect(
+      service.acceptSync(validRequest({ guest_name: "  Sari  " })),
+    ).resolves.toMatchObject({ accepted: true, already_accepted: false });
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({ customerId: null, guestName: "Sari" }),
+    );
+  });
+
   it("accepts payment equal to line total minus loyalty discount", async () => {
     acceptCompleteSaleMock.mockReturnValue({
       ok: true,

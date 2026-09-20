@@ -511,6 +511,8 @@ export const sales = pgTable("sales", {
     .default([]),
   /** Optional Customer attach (FR-71). No FK — Sale Sync never waits on Customer (AD-3 / AD-18). */
   customerId: uuid("customer_id"),
+  /** Receipt-only guest name. Not a customer profile. */
+  guestName: text("guest_name"),
   /** Required on new Sync after 2C (AD-16). No FK — sale retry must not wait on Shift row. */
   shiftId: uuid("shift_id"),
   loyalty: jsonb("loyalty").$type<{

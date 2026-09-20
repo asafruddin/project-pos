@@ -269,6 +269,7 @@ export class SalesService {
         },
         lines: request.lines,
         customerId: optionalCustomerId(request.customer_id),
+        guestName: optionalGuestName(request.guest_name),
         shiftId,
         loyalty: {
           redeem_points: loyaltyApplied.redeem_points,
@@ -522,6 +523,12 @@ function validateSyncRequest(request: SyncSaleRequest): void {
       message: "Jumlah pembayaran tidak cocok dengan item penjualan.",
     });
   }
+}
+
+function optionalGuestName(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed.slice(0, 80) : null;
 }
 
 function optionalCustomerId(value: unknown): string | null {

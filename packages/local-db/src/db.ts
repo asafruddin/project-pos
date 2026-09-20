@@ -66,6 +66,8 @@ export type LocalSaleRecord = {
   lines: LocalSaleLine[];
   /** Optional Customer attach (FR-71). Sale may complete without this. */
   customerId?: string | null;
+  /** Receipt-only guest name. Not a customer profile. */
+  guestName?: string | null;
   /** Required after 2C (AD-16). */
   shiftId?: string | null;
   /** Redeem snapshot only — earn is computed after Sync (AD-14). */

@@ -836,6 +836,8 @@ export type SyncSaleRequest = {
   }>;
   /** Optional attach (FR-71). Missing/unknown never blocks AcceptCompleteSale. */
   customer_id?: string | null;
+  /** Receipt-only guest name. Not a customer profile. */
+  guest_name?: string | null;
   /** Required after 2C (AD-16 / FR-75). */
   shift_id?: string | null;
   /** Optional Loyalty redeem snapshot. Earn is computed on the server after Sync. */
