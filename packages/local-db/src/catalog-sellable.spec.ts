@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { isSellableCatalogRow } from "./catalog";
+import { isSellableCatalogRow, tracksCatalogStock } from "./catalog";
 import type { CatalogProductRecord } from "./db";
 
 function row(
@@ -27,5 +27,16 @@ describe("isSellableCatalogRow", () => {
     assert.equal(isSellableCatalogRow(variant, all), true);
     assert.equal(isSellableCatalogRow(inactive, all), false);
     assert.equal(isSellableCatalogRow(simple, all), true);
+  });
+});
+
+describe("tracksCatalogStock", () => {
+  it("treats missing trackStock as tracked and false as unlimited", () => {
+    assert.equal(tracksCatalogStock(undefined), true);
+    assert.equal(tracksCatalogStock(row({ productId: "s", name: "Latte" })), true);
+    assert.equal(
+      tracksCatalogStock(row({ productId: "u", name: "Jasa", trackStock: false, stockQty: 0 })),
+      false,
+    );
   });
 });

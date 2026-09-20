@@ -138,6 +138,73 @@ describe("ReturnsService", () => {
     );
   });
 
+  it("skips stock movement for untracked products", async () => {
+    jest.spyOn(service, "get").mockResolvedValue(openReturn);
+    const tx = {
+      select: jest
+        .fn()
+        .mockReturnValueOnce({
+          from: () => ({
+            where: () => ({
+              limit: async () => [
+                {
+                  saleId,
+                  lines: [{ product_id: productId, qty: 2, price_minor: 18000 }],
+                },
+              ],
+            }),
+          }),
+        })
+        .mockReturnValueOnce({
+          from: () => ({
+            where: () => ({
+              limit: async () => [],
+            }),
+          }),
+        })
+        .mockReturnValueOnce({
+          from: () => ({
+            where: () => ({
+              for: async () => [
+                { productId, stockQty: 0, trackStock: false },
+              ],
+            }),
+          }),
+        }),
+      insert: jest
+        .fn()
+        .mockReturnValueOnce({
+          values: () => ({
+            returning: async () => [{ returnId }],
+          }),
+        })
+        .mockReturnValue({
+          values: async () => undefined,
+        }),
+      update: () => ({
+        set: () => ({
+          where: async () => undefined,
+        }),
+      }),
+    };
+    getDbMock.mockReturnValue({
+      transaction: async (fn: (inner: unknown) => Promise<unknown>) => fn(tx),
+      select: () => ({
+        from: () => ({
+          where: async () => [],
+        }),
+      }),
+    } as never);
+
+    await expect(
+      service.create(saleId, {
+        reason: "salah pesan",
+        lines: [{ product_id: productId, qty: 1, decision: "resellable" }],
+      }),
+    ).resolves.toEqual(openReturn);
+    expect(insertMovementMock).not.toHaveBeenCalled();
+  });
+
   it("warranty posts no stock movement", async () => {
     jest.spyOn(service, "get").mockResolvedValue(openReturn);
     const tx = {

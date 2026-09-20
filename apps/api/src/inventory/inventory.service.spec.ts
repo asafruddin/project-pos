@@ -113,6 +113,43 @@ describe("InventoryService", () => {
     });
   });
 
+  it("overview does not flag untracked products as out or low", async () => {
+    getDbMock.mockReturnValue({
+      select: jest
+        .fn()
+        .mockReturnValueOnce({
+          from: () => ({
+            orderBy: async () => [
+              {
+                productId,
+                name: "Jasa",
+                sku: null,
+                minQty: 2,
+                trackStock: false,
+              },
+            ],
+          }),
+        })
+        .mockReturnValueOnce({
+          from: () => ({
+            where: () => ({
+              groupBy: async () => [
+                { productId, bucket: "sellable", qty: "0" },
+              ],
+            }),
+          }),
+        }),
+    } as never);
+
+    const result = await service.overview();
+    expect(result.products[0]).toMatchObject({
+      sellable_qty: 0,
+      track_stock: false,
+      is_low: false,
+      is_out: false,
+    });
+  });
+
   it("markDamaged posts sellable OUT and damaged IN", async () => {
     getDbMock.mockReturnValue({
       transaction: async (fn: (tx: unknown) => Promise<unknown>) =>

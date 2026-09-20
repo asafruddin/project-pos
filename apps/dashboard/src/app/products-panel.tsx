@@ -77,6 +77,14 @@ function StatusBadge({ status }: { status: Product["status"] }) {
 }
 
 function StockBadge({ product }: { product: Product }) {
+  if (!product.track_stock) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2.5 py-1 text-xs font-medium text-sky-700 dark:text-sky-300">
+        <CheckCircleIcon size={14} weight="fill" />
+        Tidak terbatas
+      </span>
+    );
+  }
   const out = product.stock_qty <= 0;
   const low = !out && product.min_qty != null && product.stock_qty <= product.min_qty;
   const tone = out
@@ -90,6 +98,11 @@ function StockBadge({ product }: { product: Product }) {
       {out ? "Habis" : low ? "Rendah" : "Tersedia"}
     </span>
   );
+}
+
+function stockQtyLabel(product: Product): string {
+  if (!product.track_stock) return "Tidak terbatas";
+  return `${product.stock_qty} ${product.unit_name || "unit"}`;
 }
 
 export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
@@ -152,11 +165,12 @@ export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
           .toLowerCase();
         const matchesStock =
           stock === "all" ||
-          (stock === "out"
-            ? p.stock_qty === 0
-            : stock === "low"
-              ? p.min_qty != null && p.stock_qty <= p.min_qty
-              : p.stock_qty > 0);
+          (p.track_stock &&
+            (stock === "out"
+              ? p.stock_qty === 0
+              : stock === "low"
+                ? p.min_qty != null && p.stock_qty <= p.min_qty
+                : p.stock_qty > 0));
         return (
           (!normalized || haystack.includes(normalized)) &&
           (status === "all" || p.status === status) &&
@@ -437,7 +451,7 @@ export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
                     <div>
                       <p className="text-xs text-muted-foreground">Stok saat ini</p>
                       <p className="mt-0.5 font-semibold text-foreground">
-                        {p.stock_qty} {p.unit_name || "unit"}
+                        {stockQtyLabel(p)}
                       </p>
                     </div>
                     <StockBadge product={p} />
@@ -494,7 +508,9 @@ export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
                           {formatIdr(p.price_minor)}
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {p.stock_qty} {p.unit_name || "unit"} tersedia
+                          {p.track_stock
+                            ? `${stockQtyLabel(p)} tersedia`
+                            : stockQtyLabel(p)}
                         </p>
                       </div>
                       <StockBadge product={p} />
@@ -571,7 +587,7 @@ export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
                           <td className="px-4 py-3.5">
                             <div className="flex flex-col items-start gap-1.5">
                               <span className="font-semibold text-foreground">
-                                {p.stock_qty} {p.unit_name || "unit"}
+                                {stockQtyLabel(p)}
                               </span>
                               <StockBadge product={p} />
                             </div>

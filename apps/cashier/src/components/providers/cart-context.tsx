@@ -14,6 +14,7 @@ export type CartLine = {
   catalogPriceMinor: number;
   qty: number;
   stockQty: number;
+  trackStock?: boolean;
 };
 
 type CartContextValue = {
@@ -68,19 +69,28 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       customer,
       add(product) {
         setLines((current) => {
+          const unlimited = product.trackStock === false;
           const line = current.find((entry) => entry.productId === product.productId);
           if (line) {
             return current.map((entry) =>
               entry.productId === product.productId
                 ? {
                     ...entry,
-                    stockQty: Math.max(entry.stockQty, product.stockQty),
-                    qty: Math.min(entry.qty + 1, Math.max(entry.stockQty, product.stockQty)),
+                    trackStock: unlimited ? false : entry.trackStock,
+                    stockQty: unlimited
+                      ? entry.stockQty
+                      : Math.max(entry.stockQty, product.stockQty),
+                    qty: unlimited
+                      ? entry.qty + 1
+                      : Math.min(
+                          entry.qty + 1,
+                          Math.max(entry.stockQty, product.stockQty),
+                        ),
                   }
                 : entry,
             );
           }
-          if (product.stockQty <= 0) return current;
+          if (!unlimited && product.stockQty <= 0) return current;
           const catalogPriceMinor = product.priceMinor;
           return [
             ...current,
@@ -95,6 +105,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               ),
               qty: 1,
               stockQty: product.stockQty,
+              trackStock: unlimited ? false : true,
             },
           ];
         });
@@ -105,7 +116,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             ? current.filter((line) => line.productId !== productId)
             : current.map((line) =>
                 line.productId === productId
-                  ? { ...line, qty: Math.min(qty, line.stockQty) }
+                  ? {
+                      ...line,
+                      qty:
+                        line.trackStock === false
+                          ? qty
+                          : Math.min(qty, line.stockQty),
+                    }
                   : line,
               ),
         );

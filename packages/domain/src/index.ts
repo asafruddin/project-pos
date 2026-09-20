@@ -495,7 +495,11 @@ export function isPlaceholderId(id: string): boolean {
   return typeof id === "string" && id.length > 0;
 }
 
-export type StockForSale = { product_id: string; stock_qty: number };
+export type StockForSale = {
+  product_id: string;
+  stock_qty: number;
+  track_stock?: boolean;
+};
 export type SaleStockLine = { product_id: string; qty: number };
 export type AcceptCompleteSaleResult =
   | { ok: true; products: StockForSale[]; warned?: true }
@@ -538,6 +542,7 @@ export function acceptCompleteSale(
     if (!product) {
       return { ok: false, code: "SALE_PRODUCT_NOT_FOUND", message: "Produk tidak ditemukan." };
     }
+    if (product.track_stock === false) continue;
     if (!Number.isInteger(product.stock_qty)) {
       return { ok: false, code: "SALE_INVALID_LINE", message: "Item penjualan tidak valid." };
     }
@@ -549,6 +554,7 @@ export function acceptCompleteSale(
   const result: Extract<AcceptCompleteSaleResult, { ok: true }> = {
     ok: true,
     products: products.map((product) => {
+      if (product.track_stock === false) return product;
       const qty = requested.get(product.product_id) ?? 0;
       return { ...product, stock_qty: product.stock_qty - qty };
     }),

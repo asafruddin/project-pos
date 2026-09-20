@@ -44,4 +44,15 @@ describe("acceptCompleteSale", () => {
       products: [{ product_id: "coffee", stock_qty: -1 }],
     });
   });
+
+  it("does not decrement or warn for untracked products", () => {
+    const result = acceptCompleteSale(
+      [{ product_id: "service", stock_qty: 0, track_stock: false }],
+      [{ product_id: "service", qty: 3 }],
+    );
+    assert.deepEqual(result, {
+      ok: true,
+      products: [{ product_id: "service", stock_qty: 0, track_stock: false }],
+    });
+  });
 });

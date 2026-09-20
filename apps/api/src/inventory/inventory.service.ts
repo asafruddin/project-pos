@@ -59,8 +59,9 @@ export class InventoryService {
       const sellable_qty = byKey.get(`${row.productId}:sellable`) ?? 0;
       const damaged_qty = byKey.get(`${row.productId}:damaged`) ?? 0;
       const in_transit_qty = byKey.get(`${row.productId}:in_transit`) ?? 0;
-      const is_out = sellable_qty <= 0;
-      const is_low = row.minQty != null && sellable_qty <= row.minQty;
+      const is_out = row.trackStock && sellable_qty <= 0;
+      const is_low =
+        row.trackStock && row.minQty != null && sellable_qty <= row.minQty;
       return {
         product_id: row.productId,
         name: row.name,

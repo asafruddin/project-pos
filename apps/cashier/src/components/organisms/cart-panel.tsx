@@ -523,6 +523,8 @@ export function CartPanel({ lang, onCompleted }: Props) {
               line.qty,
               byId.get(line.productId)?.stockQty ?? line.qty,
             ),
+            trackStock:
+              byId.get(line.productId)?.trackStock === false ? false : true,
           };
         }),
       );
@@ -1019,11 +1021,15 @@ export function CartPanel({ lang, onCompleted }: Props) {
                         className="h-12 w-12 rounded-2xl"
                         aria-label={`${t.qtyUp} ${line.name}`}
                         onClick={() => {
-                          if (line.qty < line.stockQty) {
+                          const catalog = catalogById.get(line.productId);
+                          if (
+                            line.trackStock === false ||
+                            catalog?.trackStock === false ||
+                            line.qty < line.stockQty
+                          ) {
                             setQty(line.productId, line.qty + 1);
                             return;
                           }
-                          const catalog = catalogById.get(line.productId);
                           if (
                             catalog &&
                             canOfferUnpack(

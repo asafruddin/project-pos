@@ -24,6 +24,7 @@ import {
   replaceCustomers,
   replaceLoyaltyProgram,
   replacePromotions,
+  tracksCatalogStock,
   type CatalogProductRecord,
   type LocalSaleRecord,
 } from "@pos-apps/local-db";
@@ -83,8 +84,8 @@ function filterAndSortProducts(
   const q = opts.query.trim().toLowerCase();
   const filtered = products.filter((p) => {
     if (opts.category && (p.categoryName ?? "") !== opts.category) return false;
-    if (opts.stock === "in" && p.stockQty <= 0) return false;
-    if (opts.stock === "out" && p.stockQty > 0) return false;
+    if (opts.stock === "in" && tracksCatalogStock(p) && p.stockQty <= 0) return false;
+    if (opts.stock === "out" && (!tracksCatalogStock(p) || p.stockQty > 0)) return false;
     if (!q) return true;
     const hay = `${p.name} ${p.sku ?? ""} ${p.unitName ?? ""}`.toLowerCase();
     return hay.includes(q);
@@ -652,12 +653,17 @@ export default function MenuPage() {
                 (line) => line.productId === p.productId,
               )?.qty ?? 0;
               const priceOk = isValidSellablePrice(p.priceMinor);
-              const inStock = priceOk && p.stockQty > 0;
+              const unlimited = !tracksCatalogStock(p);
+              const inStock = priceOk && (unlimited || p.stockQty > 0);
               const unpackable =
                 priceOk &&
+                !unlimited &&
                 p.stockQty <= 0 &&
                 canOfferUnpack(p, online, products);
               const clickable = inStock || unpackable;
+              const stockLabel = unlimited
+                ? t.stockUnlimited
+                : `${t.stock} ${p.stockQty}`;
               const priceLabel =
                 inStock || unpackable
                   ? formatIdr(p.priceMinor, lang)
@@ -688,7 +694,7 @@ export default function MenuPage() {
                     title={
                       clickable
                         ? undefined
-                        : p.stockQty <= 0
+                        : !unlimited && p.stockQty <= 0
                           ? t.stockOut
                           : t.catalogBlockedPrice
                     }
@@ -717,7 +723,7 @@ export default function MenuPage() {
                       />
                       {viewMode === "grid" ? (
                         <span className="absolute bottom-1 left-1 rounded bg-black/65 px-1 py-px text-[10px] font-medium text-white md:hidden">
-                          {t.stock} {p.stockQty}
+                          {stockLabel}
                         </span>
                       ) : null}
                     </span>
@@ -753,7 +759,7 @@ export default function MenuPage() {
                           {priceLabel}
                         </span>
                         <span className="hidden text-muted-foreground md:inline">
-                          {t.stock}: {p.stockQty}
+                          {stockLabel}
                         </span>
                         {unpackable ? (
                           <span className="rounded-md bg-primary/10 px-1 py-px text-[10px] font-medium text-primary md:px-1.5 md:py-0.5 md:text-xs">

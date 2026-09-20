@@ -32,6 +32,8 @@ export type CatalogProductRecord = {
   categoryName?: string | null;
   unitName?: string | null;
   unitConversion?: CatalogUnitConversion | null;
+  /** Missing on older cached rows — treat as tracked until the next catalog pull. */
+  trackStock?: boolean;
   pulledAt: string;
 };
 

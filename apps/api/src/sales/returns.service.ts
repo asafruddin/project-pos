@@ -152,6 +152,7 @@ export class ReturnsService {
               .select({
                 productId: products.productId,
                 stockQty: products.stockQty,
+                trackStock: products.trackStock,
               })
               .from(products)
               .where(inArray(products.productId, productIds))
@@ -166,6 +167,7 @@ export class ReturnsService {
             message: "Produk tidak ditemukan.",
           });
         }
+        if (product.trackStock === false) continue;
         await insertStockMovement(tx, {
           productId: movement.product_id,
           storeId: sale.storeId,

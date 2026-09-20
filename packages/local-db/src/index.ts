@@ -54,6 +54,7 @@ export {
   cacheCatalogImages,
   getCatalogImageRecord,
   isSellableCatalogRow,
+  tracksCatalogStock,
   primaryCatalogImage,
   patchCatalogStocks,
 } from "./catalog.js";

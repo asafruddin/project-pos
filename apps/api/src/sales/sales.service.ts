@@ -194,6 +194,7 @@ export class SalesService {
         .select({
           product_id: products.productId,
           stock_qty: products.stockQty,
+          track_stock: products.trackStock,
         })
         .from(products)
         .where(inArray(products.productId, productIds))
@@ -206,7 +207,11 @@ export class SalesService {
         });
       }
 
+      const trackById = new Map(
+        stock.map((row) => [row.product_id, row.track_stock !== false]),
+      );
       for (const line of request.lines) {
+        if (trackById.get(line.product_id) === false) continue;
         await insertStockMovement(tx, {
           productId: line.product_id,
           storeId: saleStoreId,
@@ -221,6 +226,7 @@ export class SalesService {
 
       if (saleStoreId === STORE_1_ID) {
         for (const product of accepted.products) {
+          if (product.track_stock === false) continue;
           await tx
             .update(products)
             .set({ stockQty: product.stock_qty, updatedAt: new Date() })
@@ -360,6 +366,7 @@ export class SalesService {
         .select({
           productId: products.productId,
           stockQty: products.stockQty,
+          trackStock: products.trackStock,
         })
         .from(products)
         .where(inArray(products.productId, productIds))
@@ -374,6 +381,7 @@ export class SalesService {
             message: "Produk tidak ditemukan.",
           });
         }
+        if (product.trackStock === false) continue;
         await insertStockMovement(tx, {
           productId: line.product_id,
           storeId: sale.storeId,

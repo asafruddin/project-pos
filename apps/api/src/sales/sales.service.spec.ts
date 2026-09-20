@@ -157,6 +157,53 @@ describe("SalesService.acceptSync", () => {
     );
   });
 
+  it("skips STOCK OUT for untracked products", async () => {
+    acceptCompleteSaleMock.mockReturnValue({
+      ok: true,
+      products: [
+        {
+          product_id: "22222222-2222-4222-8222-222222222222",
+          stock_qty: 0,
+          track_stock: false,
+        },
+      ],
+    });
+    getDbMock.mockReturnValue({
+      transaction: async (fn: (tx: unknown) => Promise<unknown>) =>
+        fn({
+          select: () => ({
+            from: () => ({
+              where: () => ({
+                limit: async () => [],
+                for: async () => [
+                  {
+                    product_id: "22222222-2222-4222-8222-222222222222",
+                    stock_qty: 0,
+                    track_stock: false,
+                  },
+                ],
+              }),
+            }),
+          }),
+          update: () => ({
+            set: () => ({
+              where: async () => undefined,
+            }),
+          }),
+          insert: () => ({
+            values: async () => undefined,
+          }),
+        }),
+    } as never);
+
+    await expect(service.acceptSync(validRequest())).resolves.toEqual({
+      sale_id: "11111111-1111-4111-8111-111111111111",
+      accepted: true,
+      already_accepted: false,
+    });
+    expect(insertMovementMock).not.toHaveBeenCalled();
+  });
+
   it("accepts a sale when customer_id is missing or invalid (fail-open)", async () => {
     acceptCompleteSaleMock.mockReturnValue({
       ok: true,

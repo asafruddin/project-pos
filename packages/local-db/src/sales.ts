@@ -6,6 +6,7 @@ import {
 } from "@pos-apps/domain";
 import type { SyncSaleRequest, SyncVoidRequest } from "@pos-apps/types";
 import { openLocalDb, type LocalSaleLine, type LocalSaleRecord } from "./db.js";
+import { tracksCatalogStock } from "./catalog.js";
 import { endOfLocalDay, startOfLocalDay } from "./day-bounds.js";
 import { evaluateVoid } from "./void-sale.js";
 
@@ -149,7 +150,11 @@ export async function completeSale(
   const catalog = tx.objectStore("catalogProducts");
   for (const line of sale.lines) {
     const product = await catalog.get(line.productId);
-    if (!product || product.stockQty < line.qty) {
+    if (!product) {
+      throw new Error("Insufficient local stock");
+    }
+    if (!tracksCatalogStock(product)) continue;
+    if (product.stockQty < line.qty) {
       throw new Error("Insufficient local stock");
     }
     await catalog.put({ ...product, stockQty: product.stockQty - line.qty });
@@ -246,7 +251,7 @@ export async function voidCompleteSale(
   const seen = new Map<string, number>();
   for (const line of sale.lines) {
     const product = await catalog.get(line.productId);
-    if (!product) continue;
+    if (!product || !tracksCatalogStock(product)) continue;
     const current = seen.get(line.productId) ?? product.stockQty;
     const next = current + line.qty;
     seen.set(line.productId, next);

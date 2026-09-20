@@ -137,7 +137,7 @@ const PAGE_COPY: Record<string, { title: string; subtitle: string }> = {
   },
   "/products/new": {
     title: "Tambah produk",
-    subtitle: "Isi nama dan harga dulu. Detail lain opsional.",
+    subtitle: "Pilih produk stok atau non-stok. Nama dan harga wajib.",
   },
   "/products/import": {
     title: "Impor produk",

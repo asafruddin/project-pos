@@ -314,10 +314,17 @@ export function ProductForm({
     setPending(true);
     setError(null);
     const price_minor = parseNonNegInt(form.price);
-    const stock_qty = editingId
-      ? parseIntQty(form.stock)
-      : parseNonNegInt(form.stock);
-    if (!form.name.trim() || price_minor === null || stock_qty === null) {
+    const stock_qty = form.trackStock
+      ? editingId
+        ? parseIntQty(form.stock)
+        : parseNonNegInt(form.stock)
+      : 0;
+    if (!form.name.trim() || price_minor === null) {
+      setError("Nama dan harga harus valid (harga bilangan bulat ≥ 0).");
+      setPending(false);
+      return;
+    }
+    if (form.trackStock && stock_qty === null) {
       setError(
         editingId
           ? "Nama, harga, dan stok harus bilangan bulat."
@@ -326,6 +333,7 @@ export function ProductForm({
       setPending(false);
       return;
     }
+    const nextQty = stock_qty ?? 0;
 
     const catalogFields = {
       sku: form.sku.trim() || null,
@@ -339,8 +347,14 @@ export function ProductForm({
       compare_at_minor: form.compareAt.trim()
         ? parseNonNegInt(form.compareAt)
         : null,
-      min_qty: form.minQty.trim() ? parseIntQty(form.minQty) : null,
-      max_qty: form.maxQty.trim() ? parseIntQty(form.maxQty) : null,
+      min_qty:
+        form.trackStock && form.minQty.trim()
+          ? parseIntQty(form.minQty)
+          : null,
+      max_qty:
+        form.trackStock && form.maxQty.trim()
+          ? parseIntQty(form.maxQty)
+          : null,
       track_stock: form.trackStock,
       tags: form.tags
         .split(",")
@@ -358,21 +372,22 @@ export function ProductForm({
       setPending(false);
       return;
     }
-    if (form.minQty.trim() && catalogFields.min_qty === null) {
+    if (form.trackStock && form.minQty.trim() && catalogFields.min_qty === null) {
       setError("Stok min harus bilangan bulat.");
       setPending(false);
       return;
     }
-    if (form.maxQty.trim() && catalogFields.max_qty === null) {
+    if (form.trackStock && form.maxQty.trim() && catalogFields.max_qty === null) {
       setError("Stok max harus bilangan bulat.");
       setPending(false);
       return;
     }
 
     if (editingId) {
-      const stockChanged = stock_qty !== form.originalStock;
+      const stockChanged =
+        form.trackStock && nextQty !== form.originalStock;
       if (stockChanged) {
-        if (stock_qty < 0) {
+        if (nextQty < 0) {
           setError("Penyesuaian stok harus bilangan bulat ≥ 0.");
           setPending(false);
           return;
@@ -402,7 +417,7 @@ export function ProductForm({
           {
             method: "PUT",
             body: JSON.stringify({
-              stock_qty,
+              stock_qty: nextQty,
               reason: form.reason.trim(),
             }),
           },
@@ -423,7 +438,7 @@ export function ProductForm({
         body: JSON.stringify({
           name: form.name.trim(),
           price_minor,
-          stock_qty,
+          stock_qty: nextQty,
           ...catalogFields,
         }),
       });
@@ -910,72 +925,95 @@ export function ProductForm({
             </div>
           </FormSection>
 
-          <FormSection title="Stok" description="Kasir tetap bisa menjual meski stok habis.">
-            <FormField id="stock" label="Jumlah" required>
-              <Input
-                id="stock"
-                inputMode="numeric"
-                placeholder="10"
-                value={form.stock}
-                onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
-                required
+          <FormSection
+            title="Stok"
+            description={
+              form.trackStock
+                ? "Kasir tetap bisa menjual meski stok habis."
+                : "Stok tidak terbatas. Kasir bisa menjual tanpa habis."
+            }
+          >
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant={form.trackStock ? "default" : "secondary"}
                 disabled={pending}
-                className={formInputClass}
-              />
-            </FormField>
-            <div className="flex items-center gap-2.5">
-              <Checkbox
-                id="trackStock"
-                checked={form.trackStock}
-                onCheckedChange={(checked) =>
-                  setForm((f) => ({ ...f, trackStock: checked === true }))
-                }
-                disabled={pending}
-              />
-              <Label htmlFor="trackStock" className="font-normal">
-                Lacak stok di buku besar
-              </Label>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField id="minQty" label="Stok min" hint="Tandai rendah di ikhtisar.">
-                <Input
-                  id="minQty"
-                  inputMode="numeric"
-                  value={form.minQty}
-                  onChange={(e) => setForm((f) => ({ ...f, minQty: e.target.value }))}
-                  disabled={pending}
-                  className={formInputClass}
-                />
-              </FormField>
-              <FormField id="maxQty" label="Stok max">
-                <Input
-                  id="maxQty"
-                  inputMode="numeric"
-                  value={form.maxQty}
-                  onChange={(e) => setForm((f) => ({ ...f, maxQty: e.target.value }))}
-                  disabled={pending}
-                  className={formInputClass}
-                />
-              </FormField>
-            </div>
-            {editingId ? (
-              <FormField
-                id="reason"
-                label="Alasan ubah stok"
-                hint="Wajib hanya jika jumlah stok berubah."
+                onClick={() => setForm((f) => ({ ...f, trackStock: true }))}
               >
-                <Input
-                  id="reason"
-                  placeholder="contoh: koreksi hitung"
-                  value={form.reason}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, reason: e.target.value }))
-                  }
-                  disabled={pending}
-                  className={formInputClass}
-                />
-              </FormField>
-            ) : null}
+                Produk stok
+              </Button>
+              <Button
+                type="button"
+                variant={!form.trackStock ? "default" : "secondary"}
+                disabled={pending}
+                onClick={() => {
+                  setConversionEnabled(false);
+                  setForm((f) => ({ ...f, trackStock: false }));
+                }}
+              >
+                Produk non-stok
+              </Button>
+            </div>
+            {form.trackStock ? (
+              <>
+                <FormField id="stock" label="Jumlah" required>
+                  <Input
+                    id="stock"
+                    inputMode="numeric"
+                    placeholder="10"
+                    value={form.stock}
+                    onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
+                    required
+                    disabled={pending}
+                    className={formInputClass}
+                  />
+                </FormField>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField id="minQty" label="Stok min" hint="Tandai rendah di ikhtisar.">
+                    <Input
+                      id="minQty"
+                      inputMode="numeric"
+                      value={form.minQty}
+                      onChange={(e) => setForm((f) => ({ ...f, minQty: e.target.value }))}
+                      disabled={pending}
+                      className={formInputClass}
+                    />
+                  </FormField>
+                  <FormField id="maxQty" label="Stok max">
+                    <Input
+                      id="maxQty"
+                      inputMode="numeric"
+                      value={form.maxQty}
+                      onChange={(e) => setForm((f) => ({ ...f, maxQty: e.target.value }))}
+                      disabled={pending}
+                      className={formInputClass}
+                    />
+                  </FormField>
+                </div>
+                {editingId ? (
+                  <FormField
+                    id="reason"
+                    label="Alasan ubah stok"
+                    hint="Wajib hanya jika jumlah stok berubah."
+                  >
+                    <Input
+                      id="reason"
+                      placeholder="contoh: koreksi hitung"
+                      value={form.reason}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, reason: e.target.value }))
+                      }
+                      disabled={pending}
+                      className={formInputClass}
+                    />
+                  </FormField>
+                ) : null}
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Jumlah stok, stok min/max, dan alasan penyesuaian tidak dipakai untuk produk non-stok.
+              </p>
+            )}
           </FormSection>
 
           <FormSection title="Status">

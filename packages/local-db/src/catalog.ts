@@ -23,6 +23,12 @@ export function isSellableCatalogRow(
   return !all.some((other) => other.parentId === product.productId);
 }
 
+export function tracksCatalogStock(
+  product: { trackStock?: boolean } | null | undefined,
+): boolean {
+  return product?.trackStock !== false;
+}
+
 export async function listCatalogProducts(): Promise<CatalogProductRecord[]> {
   const db = await openLocalDb();
   const rows = await db.getAll("catalogProducts");
@@ -81,6 +87,7 @@ export async function replaceCatalog(products: Product[]): Promise<number> {
       categoryName: p.category_name ?? null,
       unitName: p.unit_name ?? null,
       unitConversion: conversion,
+      trackStock: p.track_stock ?? true,
       pulledAt,
     };
     await tx.objectStore("catalogProducts").put(row);
