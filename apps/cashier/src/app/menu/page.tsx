@@ -8,10 +8,23 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
   toSelectValue,
   fromSelectValue,
 } from "@pos-apps/ui/molecules";
-import { ListIcon, MagnifyingGlassIcon, SquaresFourIcon } from "@phosphor-icons/react";
+import {
+  ArrowsClockwiseIcon,
+  CloudArrowDownIcon,
+  FunnelIcon,
+  ListIcon,
+  MagnifyingGlassIcon,
+  SquaresFourIcon,
+} from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -138,6 +151,7 @@ export default function MenuPage() {
   const [stockFilter, setStockFilter] = useState<StockFilter>("all");
   const [sortBy, setSortBy] = useState<CatalogSort>("name-asc");
   const [viewMode, setViewMode] = useState<CatalogView>("grid");
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [page, setPage] = useState(1);
   const { add, lines, pruneToSellable, raiseStockCap } = useCart();
   const [unpackTarget, setUnpackTarget] = useState<CatalogProductRecord | null>(
@@ -153,6 +167,11 @@ export default function MenuPage() {
     }
     return [...set].sort((a, b) => compareLocale(a, b, lang));
   }, [products, lang]);
+
+  const activeFilterCount =
+    (categoryFilter ? 1 : 0) +
+    (stockFilter !== "all" ? 1 : 0) +
+    (sortBy !== "name-asc" ? 1 : 0);
 
   const visibleProducts = useMemo(
     () =>
@@ -395,9 +414,22 @@ export default function MenuPage() {
           type="button"
           disabled={pulling || !online}
           onClick={() => void pullCatalog()}
-          className="rounded-xl"
+          className="rounded-xl max-lg:size-8 max-lg:rounded-lg max-lg:p-0"
+          aria-label={pulling ? t.catalogPulling : t.catalogPull}
+          title={pulling ? t.catalogPulling : t.catalogPull}
         >
-          {pulling ? t.catalogPulling : t.catalogPull}
+          {pulling ? (
+            <ArrowsClockwiseIcon
+              size={16}
+              weight="bold"
+              className="animate-spin lg:hidden"
+            />
+          ) : (
+            <CloudArrowDownIcon size={16} weight="bold" className="lg:hidden" />
+          )}
+          <span className="hidden lg:inline">
+            {pulling ? t.catalogPulling : t.catalogPull}
+          </span>
         </Button>
       }
       aside={<CartPanel lang={lang} onCompleted={handleCompleted} />}
@@ -436,87 +468,69 @@ export default function MenuPage() {
 
       {products.length > 0 ? (
         <div className="shrink-0 space-y-2 md:space-y-3 md:rounded-2xl md:border md:border-border/70 md:bg-muted/30 md:p-4">
-          <div className="relative">
-            <MagnifyingGlassIcon
-              size={18}
-              className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
-            />
-            <Label htmlFor="catalog-search" className="sr-only">
-              {t.catalogSearch}
-            </Label>
-            <Input
-              id="catalog-search"
-              type="search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t.catalogSearchPlaceholder}
-              autoComplete="off"
-              className="h-10 rounded-xl bg-muted/50 pr-3 pl-9 md:h-11 md:bg-background"
-            />
-          </div>
-          <div className="flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden">
+          <div className="flex items-center gap-2">
+            <div className="relative min-w-0 flex-1">
+              <MagnifyingGlassIcon
+                size={18}
+                className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
+              />
+              <Label htmlFor="catalog-search" className="sr-only">
+                {t.catalogSearch}
+              </Label>
+              <Input
+                id="catalog-search"
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t.catalogSearchPlaceholder}
+                autoComplete="off"
+                className="h-10 rounded-xl bg-muted/50 pr-3 pl-9 md:h-11 md:bg-background"
+              />
+            </div>
             <Button
               type="button"
-              size="sm"
-              variant={categoryFilter === "" ? "default" : "outline"}
-              className="h-8 shrink-0 rounded-full px-3 text-xs"
-              onClick={() => setCategoryFilter("")}
+              variant={activeFilterCount ? "default" : "outline"}
+              className="h-10 shrink-0 gap-1.5 rounded-xl px-3 md:hidden"
+              aria-label={t.catalogFilters}
+              onClick={() => setFilterSheetOpen(true)}
             >
-              {t.catalogFilterAllCategories}
+              <FunnelIcon size={18} weight={activeFilterCount ? "fill" : "regular"} />
+              {activeFilterCount
+                ? `${t.catalogFilters} (${activeFilterCount})`
+                : t.catalogFilters}
             </Button>
-            {categories.map((name) => (
+            <div
+              className="inline-flex shrink-0 rounded-xl border border-border bg-background p-0.5 md:p-1"
+              role="group"
+              aria-label={t.catalogViewGrid}
+            >
               <Button
-                key={name}
                 type="button"
-                size="sm"
-                variant={categoryFilter === name ? "default" : "outline"}
-                className="h-8 max-w-40 shrink-0 truncate rounded-full px-3 text-xs"
-                onClick={() => setCategoryFilter(name)}
+                variant={viewMode === "grid" ? "default" : "ghost"}
+                size="icon"
+                className="size-8 rounded-lg md:size-10"
+                aria-pressed={viewMode === "grid"}
+                aria-label={t.catalogViewGrid}
+                title={t.catalogViewGrid}
+                onClick={() => setCatalogView("grid")}
               >
-                {name}
+                <SquaresFourIcon size={18} />
               </Button>
-            ))}
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 md:hidden">
-              <Select
-                value={stockFilter}
-                onValueChange={(value) => setStockFilter(value as StockFilter)}
+              <Button
+                type="button"
+                variant={viewMode === "list" ? "default" : "ghost"}
+                size="icon"
+                className="size-8 rounded-lg md:size-10"
+                aria-pressed={viewMode === "list"}
+                aria-label={t.catalogViewList}
+                title={t.catalogViewList}
+                onClick={() => setCatalogView("list")}
               >
-                <SelectTrigger
-                  id="catalog-stock-mobile"
-                  aria-label={t.catalogFilterStock}
-                  className="h-9 rounded-xl bg-muted/50 text-xs"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t.catalogFilterAllStock}</SelectItem>
-                  <SelectItem value="in">{t.catalogFilterInStock}</SelectItem>
-                  <SelectItem value="out">{t.catalogFilterOutOfStock}</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select
-                value={sortBy}
-                onValueChange={(value) => setSortBy(value as CatalogSort)}
-              >
-                <SelectTrigger
-                  id="catalog-sort-mobile"
-                  aria-label={t.catalogSort}
-                  className="h-9 rounded-xl bg-muted/50 text-xs"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="name-asc">{t.catalogSortNameAsc}</SelectItem>
-                  <SelectItem value="name-desc">{t.catalogSortNameDesc}</SelectItem>
-                  <SelectItem value="price-asc">{t.catalogSortPriceAsc}</SelectItem>
-                  <SelectItem value="price-desc">{t.catalogSortPriceDesc}</SelectItem>
-                  <SelectItem value="stock-desc">{t.catalogSortStockDesc}</SelectItem>
-                </SelectContent>
-              </Select>
+                <ListIcon size={18} />
+              </Button>
             </div>
-            <div className="hidden min-w-0 flex-1 grid-cols-3 gap-3 md:grid">
+          </div>
+          <div className="hidden min-w-0 grid-cols-3 gap-3 md:grid">
               <div className="grid gap-1.5">
                 <Label htmlFor="catalog-category">{t.catalogFilterCategory}</Label>
                 <Select
@@ -581,38 +595,109 @@ export default function MenuPage() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-            <div
-              className="inline-flex shrink-0 rounded-xl border border-border bg-background p-0.5 md:p-1"
-              role="group"
-              aria-label={t.catalogViewGrid}
-            >
-              <Button
-                type="button"
-                variant={viewMode === "grid" ? "default" : "ghost"}
-                size="icon"
-                className="size-8 rounded-lg md:size-10"
-                aria-pressed={viewMode === "grid"}
-                aria-label={t.catalogViewGrid}
-                title={t.catalogViewGrid}
-                onClick={() => setCatalogView("grid")}
-              >
-                <SquaresFourIcon size={18} />
-              </Button>
-              <Button
-                type="button"
-                variant={viewMode === "list" ? "default" : "ghost"}
-                size="icon"
-                className="size-8 rounded-lg md:size-10"
-                aria-pressed={viewMode === "list"}
-                aria-label={t.catalogViewList}
-                title={t.catalogViewList}
-                onClick={() => setCatalogView("list")}
-              >
-                <ListIcon size={18} />
-              </Button>
-            </div>
           </div>
+          <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
+            <SheetContent
+              side="bottom"
+              className="max-h-[80vh] gap-0 rounded-t-3xl px-0 pb-[calc(1rem+env(safe-area-inset-bottom))] md:hidden"
+            >
+              <SheetHeader className="border-b border-border px-4 pb-3">
+                <SheetTitle>{t.catalogFilters}</SheetTitle>
+                <SheetDescription className="sr-only">
+                  {t.catalogFilterCategory}, {t.catalogFilterStock}, {t.catalogSort}
+                </SheetDescription>
+              </SheetHeader>
+              <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4">
+                <div className="grid gap-2">
+                  <p className="text-sm font-medium">{t.catalogFilterCategory}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={categoryFilter === "" ? "default" : "outline"}
+                      className="h-9 rounded-full px-3"
+                      onClick={() => setCategoryFilter("")}
+                    >
+                      {t.catalogFilterAllCategories}
+                    </Button>
+                    {categories.map((name) => (
+                      <Button
+                        key={name}
+                        type="button"
+                        size="sm"
+                        variant={categoryFilter === name ? "default" : "outline"}
+                        className="h-9 max-w-48 truncate rounded-full px-3"
+                        onClick={() => setCategoryFilter(name)}
+                      >
+                        {name}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="catalog-stock-sheet">{t.catalogFilterStock}</Label>
+                  <Select
+                    value={stockFilter}
+                    onValueChange={(value) => setStockFilter(value as StockFilter)}
+                  >
+                    <SelectTrigger
+                      id="catalog-stock-sheet"
+                      className="h-11 rounded-xl"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t.catalogFilterAllStock}</SelectItem>
+                      <SelectItem value="in">{t.catalogFilterInStock}</SelectItem>
+                      <SelectItem value="out">{t.catalogFilterOutOfStock}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="catalog-sort-sheet">{t.catalogSort}</Label>
+                  <Select
+                    value={sortBy}
+                    onValueChange={(value) => setSortBy(value as CatalogSort)}
+                  >
+                    <SelectTrigger
+                      id="catalog-sort-sheet"
+                      className="h-11 rounded-xl"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="name-asc">{t.catalogSortNameAsc}</SelectItem>
+                      <SelectItem value="name-desc">{t.catalogSortNameDesc}</SelectItem>
+                      <SelectItem value="price-asc">{t.catalogSortPriceAsc}</SelectItem>
+                      <SelectItem value="price-desc">{t.catalogSortPriceDesc}</SelectItem>
+                      <SelectItem value="stock-desc">{t.catalogSortStockDesc}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <SheetFooter className="mt-0 flex-row gap-2 border-t border-border px-4 pt-3">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="min-h-11 flex-1 rounded-xl"
+                  onClick={() => {
+                    setCategoryFilter("");
+                    setStockFilter("all");
+                    setSortBy("name-asc");
+                  }}
+                >
+                  {t.catalogClearFilters}
+                </Button>
+                <Button
+                  type="button"
+                  className="min-h-11 flex-1 rounded-xl"
+                  onClick={() => setFilterSheetOpen(false)}
+                >
+                  {t.catalogFilterDone}
+                </Button>
+              </SheetFooter>
+            </SheetContent>
+          </Sheet>
         </div>
       ) : null}
 
@@ -644,7 +729,7 @@ export default function MenuPage() {
           <ul
             className={
               viewMode === "grid"
-                ? "grid min-h-0 flex-1 auto-rows-min grid-cols-3 content-start gap-1.5 overflow-y-auto pb-2 sm:gap-2 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
+                ? "grid min-h-0 flex-1 auto-rows-min grid-cols-2 content-start gap-2 overflow-y-auto pb-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
                 : "flex min-h-0 flex-1 flex-col content-start gap-2 overflow-y-auto pb-2"
             }
           >
@@ -737,7 +822,7 @@ export default function MenuPage() {
                       <span
                         className={
                           viewMode === "grid"
-                            ? "line-clamp-2 text-[11px] leading-tight font-semibold tracking-tight text-foreground md:truncate md:text-base"
+                            ? "line-clamp-2 text-xs leading-snug font-semibold tracking-tight text-foreground sm:text-sm md:truncate md:text-base"
                             : "truncate text-base font-semibold tracking-tight text-foreground"
                         }
                       >
@@ -746,7 +831,7 @@ export default function MenuPage() {
                       <span
                         className={
                           viewMode === "grid"
-                            ? "flex flex-col gap-0.5 text-[11px] md:flex-row md:flex-wrap md:items-center md:gap-x-2 md:gap-y-1 md:text-sm"
+                            ? "flex flex-col gap-0.5 text-xs md:flex-row md:flex-wrap md:items-center md:gap-x-2 md:gap-y-1 md:text-sm"
                             : "flex flex-wrap items-center gap-x-2 gap-y-1 text-sm"
                         }
                       >
@@ -773,8 +858,12 @@ export default function MenuPage() {
               );
             })}
           </ul>
-          <div className="mt-auto flex w-full shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border pt-2 md:gap-3 md:pt-3">
-            <p className="text-sm text-muted-foreground">
+          <div
+            className={`mt-auto w-full shrink-0 items-center justify-between gap-2 border-t border-border pt-2 md:gap-3 md:pt-3 ${
+              totalPages <= 1 ? "hidden md:flex" : "flex flex-wrap"
+            }`}
+          >
+            <p className="hidden text-sm text-muted-foreground md:block">
               {formatTemplate(t.catalogShowing, {
                 from: (page - 1) * CATALOG_PAGE_SIZE + 1,
                 to: Math.min(page * CATALOG_PAGE_SIZE, visibleProducts.length),

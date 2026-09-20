@@ -11,10 +11,10 @@ import {
   UserCircleIcon,
 } from "@phosphor-icons/react";
 import { usePathname, useRouter } from "next/navigation";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BottomNav, SideNav, type NavSection } from "@/components/organisms/pos-nav";
 import { OpenShiftDialog } from "@/components/organisms/open-shift-dialog";
+import { AccountMenu } from "@/components/molecules/account-menu";
 import { PrefControls } from "@/components/molecules/settings-menu";
 import { getSession, getStoreIdentity } from "@/lib/auth-token";
 import { useStoreLogoSrc } from "@/lib/use-store-logo";
@@ -196,25 +196,25 @@ export function AppShell({
       />
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex shrink-0 flex-col gap-3 border-b border-border bg-card px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:gap-6">
+        <header className="flex shrink-0 items-center gap-2 border-b border-border bg-card px-3 py-1.5 sm:px-6 lg:gap-6 lg:py-3">
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+            <h1 className="truncate text-base font-semibold tracking-tight text-foreground lg:text-xl">
               {title}
             </h1>
             {subtitle ? (
-              <div className="mt-0.5 hidden max-w-2xl text-sm text-muted-foreground md:block">
+              <div className="mt-0.5 hidden max-w-2xl text-sm text-muted-foreground lg:block">
                 {subtitle}
               </div>
             ) : null}
           </div>
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          <div className="flex shrink-0 flex-nowrap items-center justify-end gap-1.5 lg:gap-2">
             {headerActions}
             {aside ? (
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
-                className="relative lg:hidden"
+                className="relative size-8 lg:hidden"
                 aria-label={t.cart}
                 onClick={() => {
                   if (pathname !== "/menu") {
@@ -224,7 +224,7 @@ export function AppShell({
                   toggleCashierCart();
                 }}
               >
-                <ShoppingCartIcon size={18} weight="bold" />
+                <ShoppingCartIcon size={16} weight="bold" />
                 {cartCount > 0 ? (
                   <span className="absolute -top-1 -right-1 min-w-4 rounded-full bg-primary px-1 text-center text-[10px] font-bold leading-4 text-primary-foreground">
                     {cartCount > 99 ? "99+" : cartCount}
@@ -232,32 +232,16 @@ export function AppShell({
                 ) : null}
               </Button>
             ) : null}
-            <div className="flex items-center gap-1 lg:hidden">
-              <PrefControls onLangChange={onLangChange} tooltipSide="bottom" />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="size-9"
-                asChild
-              >
-                <Link href="/settings" aria-label={t.settings} title={t.settings}>
-                  <GearIcon size={18} weight="duotone" />
-                </Link>
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                onClick={logout}
-                aria-label={t.logout}
-                title={t.logout}
-              >
-                <SignOutIcon size={18} weight="bold" />
-              </Button>
-            </div>
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/50 py-1 pr-3 pl-1">
+            <AccountMenu
+              storeName={storeName}
+              storeLogoSrc={storeLogoSrc}
+              roleLabel={roleLabel}
+              initials={initials}
+              lang={lang}
+              onLangChange={onLangChange}
+              onLogout={logout}
+            />
+            <div className="hidden items-center gap-2 rounded-xl border border-border bg-muted/50 py-1 pr-3 pl-1 lg:flex">
               {storeLogoSrc ? (
                 <StoreLogo src={storeLogoSrc} alt={storeName} size="sm" />
               ) : (
@@ -265,7 +249,7 @@ export function AppShell({
                   {initials || "POS"}
                 </div>
               )}
-              <div className="hidden min-w-0 sm:block">
+              <div className="min-w-0">
                 <p className="truncate text-sm leading-tight font-medium">{storeName}</p>
                 <p className="truncate text-xs text-muted-foreground">{roleLabel}</p>
               </div>
