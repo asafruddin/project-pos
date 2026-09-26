@@ -735,39 +735,41 @@ export function CartPanel({ lang, onCompleted }: Props) {
       ) : null}
       {sale ? (
         <div className="flex min-h-0 flex-1 flex-col">
+          <div className="shrink-0 space-y-3 border-b border-border px-4 py-3 sm:px-5">
+            <p className="font-medium">
+              {payMethod === "qris" ? t.qrisPayment : t.cashPayment}{" "}
+              {formatIdr(payable, lang)}
+            </p>
+            {payable > 0 ? (
+              <div
+                className="grid grid-cols-2 rounded-xl border border-border bg-background p-1"
+                role="group"
+                aria-label={t.qrisPayment}
+              >
+                <Button
+                  type="button"
+                  variant={payMethod === "cash" ? "default" : "ghost"}
+                  className="h-11 min-h-11 rounded-lg text-sm"
+                  aria-pressed={payMethod === "cash"}
+                  disabled={busy}
+                  onClick={() => selectPayMethod("cash")}
+                >
+                  {t.cashTender}
+                </Button>
+                <Button
+                  type="button"
+                  variant={payMethod === "qris" ? "default" : "ghost"}
+                  className="h-11 min-h-11 rounded-lg text-sm"
+                  aria-pressed={payMethod === "qris"}
+                  disabled={busy}
+                  onClick={() => selectPayMethod("qris")}
+                >
+                  {t.qris}
+                </Button>
+              </div>
+            ) : null}
+          </div>
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
-          <p className="font-medium">
-            {payMethod === "qris" ? t.qrisPayment : t.cashPayment}{" "}
-            {formatIdr(payable, lang)}
-          </p>
-          {payable > 0 ? (
-            <div
-              className="inline-flex rounded-xl border border-border bg-background p-1"
-              role="group"
-              aria-label={t.qrisPayment}
-            >
-              <Button
-                type="button"
-                variant={payMethod === "cash" ? "default" : "ghost"}
-                className="h-9 rounded-lg px-3 text-sm"
-                aria-pressed={payMethod === "cash"}
-                disabled={busy}
-                onClick={() => selectPayMethod("cash")}
-              >
-                {t.cashTender}
-              </Button>
-              <Button
-                type="button"
-                variant={payMethod === "qris" ? "default" : "ghost"}
-                className="h-9 rounded-lg px-3 text-sm"
-                aria-pressed={payMethod === "qris"}
-                disabled={busy}
-                onClick={() => selectPayMethod("qris")}
-              >
-                {t.qris}
-              </Button>
-            </div>
-          ) : null}
           <div className="space-y-2 text-sm">
             {promoEval.discount_minor > 0 ? (
               <p className="flex justify-between">
@@ -851,9 +853,8 @@ export function CartPanel({ lang, onCompleted }: Props) {
               </Label>
             ) : null}
           </div>
-          </div>
           {payMethod === "cash" && payable > 0 ? (
-            <div className="shrink-0 px-4 pb-3 sm:px-5">
+            <div>
               <div className="space-y-3 rounded-2xl border border-border bg-muted/30 p-3">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-medium">{t.cashReceived}</p>
@@ -933,7 +934,8 @@ export function CartPanel({ lang, onCompleted }: Props) {
               </div>
             </div>
           ) : null}
-          <div className="shrink-0 border-t border-border px-4 py-4 sm:px-5">
+          </div>
+          <div className="shrink-0 border-t border-border px-4 py-3 sm:px-5 sm:py-4">
             <p className="text-sm text-muted-foreground">{t.receiptHint}</p>
             <Button
               className="mt-4 h-12 min-h-12 w-full rounded-xl"
