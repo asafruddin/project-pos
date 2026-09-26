@@ -25,8 +25,12 @@ describe("InventoryController", () => {
       .compile();
 
     const controller = moduleRef.get(InventoryController);
-    const result = await controller.overview();
-    expect(inventory.overview).toHaveBeenCalled();
+    const result = await controller.overview({
+      userId: "u-admin",
+      role: "catalog_admin",
+      storeId: "s1",
+    });
+    expect(inventory.overview).toHaveBeenCalledWith("s1");
     expect(result.products).toEqual([]);
   });
 

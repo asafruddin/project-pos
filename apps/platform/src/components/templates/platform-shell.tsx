@@ -5,6 +5,7 @@ import {
   SignOutIcon,
   ShieldCheckIcon,
   UsersThreeIcon,
+  BuildingsIcon,
 } from "@phosphor-icons/react";
 import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
@@ -34,6 +35,14 @@ const PAGE_COPY: Record<string, { title: string; subtitle: string }> = {
   "/accounts/new": {
     title: "Tambah akun POS",
     subtitle: "Operator dapat menetapkan peran Owner.",
+  },
+  "/stores": {
+    title: "Toko",
+    subtitle: "Setiap toko punya katalog, pelanggan, dan akun sendiri.",
+  },
+  "/stores/new": {
+    title: "Tambah toko",
+    subtitle: "Buat toko baru beserta owner. Kasir opsional.",
   },
 };
 
@@ -101,6 +110,12 @@ export function PlatformShell({
       href: "/accounts",
       label: "Akun POS",
       icon: <UsersThreeIcon size={20} weight="regular" />,
+    },
+    {
+      group: "Akun",
+      href: "/stores",
+      label: "Toko",
+      icon: <BuildingsIcon size={20} weight="regular" />,
     },
   ].map((item) => ({
     ...item,

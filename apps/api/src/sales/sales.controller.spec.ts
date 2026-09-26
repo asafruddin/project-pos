@@ -33,10 +33,13 @@ describe("SalesController", () => {
       .compile();
 
     const controller = moduleRef.get(SalesController);
-    await expect(controller.list()).resolves.toEqual({
+    await expect(
+      controller.list({ userId: "u1", role: "cashier" }),
+    ).resolves.toEqual({
       sales: [],
       daily_total_minor: 0,
     });
+    expect(sales.listToday).toHaveBeenCalledWith(undefined);
   });
 
   it("route is Jwt-protected (guard contract)", () => {

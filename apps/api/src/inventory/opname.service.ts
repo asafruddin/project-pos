@@ -26,7 +26,8 @@ function toQty(value: unknown): number {
 
 @Injectable()
 export class OpnameService {
-  async list(): Promise<OpnameListResponse> {
+  async list(storeId?: string): Promise<OpnameListResponse> {
+    const scoped = storeId || STORE_1_ID;
     const rows = await getDb()
       .select({
         opnameId: stockOpnames.opnameId,
@@ -39,6 +40,7 @@ export class OpnameService {
         stockOpnameLines,
         eq(stockOpnameLines.opnameId, stockOpnames.opnameId),
       )
+      .where(eq(stockOpnames.storeId, scoped))
       .groupBy(stockOpnames.opnameId, stockOpnames.status, stockOpnames.createdAt)
       .orderBy(desc(stockOpnames.createdAt));
 
@@ -52,9 +54,9 @@ export class OpnameService {
     };
   }
 
-  async get(opnameId: string): Promise<OpnameDetail> {
+  async get(opnameId: string, storeId?: string): Promise<OpnameDetail> {
     const detail = await this.loadDetail(opnameId);
-    if (!detail) {
+    if (!detail || (storeId && detail.store_id !== storeId)) {
       throw new NotFoundException({
         code: "OPNAME_NOT_FOUND",
         message: "Opname tidak ditemukan.",
@@ -66,7 +68,9 @@ export class OpnameService {
   async create(
     input: { product_ids: string[] },
     actorId?: string,
+    storeId?: string,
   ): Promise<OpnameDetail> {
+    const scoped = storeId || STORE_1_ID;
     const productIds = [...new Set(input.product_ids)];
     if (!productIds.length) {
       throw new BadRequestException({
@@ -97,7 +101,7 @@ export class OpnameService {
         .from(stockMovements)
         .where(
           and(
-            eq(stockMovements.storeId, STORE_1_ID),
+            eq(stockMovements.storeId, scoped),
             eq(stockMovements.bucket, "sellable"),
             inArray(stockMovements.productId, productIds),
           ),
@@ -110,7 +114,7 @@ export class OpnameService {
       const [header] = await tx
         .insert(stockOpnames)
         .values({
-          storeId: STORE_1_ID,
+          storeId: scoped,
           status: "draft",
           createdBy: actorId ?? null,
         })
@@ -197,7 +201,7 @@ export class OpnameService {
         .from(stockMovements)
         .where(
           and(
-            eq(stockMovements.storeId, STORE_1_ID),
+            eq(stockMovements.storeId, header.storeId),
             eq(stockMovements.bucket, "sellable"),
             inArray(stockMovements.productId, productIds),
           ),
@@ -232,7 +236,7 @@ export class OpnameService {
         if (adj.qty_delta !== 0) {
           await insertStockMovement(tx, {
             productId: adj.product_id,
-            storeId: STORE_1_ID,
+            storeId: header.storeId,
             qtyDelta: adj.qty_delta,
             bucket: "sellable",
             reason: "opname stok",

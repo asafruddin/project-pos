@@ -38,20 +38,21 @@ export class SalesController {
   ) {}
 
   @Get()
-  list(): Promise<SalesListResponse> {
-    return this.sales.listToday();
+  list(@CurrentUser() user: AuthUser): Promise<SalesListResponse> {
+    return this.sales.listToday(user.storeId);
   }
 
   @Get("returns")
-  listOpenReturns(): Promise<ReturnListResponse> {
-    return this.returns.listOpen();
+  listOpenReturns(@CurrentUser() user: AuthUser): Promise<ReturnListResponse> {
+    return this.returns.listOpen(user.storeId);
   }
 
   @Get(":saleId")
   lookup(
+    @CurrentUser() user: AuthUser,
     @Param("saleId", ParseUUIDPipe) saleId: string,
   ): Promise<SaleLookupResponse> {
-    return this.returns.lookup(saleId);
+    return this.returns.lookup(saleId, user.storeId);
   }
 
   @Post("sync")
@@ -82,7 +83,7 @@ export class SalesController {
     @Param("saleId", ParseUUIDPipe) saleId: string,
     @Body() body: CreateReturnRequest,
   ): Promise<ReturnDetail> {
-    return this.returns.create(saleId, body, user.userId);
+    return this.returns.create(saleId, body, user.userId, user.storeId);
   }
 
   @Post("returns/:returnId/refund")

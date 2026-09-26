@@ -88,4 +88,32 @@ describe("UsersService", () => {
     expect(created.username).toBe("ana");
     expect(created.role).toBe("cashier");
   });
+
+  it("lists only users on the actor store", async () => {
+    getDbMock.mockReturnValue({
+      select: () => ({
+        from: () => ({
+          where: async () => [
+            {
+              userId: "u-b",
+              username: "cashier-budi",
+              role: "cashier",
+              storeId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+              active: true,
+              createdAt: new Date("2026-08-13T00:00:00.000Z"),
+            },
+          ],
+        }),
+      }),
+    } as never);
+    const listed = await service.list({
+      ...admin,
+      storeId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    });
+    expect(listed.users).toHaveLength(1);
+    expect(listed.users[0]?.username).toBe("cashier-budi");
+    expect(listed.users[0]?.store_id).toBe(
+      "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    );
+  });
 });

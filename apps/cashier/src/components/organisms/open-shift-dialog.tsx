@@ -13,6 +13,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { openLocalShift } from "@pos-apps/local-db";
 import { flushSalesAndVoids } from "@/lib/flush-sync";
+import { getSession } from "@/lib/auth-token";
 import { requestLogout } from "@/lib/logout";
 import { copy, type LangPref } from "@/lib/preferences";
 import { formatGroupedInt, parseGroupedInt } from "@/lib/money";
@@ -52,7 +53,11 @@ export function OpenShiftDialog({
     setBusy(true);
     setError(null);
     try {
-      await openLocalShift(opening);
+      const session = getSession();
+      await openLocalShift(opening, {
+        storeId: session?.storeId ?? undefined,
+        registerId: session?.registerId ?? undefined,
+      });
       await flushSalesAndVoids();
       notifyShiftChanged();
       onOpened?.();

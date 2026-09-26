@@ -63,7 +63,7 @@ const PAGE_COPY: Record<string, { title: string; subtitle: string }> = {
   "/stores": {
     title: "Toko",
     subtitle:
-      "Store #1 tetap toko awal. Harga toko menimpa harga katalog setelah kasir menyegarkan menu.",
+      "Toko ini terisolasi. Katalog, pelanggan, dan staf hanya milik toko Anda.",
   },
   "/transfers": {
     title: "Transfer stok",
@@ -415,7 +415,7 @@ export function DashboardShell({
       href: "/transfers",
       label: "Transfer stok",
       icon: <ArrowsLeftRightIcon size={20} weight="regular" />,
-      show: can("transfers", "view"),
+      show: false,
     },
     {
       group: "Produk",

@@ -12,7 +12,6 @@ import type {
   ReturnListResponse,
   SaleLookupResponse,
 } from "@pos-apps/types";
-import { REGISTER_1_ID, STORE_1_ID } from "@pos-apps/types";
 import { and, eq, inArray } from "drizzle-orm";
 import { getDb } from "../db/client";
 import { insertStockMovement } from "../db/stock-ledger";
@@ -27,7 +26,7 @@ import {
 
 @Injectable()
 export class ReturnsService {
-  async lookup(saleId: string): Promise<SaleLookupResponse> {
+  async lookup(saleId: string, storeId?: string): Promise<SaleLookupResponse> {
     const db = getDb();
     const saleRows = await db
       .select()
@@ -35,7 +34,7 @@ export class ReturnsService {
       .where(eq(sales.saleId, saleId))
       .limit(1);
     const sale = saleRows[0];
-    if (!sale) {
+    if (!sale || (storeId && sale.storeId !== storeId)) {
       throw new NotFoundException({
         code: "SALE_NOT_FOUND",
         message: "Penjualan tidak ditemukan. Cek ID atau unggah dulu.",
@@ -67,6 +66,7 @@ export class ReturnsService {
     saleId: string,
     input: CreateReturnRequest,
     actorId?: string,
+    storeId?: string,
   ): Promise<ReturnDetail> {
     const db = getDb();
     const returnId = await db.transaction(async (tx) => {
@@ -76,7 +76,7 @@ export class ReturnsService {
         .where(eq(sales.saleId, saleId))
         .limit(1);
       const sale = saleRows[0];
-      if (!sale) {
+      if (!sale || (storeId && sale.storeId !== storeId)) {
         throw new NotFoundException({
           code: "SALE_NOT_FOUND",
           message: "Penjualan tidak ditemukan. Cek ID atau unggah dulu.",
@@ -178,7 +178,7 @@ export class ReturnsService {
           sourceId: id,
           actorId: actorId ?? null,
         });
-        if (movement.bucket === "sellable" && sale.storeId === STORE_1_ID) {
+        if (movement.bucket === "sellable") {
           const next = product.stockQty + movement.qty;
           byId.set(movement.product_id, { ...product, stockQty: next });
           await tx
@@ -192,12 +192,17 @@ export class ReturnsService {
     return this.get(returnId);
   }
 
-  async listOpen(): Promise<ReturnListResponse> {
+  async listOpen(storeId?: string): Promise<ReturnListResponse> {
     const db = getDb();
     const rows = await db
       .select({ returnId: saleReturns.returnId })
       .from(saleReturns)
-      .where(eq(saleReturns.status, "open"));
+      .innerJoin(sales, eq(sales.saleId, saleReturns.saleId))
+      .where(
+        storeId
+          ? and(eq(saleReturns.status, "open"), eq(sales.storeId, storeId))
+          : eq(saleReturns.status, "open"),
+      );
     const details: ReturnDetail[] = [];
     for (const row of rows) {
       details.push(await this.get(row.returnId));
@@ -276,20 +281,26 @@ export class ReturnsService {
       });
     }
     const db = getDb();
-    const openShiftRows = await db
-      .select({ shiftId: shifts.shiftId })
-      .from(shifts)
-      .where(
-        and(eq(shifts.registerId, REGISTER_1_ID), eq(shifts.status, "open")),
-      )
-      .limit(1);
-    const saleShiftRows = await db
-      .select({ shiftId: sales.shiftId })
+    const saleMeta = await db
+      .select({
+        shiftId: sales.shiftId,
+        registerId: sales.registerId,
+      })
       .from(sales)
       .where(eq(sales.saleId, current.sale_id))
       .limit(1);
+    const saleRegisterId = saleMeta[0]?.registerId;
+    const openShiftRows = saleRegisterId
+      ? await db
+          .select({ shiftId: shifts.shiftId })
+          .from(shifts)
+          .where(
+            and(eq(shifts.registerId, saleRegisterId), eq(shifts.status, "open")),
+          )
+          .limit(1)
+      : [];
     const shiftId =
-      openShiftRows[0]?.shiftId ?? saleShiftRows[0]?.shiftId ?? null;
+      openShiftRows[0]?.shiftId ?? saleMeta[0]?.shiftId ?? null;
     await db
       .update(saleReturns)
       .set({

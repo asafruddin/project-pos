@@ -1,3 +1,4 @@
+import { ForbiddenException } from "@nestjs/common";
 import { StoresController } from "./stores.controller";
 
 describe("StoresController", () => {
@@ -17,5 +18,10 @@ describe("StoresController", () => {
     expect(
       Reflect.getMetadata("permission", StoresController.prototype.transition),
     ).toEqual({ resource: "transfers", action: "update" });
+  });
+
+  it("rejects tenant creation from a store JWT", () => {
+    const controller = new StoresController({} as never, {} as never);
+    expect(() => controller.createStore()).toThrow(ForbiddenException);
   });
 });

@@ -16,7 +16,6 @@ import type {
   ApiErrorBody,
   Role,
   StoreListResponse,
-  StoreRecord,
   UserListResponse,
 } from "@pos-apps/types";
 import {
@@ -42,12 +41,6 @@ function errorMessage(res: Response, body: unknown): string {
   return err?.message ?? `Gagal (${res.status})`;
 }
 
-function storeOptions(stores: StoreRecord[]): StoreRecord[] {
-  return stores.length
-    ? stores
-    : [{ store_id: STORE_1_ID, name: "Store #1", created_at: "", logo_public_id: null, logo_secure_url: null }];
-}
-
 export function EmployeeForm({
   actorRole,
   permissions,
@@ -70,7 +63,6 @@ export function EmployeeForm({
   const [role, setRole] = useState<Role>("cashier");
   const [storeId, setStoreId] = useState(STORE_1_ID);
   const [active, setActive] = useState(true);
-  const [stores, setStores] = useState<StoreRecord[]>([]);
 
   const load = useCallback(async () => {
     try {
@@ -79,7 +71,10 @@ export function EmployeeForm({
         authorizedFetch("/stores"),
       ]);
       if (storesRes.ok) {
-        setStores(((await storesRes.json()) as StoreListResponse).stores);
+        const packedStores = (await storesRes.json()) as StoreListResponse;
+        if (!userId && packedStores.stores[0]) {
+          setStoreId(packedStores.stores[0].store_id);
+        }
       }
       if (userId && usersRes) {
         if (!usersRes.ok) {
@@ -259,25 +254,6 @@ export function EmployeeForm({
                 {roles.map((r) => (
                   <SelectItem key={r} value={r}>
                     {ROLE_LABELS[r]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-          <FormField id="emp-store" label="Toko" required>
-            <Select
-              value={storeId}
-              onValueChange={setStoreId}
-              disabled={pending}
-            >
-              <SelectTrigger id="emp-store">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {storeOptions(stores).map((store) => (
-                  <SelectItem key={store.store_id} value={store.store_id}>
-                    {store.name}
-                    {store.store_id === STORE_1_ID ? " · Store #1" : ""}
                   </SelectItem>
                 ))}
               </SelectContent>

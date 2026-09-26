@@ -12,6 +12,7 @@ import { getDb } from "../db/client";
 import { stores, users } from "../db/schema";
 import { loadRolePermissions } from "./load-permissions";
 import { isRole } from "./roles";
+import { firstRegisterId } from "../stores/register-for-store";
 
 export type JwtPayload = {
   sub: string;
@@ -70,6 +71,7 @@ export class AuthService {
     const permissions = await loadRolePermissions(user.role);
     const storeId = user.storeId ?? STORE_1_ID;
     const store = await this.storeIdentity(storeId);
+    const registerId = await firstRegisterId(storeId);
 
     return {
       access_token,
@@ -80,6 +82,7 @@ export class AuthService {
       store_id: storeId,
       store_name: store.store_name,
       store_logo_url: store.store_logo_url,
+      register_id: registerId,
     };
   }
 
@@ -99,6 +102,7 @@ export class AuthService {
     }
     const storeId = user.storeId ?? STORE_1_ID;
     const store = await this.storeIdentity(storeId);
+    const registerId = await firstRegisterId(storeId);
     return {
       user_id: user.userId,
       role: user.role,
@@ -106,6 +110,7 @@ export class AuthService {
       store_id: storeId,
       store_name: store.store_name,
       store_logo_url: store.store_logo_url,
+      register_id: registerId,
       active: user.active,
     };
   }

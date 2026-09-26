@@ -9,6 +9,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import type {
+  CreatePlatformStoreResponse,
   PlatformOperator,
   PlatformOperatorListResponse,
   StoreListResponse,
@@ -19,6 +20,7 @@ import { CurrentPlatformUser } from "./current-platform-user.decorator";
 import {
   CreatePlatformAccountDto,
   CreatePlatformOperatorDto,
+  CreatePlatformStoreDto,
   UpdatePlatformAccountDto,
   UpdatePlatformOperatorDto,
 } from "./dto/platform.dto";
@@ -73,5 +75,12 @@ export class PlatformController {
   @Get("stores")
   listStores(): Promise<StoreListResponse> {
     return this.platform.listStores();
+  }
+
+  @Post("stores")
+  createStore(
+    @Body() body: CreatePlatformStoreDto,
+  ): Promise<CreatePlatformStoreResponse> {
+    return this.platform.createStore(body);
   }
 }

@@ -24,8 +24,8 @@ export class PromotionsController {
   constructor(private readonly promotions: PromotionsService) {}
 
   @Get()
-  list(): Promise<{ promotions: Promotion[] }> {
-    return this.promotions.list();
+  list(@CurrentUser() user: AuthUser): Promise<{ promotions: Promotion[] }> {
+    return this.promotions.list(user.storeId);
   }
 
   @Post()
@@ -73,8 +73,11 @@ export class VouchersController {
   }
 
   @Get("code/:code")
-  lookup(@Param("code") code: string): Promise<Voucher> {
-    return this.promotions.lookupVoucher(code);
+  lookup(
+    @CurrentUser() user: AuthUser,
+    @Param("code") code: string,
+  ): Promise<Voucher> {
+    return this.promotions.lookupVoucher(code, user.storeId);
   }
 
   @Post()

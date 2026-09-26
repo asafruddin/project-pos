@@ -16,7 +16,6 @@ import {
 } from "@pos-apps/domain";
 import type { Role } from "@pos-apps/types";
 import {
-  STORE_1_ID,
   type ReportCashiersResponse,
   type ReportInventoryResponse,
   type ReportProductRow,
@@ -24,6 +23,7 @@ import {
   type ReportSummary,
 } from "@pos-apps/types";
 import { and, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import { actorStoreId } from "../auth/store-scope";
 import { getDb } from "../db/client";
 import {
   products,
@@ -89,17 +89,16 @@ export function parseReportRange(
   return { start, end, from: fromStr, to: toStr };
 }
 
-function resolveStore(storeId?: string): string {
-  if (storeId && storeId !== STORE_1_ID) {
-    throw new BadRequestException({
-      code: "REPORT_INVALID_STORE",
-      message: "Laporan hanya untuk Store #1.",
-    });
-  }
-  return STORE_1_ID;
-}
+type Viewer = {
+  userId: string;
+  role: Role;
+  permissions?: string[];
+  storeId?: string | null;
+};
 
-type Viewer = { userId: string; role: Role; permissions?: string[] };
+function resolveStore(viewer: Viewer): string {
+  return actorStoreId(viewer);
+}
 
 type LoadedSale = {
   saleId: string;
@@ -141,13 +140,13 @@ export class ReportsService {
     query: { from?: string; to?: string; store_id?: string },
     viewer: Viewer,
   ): Promise<ReportSummary> {
-    const { range, costs } = await this.loadSalesPeriod(query, viewer);
+    const { range, costs, storeId } = await this.loadSalesPeriod(query, viewer);
     const totals = summarizeSalesAnalytics({
       sales: range.sales.map((sale) => this.toReportSale(sale, costs)),
       refunds: range.refunds,
     });
     const base: ReportSummary = {
-      store_id: STORE_1_ID,
+      store_id: storeId,
       from: range.from,
       to: range.to,
       revenue_minor: totals.revenue_minor,
@@ -172,13 +171,16 @@ export class ReportsService {
     query: { from?: string; to?: string; store_id?: string },
     viewer: Viewer,
   ): Promise<ReportProductsResponse> {
-    const { range, costs, names } = await this.loadSalesPeriod(query, viewer);
+    const { range, costs, names, storeId } = await this.loadSalesPeriod(
+      query,
+      viewer,
+    );
     const aggs = summarizeProductAnalytics({
       sales: range.sales.map((sale) => this.toReportSale(sale, costs)),
     });
     const ranked = rankProductAnalytics(aggs);
     return {
-      store_id: STORE_1_ID,
+      store_id: storeId,
       from: range.from,
       to: range.to,
       top: ranked.top.map((row) => this.toProductRow(row, names, viewer)),
@@ -196,7 +198,7 @@ export class ReportsService {
         message: "Analitik stok hanya untuk admin.",
       });
     }
-    const storeId = resolveStore(query.store_id);
+    const storeId = resolveStore(viewer);
     const { start, end, from, to } = parseReportRange(query.from, query.to);
     const db = getDb();
 
@@ -206,7 +208,8 @@ export class ReportsService {
         name: products.name,
         costMinor: products.costMinor,
       })
-      .from(products);
+      .from(products)
+      .where(eq(products.storeId, storeId));
 
     const bucketSums = await db
       .select({
@@ -329,11 +332,15 @@ export class ReportsService {
     query: { from?: string; to?: string; store_id?: string },
     viewer: Viewer,
   ): Promise<ReportCashiersResponse> {
-    const { range, actorByShift } = await this.loadSalesPeriod(query, viewer);
+    const { range, actorByShift, storeId } = await this.loadSalesPeriod(
+      query,
+      viewer,
+    );
     const db = getDb();
     const userRows = await db
       .select({ userId: users.userId, username: users.username })
-      .from(users);
+      .from(users)
+      .where(eq(users.storeId, storeId));
     const nameById = new Map(userRows.map((u) => [u.userId, u.username]));
 
     const saleShift = new Map(
@@ -395,7 +402,7 @@ export class ReportsService {
     }
 
     return {
-      store_id: STORE_1_ID,
+      store_id: storeId,
       from: range.from,
       to: range.to,
       cashiers,
@@ -412,7 +419,10 @@ export class ReportsService {
         message: "Ekspor laporan hanya untuk admin.",
       });
     }
-    const { range, costs, names } = await this.loadSalesPeriod(query, viewer);
+    const { range, costs, names, storeId } = await this.loadSalesPeriod(
+      query,
+      viewer,
+    );
     const totals = summarizeSalesAnalytics({
       sales: range.sales.map((sale) => this.toReportSale(sale, costs)),
       refunds: range.refunds,
@@ -438,7 +448,7 @@ export class ReportsService {
         "fees_minor",
       ].join(","),
       [
-        STORE_1_ID,
+        storeId,
         range.from,
         range.to,
         totals.revenue_minor,
@@ -531,7 +541,7 @@ export class ReportsService {
     },
     viewer: Viewer,
   ) {
-    const storeId = resolveStore(query.store_id);
+    const storeId = resolveStore(viewer);
     const { start, end, from, to } = parseReportRange(query.from, query.to);
     const db = getDb();
 
@@ -580,7 +590,8 @@ export class ReportsService {
         status: products.status,
         costMinor: products.costMinor,
       })
-      .from(products);
+      .from(products)
+      .where(eq(products.storeId, storeId));
 
     const costs = new Map(catalog.map((p) => [p.productId, p.costMinor]));
     const names = new Map(
@@ -639,6 +650,7 @@ export class ReportsService {
       costs,
       names,
       actorByShift,
+      storeId,
     };
   }
 }

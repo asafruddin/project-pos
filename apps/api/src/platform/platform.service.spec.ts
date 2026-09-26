@@ -1,4 +1,4 @@
-import { ForbiddenException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException } from "@nestjs/common";
 import { PlatformService } from "./platform.service";
 
 jest.mock("../db/client", () => ({
@@ -139,5 +139,77 @@ describe("PlatformService", () => {
     const updated = await service.updateAccount("owner-2", { active: false });
     expect(updated.active).toBe(false);
     expect(updated.role).toBe("owner");
+  });
+
+  it("rejects a blank store name when provisioning a tenant", async () => {
+    await expect(
+      service.createStore({
+        name: "  ",
+        owner: { username: "owner-budi", password: "Secret123" },
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it("provisions a store with owner and cashier", async () => {
+    const storeId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    let inserts = 0;
+    getDbMock.mockReturnValue({
+      transaction: async (fn: (tx: unknown) => Promise<unknown>) =>
+        fn({
+          insert: () => ({
+            values: (v: Record<string, unknown>) => ({
+              returning: async () => {
+                inserts += 1;
+                if (v.name === "Toko Budi") {
+                  return [
+                    {
+                      storeId,
+                      name: "Toko Budi",
+                      createdAt: new Date("2026-09-04T00:00:00.000Z"),
+                      logoPublicId: null,
+                    },
+                  ];
+                }
+                if (v.role === "owner") {
+                  return [
+                    {
+                      userId: "owner-b",
+                      username: v.username,
+                      role: "owner",
+                      storeId,
+                      active: true,
+                      createdAt: new Date("2026-09-04T00:00:00.000Z"),
+                    },
+                  ];
+                }
+                return [
+                  {
+                    userId: "cashier-b",
+                    username: v.username,
+                    role: "cashier",
+                    storeId,
+                    active: true,
+                    createdAt: new Date("2026-09-04T00:00:00.000Z"),
+                  },
+                ];
+              },
+              then: (resolve: (value: unknown) => unknown) =>
+                Promise.resolve(undefined).then(resolve),
+            }),
+          }),
+        }),
+    } as never);
+
+    const created = await service.createStore({
+      name: "Toko Budi",
+      owner: { username: "owner-budi", password: "Secret123" },
+      cashier: { username: "cashier-budi", password: "Secret123" },
+    });
+    expect(created.store.name).toBe("Toko Budi");
+    expect(created.owner.username).toBe("owner-budi");
+    expect(created.owner.store_id).toBe(storeId);
+    expect(created.cashier?.username).toBe("cashier-budi");
+    expect(created.cashier?.store_id).toBe(storeId);
+    expect(inserts).toBeGreaterThan(0);
   });
 });

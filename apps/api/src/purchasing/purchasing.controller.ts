@@ -43,37 +43,47 @@ export class PurchasingController {
 
   @Get("suppliers")
   @RequirePermission("purchases", "view")
-  listSuppliers(@Query("q") q?: string): Promise<SupplierListResponse> {
-    return this.suppliers.list(q);
+  listSuppliers(
+    @CurrentUser() user: AuthUser,
+    @Query("q") q?: string,
+  ): Promise<SupplierListResponse> {
+    return this.suppliers.list(q, user.storeId);
   }
 
   @Post("suppliers")
   @RequirePermission("purchases", "create")
-  createSupplier(@Body() body: CreateSupplierDto): Promise<Supplier> {
-    return this.suppliers.create(body);
+  createSupplier(
+    @CurrentUser() user: AuthUser,
+    @Body() body: CreateSupplierDto,
+  ): Promise<Supplier> {
+    return this.suppliers.create(body, user.storeId);
   }
 
   @Get("suppliers/:supplierId")
   @RequirePermission("purchases", "view")
   getSupplier(
+    @CurrentUser() user: AuthUser,
     @Param("supplierId", ParseUUIDPipe) supplierId: string,
   ): Promise<Supplier> {
-    return this.suppliers.get(supplierId);
+    return this.suppliers.get(supplierId, user.storeId);
   }
 
   @Patch("suppliers/:supplierId")
   @RequirePermission("purchases", "update")
   updateSupplier(
+    @CurrentUser() user: AuthUser,
     @Param("supplierId", ParseUUIDPipe) supplierId: string,
     @Body() body: UpdateSupplierDto,
   ): Promise<Supplier> {
-    return this.suppliers.update(supplierId, body);
+    return this.suppliers.update(supplierId, body, user.storeId);
   }
 
   @Get("purchase-orders")
   @RequirePermission("purchases", "view")
-  listPurchaseOrders(): Promise<PurchaseOrderListResponse> {
-    return this.purchaseOrders.list();
+  listPurchaseOrders(
+    @CurrentUser() user: AuthUser,
+  ): Promise<PurchaseOrderListResponse> {
+    return this.purchaseOrders.list(user.storeId);
   }
 
   @Post("purchase-orders")
@@ -82,15 +92,16 @@ export class PurchasingController {
     @Body() body: CreatePurchaseOrderDto,
     @CurrentUser() user: AuthUser,
   ): Promise<PurchaseOrderDetail> {
-    return this.purchaseOrders.create(body, user.userId);
+    return this.purchaseOrders.create(body, user.userId, user.storeId);
   }
 
   @Get("purchase-orders/:poId")
   @RequirePermission("purchases", "view")
   getPurchaseOrder(
+    @CurrentUser() user: AuthUser,
     @Param("poId", ParseUUIDPipe) poId: string,
   ): Promise<PurchaseOrderDetail> {
-    return this.purchaseOrders.get(poId);
+    return this.purchaseOrders.get(poId, user.storeId);
   }
 
   @Patch("purchase-orders/:poId/lines")

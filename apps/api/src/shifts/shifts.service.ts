@@ -24,9 +24,10 @@ import type {
   ShiftExpectedCash,
   ShiftListResponse,
 } from "@pos-apps/types";
-import { REGISTER_1_ID, STORE_1_ID } from "@pos-apps/types";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { getDb } from "../db/client";
+import { actorStoreId } from "../auth/store-scope";
+import { firstRegisterId } from "../stores/register-for-store";
 import {
   saleReturns,
   sales,
@@ -79,18 +80,20 @@ function cashSaleAmount(row: typeof sales.$inferSelect): number {
 
 @Injectable()
 export class ShiftsService {
-  async current(): Promise<CurrentShiftResponse> {
+  async current(storeId?: string): Promise<CurrentShiftResponse> {
+    const registerId = await firstRegisterId(actorStoreId({ storeId }));
     const rows = await getDb()
       .select()
       .from(shifts)
       .where(
-        and(eq(shifts.registerId, REGISTER_1_ID), eq(shifts.status, "open")),
+        and(eq(shifts.registerId, registerId), eq(shifts.status, "open")),
       )
       .limit(1);
     return { shift: rows[0] ? mapShift(rows[0]) : null };
   }
 
-  async list(): Promise<ShiftListResponse> {
+  async list(storeId?: string): Promise<ShiftListResponse> {
+    const scoped = actorStoreId({ storeId });
     const rows = await getDb()
       .select({
         shift: shifts,
@@ -98,13 +101,14 @@ export class ShiftsService {
       })
       .from(shifts)
       .leftJoin(users, eq(users.userId, shifts.actorId))
+      .where(eq(shifts.storeId, scoped))
       .orderBy(desc(shifts.openedAt));
     return {
       shifts: rows.map((row) => mapShift(row.shift, row.actorLogin)),
     };
   }
 
-  async get(shiftId: string): Promise<ShiftDetailResponse> {
+  async get(shiftId: string, storeId?: string): Promise<ShiftDetailResponse> {
     const db = getDb();
     const rows = await db
       .select({
@@ -116,7 +120,7 @@ export class ShiftsService {
       .where(eq(shifts.shiftId, shiftId))
       .limit(1);
     const row = rows[0];
-    if (!row) {
+    if (!row || (storeId && row.shift.storeId !== actorStoreId({ storeId }))) {
       throw new NotFoundException({
         code: "SHIFT_NOT_FOUND",
         message: "Shift tidak ditemukan.",
@@ -140,6 +144,7 @@ export class ShiftsService {
   async open(
     input: OpenShiftRequest,
     actorId?: string,
+    storeId?: string,
   ): Promise<OpenShiftResponse> {
     if (!Number.isFinite(Date.parse(input.opened_at))) {
       throw new BadRequestException({
@@ -147,6 +152,9 @@ export class ShiftsService {
         message: "Waktu buka shift tidak valid.",
       });
     }
+
+    const scoped = actorStoreId({ storeId });
+    const registerId = await firstRegisterId(scoped);
 
     const db = getDb();
     const existing = await db
@@ -162,7 +170,7 @@ export class ShiftsService {
       .select({ shiftId: shifts.shiftId })
       .from(shifts)
       .where(
-        and(eq(shifts.registerId, REGISTER_1_ID), eq(shifts.status, "open")),
+        and(eq(shifts.registerId, registerId), eq(shifts.status, "open")),
       )
       .limit(1);
 
@@ -182,8 +190,8 @@ export class ShiftsService {
         .insert(shifts)
         .values({
           shiftId: input.shift_id,
-          storeId: STORE_1_ID,
-          registerId: REGISTER_1_ID,
+          storeId: scoped,
+          registerId,
           openedAt: new Date(input.opened_at),
           openingCashMinor: parsed.opening_cash_minor,
           status: "open",
@@ -211,7 +219,7 @@ export class ShiftsService {
         .select({ shiftId: shifts.shiftId })
         .from(shifts)
         .where(
-          and(eq(shifts.registerId, REGISTER_1_ID), eq(shifts.status, "open")),
+          and(eq(shifts.registerId, registerId), eq(shifts.status, "open")),
         )
         .limit(1);
       if (stillOpen.length) {

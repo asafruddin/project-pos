@@ -91,6 +91,7 @@ describe("CustomersService", () => {
                 email: null,
                 notes: null,
                 groupName: null,
+                storeId: "00000000-0000-4000-8000-000000000001",
                 createdAt: new Date("2026-08-13T00:00:00Z"),
                 updatedAt: new Date("2026-08-13T00:00:00Z"),
               },

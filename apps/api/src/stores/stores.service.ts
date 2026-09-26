@@ -73,6 +73,22 @@ export class StoresService {
     };
   }
 
+  async listForStore(storeId: string): Promise<StoreListResponse> {
+    const db = getDb();
+    const [storeRows, registerRows] = await Promise.all([
+      db.select().from(stores).where(eq(stores.storeId, storeId)),
+      db
+        .select()
+        .from(registers)
+        .where(eq(registers.storeId, storeId))
+        .orderBy(asc(registers.createdAt)),
+    ]);
+    return {
+      stores: storeRows.map(toStore),
+      registers: registerRows.map(toRegister),
+    };
+  }
+
   async getById(storeId: string): Promise<StoreRecord> {
     const rows = await getDb()
       .select()

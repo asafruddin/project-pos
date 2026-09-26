@@ -15,7 +15,7 @@ import {
   type PurchaseOrderStatus,
   type SavePurchaseOrderLinesRequest,
 } from "@pos-apps/types";
-import { desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "../db/client";
 import {
   products,
@@ -26,7 +26,8 @@ import {
 
 @Injectable()
 export class PurchaseOrderService {
-  async list(): Promise<PurchaseOrderListResponse> {
+  async list(storeId?: string): Promise<PurchaseOrderListResponse> {
+    const scoped = storeId || STORE_1_ID;
     const rows = await getDb()
       .select({
         poId: purchaseOrders.poId,
@@ -42,6 +43,7 @@ export class PurchaseOrderService {
         purchaseOrderLines,
         eq(purchaseOrderLines.poId, purchaseOrders.poId),
       )
+      .where(eq(purchaseOrders.storeId, scoped))
       .groupBy(
         purchaseOrders.poId,
         purchaseOrders.supplierId,
@@ -63,9 +65,9 @@ export class PurchaseOrderService {
     };
   }
 
-  async get(poId: string): Promise<PurchaseOrderDetail> {
+  async get(poId: string, storeId?: string): Promise<PurchaseOrderDetail> {
     const detail = await this.load(poId);
-    if (!detail) {
+    if (!detail || (storeId && detail.store_id !== storeId)) {
       throw new NotFoundException({
         code: "PO_NOT_FOUND",
         message: "Pesanan pembelian tidak ditemukan.",
@@ -77,7 +79,9 @@ export class PurchaseOrderService {
   async create(
     input: CreatePurchaseOrderRequest,
     actorId?: string,
+    storeId?: string,
   ): Promise<PurchaseOrderDetail> {
+    const scoped = storeId || STORE_1_ID;
     const lines = input.lines?.length
       ? this.parseLines(input.lines)
       : [];
@@ -85,7 +89,12 @@ export class PurchaseOrderService {
       const supplierRows = await tx
         .select({ supplierId: suppliers.supplierId })
         .from(suppliers)
-        .where(eq(suppliers.supplierId, input.supplier_id))
+        .where(
+          and(
+            eq(suppliers.supplierId, input.supplier_id),
+            eq(suppliers.storeId, scoped),
+          ),
+        )
         .limit(1);
       if (!supplierRows[0]) {
         throw new NotFoundException({
@@ -97,7 +106,7 @@ export class PurchaseOrderService {
       const [header] = await tx
         .insert(purchaseOrders)
         .values({
-          storeId: STORE_1_ID,
+          storeId: scoped,
           supplierId: input.supplier_id,
           status: "draft",
           createdBy: actorId ?? null,

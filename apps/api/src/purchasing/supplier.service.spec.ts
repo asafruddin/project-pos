@@ -29,7 +29,8 @@ describe("SupplierService", () => {
     getDbMock.mockReturnValue({
       select: () => ({
         from: () => ({
-          orderBy: async () => [
+          where: () => ({
+            orderBy: async () => [
             {
               supplierId,
               name: "Kopi Jaya",
@@ -42,6 +43,7 @@ describe("SupplierService", () => {
               updatedAt: new Date("2026-08-13T00:00:00Z"),
             },
           ],
+          }),
         }),
       }),
     } as never);
@@ -91,7 +93,10 @@ describe("SupplierService", () => {
       [],
     );
 
-    expect(create).toHaveBeenCalledWith(expect.objectContaining({ name: "Baru" }));
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Baru" }),
+      undefined,
+    );
     expect(update).toHaveBeenCalledWith(
       supplierId,
       expect.objectContaining({ name: "Kopi Jaya", phone: "0812" }),

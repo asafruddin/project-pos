@@ -230,13 +230,14 @@ describe("ReportsService", () => {
     ]);
   });
 
-  it("rejects an unknown store", async () => {
-    await expect(
-      service.summary(
-        { from: "2026-08-13", to: "2026-08-13", store_id: "not-store-1" },
-        { userId: otherId, role: "catalog_admin" },
-      ),
-    ).rejects.toBeInstanceOf(BadRequestException);
+  it("scopes reports to the actor store", async () => {
+    mockDb([[], [], [], []]);
+    const storeB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    const summary = await service.summary(
+      { from: "2026-08-13", to: "2026-08-13", store_id: "ignored" },
+      { userId: otherId, role: "catalog_admin", storeId: storeB },
+    );
+    expect(summary.store_id).toBe(storeB);
   });
 
   it("exports the full product list as CSV for admin", async () => {

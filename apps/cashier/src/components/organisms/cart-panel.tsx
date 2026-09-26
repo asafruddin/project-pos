@@ -46,7 +46,12 @@ import { useCart } from "@/components/providers/cart-context";
 import { SaleReceiptPreview } from "@/components/organisms/sale-receipt";
 import { UnpackConfirmDialog } from "@/components/organisms/unpack-confirm-dialog";
 import { authorizedFetch } from "@/lib/api-client";
-import { formatIdr, parseGroupedInt } from "@/lib/money";
+import {
+  formatGroupedInt,
+  formatGroupedIntInput,
+  formatIdr,
+  parseGroupedInt,
+} from "@/lib/money";
 import { copy, type LangPref } from "@/lib/preferences";
 import { SHIFT_CHANGED_EVENT } from "@/lib/shift-events";
 import { CART_TOGGLE_EVENT } from "@/lib/cart-events";
@@ -57,6 +62,8 @@ type Props = {
   lang: LangPref;
   onCompleted: (sale: LocalSaleRecord) => Promise<void>;
 };
+
+const CASH_PRESETS = [10_000, 20_000, 50_000, 100_000] as const;
 
 function parkedLabel(parked: ParkedCartRecord): string {
   const first = parked.lines[0]?.name ?? "";
@@ -103,6 +110,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
   const [unpackError, setUnpackError] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [payMethod, setPayMethod] = useState<"cash" | "qris">("cash");
+  const [cashReceived, setCashReceived] = useState("");
   const lineTotal = lines.reduce((sum, line) => sum + line.priceMinor * line.qty, 0);
   const itemCount = lines.reduce((sum, line) => sum + line.qty, 0);
   const parkedBadge = parked.length > 99 ? "99+" : String(parked.length);
@@ -169,6 +177,29 @@ export function CartPanel({ lang, onCompleted }: Props) {
     voucher_minor: voucherEval.applied_minor,
     loyalty_discount_minor: 0,
   });
+  const cashReceivedMinor = parseGroupedInt(cashReceived);
+  const cashKnown =
+    cashReceived.trim() !== "" && Number.isInteger(cashReceivedMinor);
+  const cashShort =
+    payMethod === "cash" &&
+    payable > 0 &&
+    (!cashKnown || cashReceivedMinor < payable);
+  const cashChangeMinor =
+    cashKnown && cashReceivedMinor >= payable
+      ? cashReceivedMinor - payable
+      : 0;
+  const selectedCashPreset = CASH_PRESETS.find(
+    (amount) => cashKnown && cashReceivedMinor === amount,
+  );
+
+  function resetCashReceived() {
+    setCashReceived("");
+  }
+
+  function selectPayMethod(method: "cash" | "qris") {
+    setPayMethod(method);
+    if (method === "qris") resetCashReceived();
+  }
 
   function beginWork(): boolean {
     if (inFlight.current) return false;
@@ -213,6 +244,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
     }
     setShiftOpen(true);
       setPayMethod("cash");
+      resetCashReceived();
       try {
         setPromos(await getCachedPromotions());
       setSale(
@@ -299,6 +331,21 @@ export function CartPanel({ lang, onCompleted }: Props) {
         loyalty_discount_minor: 0,
       });
       const remainderMethod = payMethod;
+      if (remainderMethod === "cash" && payableSale > 0) {
+        const received = parseGroupedInt(cashReceived);
+        if (!Number.isInteger(received) || received < payableSale) {
+          setError(
+            t.cashShort.replace(
+              "{amount}",
+              formatIdr(
+                payableSale - (Number.isInteger(received) ? received : 0),
+                lang,
+              ),
+            ),
+          );
+          return;
+        }
+      }
       const completed = await completeSale(
         sale.saleId,
         {
@@ -330,6 +377,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
       clear();
       setSale(null);
       setPayMethod("cash");
+      resetCashReceived();
       setReceipt(t.receiptSuccess);
       setPreviewCustomerName(printedName);
       setPreviewSale(completed);
@@ -373,6 +421,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
       await discardIncompleteSale(sale.saleId);
       setSale(null);
       setPayMethod("cash");
+      resetCashReceived();
     } finally {
       endWork();
     }
@@ -703,7 +752,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
                 className="h-9 rounded-lg px-3 text-sm"
                 aria-pressed={payMethod === "cash"}
                 disabled={busy}
-                onClick={() => setPayMethod("cash")}
+                onClick={() => selectPayMethod("cash")}
               >
                 {t.cashTender}
               </Button>
@@ -713,7 +762,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
                 className="h-9 rounded-lg px-3 text-sm"
                 aria-pressed={payMethod === "qris"}
                 disabled={busy}
-                onClick={() => setPayMethod("qris")}
+                onClick={() => selectPayMethod("qris")}
               >
                 {t.qris}
               </Button>
@@ -803,11 +852,92 @@ export function CartPanel({ lang, onCompleted }: Props) {
             ) : null}
           </div>
           </div>
+          {payMethod === "cash" && payable > 0 ? (
+            <div className="shrink-0 px-4 pb-3 sm:px-5">
+              <div className="space-y-3 rounded-2xl border border-border bg-muted/30 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-medium">{t.cashReceived}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t.total} {formatIdr(payable, lang)}
+                  </p>
+                </div>
+                <div
+                  className="grid grid-cols-2 gap-2"
+                  role="group"
+                  aria-label={t.cashReceived}
+                >
+                  {CASH_PRESETS.map((amount) => {
+                    const active = selectedCashPreset === amount;
+                    return (
+                      <Button
+                        key={amount}
+                        type="button"
+                        variant={active ? "default" : "secondary"}
+                        disabled={busy}
+                        className="h-11 min-h-11 rounded-xl text-sm font-semibold tabular-nums sm:h-10 sm:min-h-10"
+                        aria-pressed={active}
+                        aria-label={`${t.cashReceived} ${formatIdr(amount, lang)}`}
+                        onClick={() =>
+                          setCashReceived(formatGroupedInt(amount, lang))
+                        }
+                      >
+                        {formatGroupedInt(amount, lang)}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Label htmlFor="cash-received" className="sr-only">
+                  {t.cashReceived}
+                </Label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm font-medium text-muted-foreground">
+                    Rp
+                  </span>
+                  <Input
+                    id="cash-received"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    value={cashReceived}
+                    disabled={busy}
+                    className="h-12 w-full rounded-xl pl-10 pr-3 text-right text-lg font-semibold tabular-nums"
+                    placeholder="0"
+                    onChange={(e) =>
+                      setCashReceived(formatGroupedIntInput(e.target.value))
+                    }
+                  />
+                </div>
+                {cashShort ? (
+                  <div
+                    className="flex items-center justify-between gap-3 rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                    role="status"
+                  >
+                    <span>{t.cashShortLabel}</span>
+                    <strong className="tabular-nums">
+                      {formatIdr(
+                        payable - (cashKnown ? cashReceivedMinor : 0),
+                        lang,
+                      )}
+                    </strong>
+                  </div>
+                ) : (
+                  <div
+                    className="flex items-center justify-between gap-3 rounded-xl bg-primary/10 px-3 py-2 text-sm text-primary"
+                    role="status"
+                  >
+                    <span>{t.cashChange}</span>
+                    <strong className="text-base tabular-nums">
+                      {formatIdr(cashChangeMinor, lang)}
+                    </strong>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
           <div className="shrink-0 border-t border-border px-4 py-4 sm:px-5">
             <p className="text-sm text-muted-foreground">{t.receiptHint}</p>
             <Button
               className="mt-4 h-12 min-h-12 w-full rounded-xl"
-              disabled={busy}
+              disabled={busy || cashShort}
               onClick={() => void confirmReceipt()}
             >
               {busy ? t.pending : t.confirmReceipt}

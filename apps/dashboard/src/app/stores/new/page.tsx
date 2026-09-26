@@ -1,10 +1,11 @@
 "use client";
 
-import { hasPermission } from "@pos-apps/types";
-import { useDashboardSession } from "@/components/templates/dashboard-frame";
-import { StoreForm } from "../../store-form";
+import { FormDenied } from "@pos-apps/ui/organisms";
 
 export default function NewStorePage() {
-  const me = useDashboardSession();
-  return <StoreForm canEdit={hasPermission(me.permissions, "stores", "update")} />;
+  return (
+    <FormDenied href="/stores">
+      Toko baru hanya dibuat dari konsol platform.
+    </FormDenied>
+  );
 }

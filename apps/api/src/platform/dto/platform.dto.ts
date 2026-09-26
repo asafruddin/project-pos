@@ -1,3 +1,4 @@
+import { Type } from "class-transformer";
 import {
   IsBoolean,
   IsIn,
@@ -5,6 +6,7 @@ import {
   IsString,
   IsUUID,
   MinLength,
+  ValidateNested,
 } from "class-validator";
 import {
   ACCOUNT_ROLES,
@@ -71,4 +73,27 @@ export class UpdatePlatformAccountDto {
   @IsOptional()
   @IsString()
   password?: string;
+}
+
+export class PlatformStoreAccountDto {
+  @IsString()
+  username!: string;
+
+  @IsString()
+  @MinLength(8)
+  password!: string;
+}
+
+export class CreatePlatformStoreDto {
+  @IsString()
+  name!: string;
+
+  @ValidateNested()
+  @Type(() => PlatformStoreAccountDto)
+  owner!: PlatformStoreAccountDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PlatformStoreAccountDto)
+  cashier?: PlatformStoreAccountDto;
 }

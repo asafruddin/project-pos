@@ -72,6 +72,19 @@ describe("openShiftIn", () => {
     assert.equal(getOpenShiftFrom([...store.rows.values()])?.shiftId, row.shiftId);
   });
 
+  it("openShiftIn uses the cashier store register", async () => {
+    const store = memoryShifts();
+    const outbox = memoryOutbox();
+    const row = await openShiftIn(store, outbox, 0, {
+      shiftId: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      openedAt: "2026-08-13T07:00:00.000Z",
+      storeId: "store-b",
+      registerId: "register-b",
+    });
+    assert.equal(row.storeId, "store-b");
+    assert.equal(row.registerId, "register-b");
+  });
+
   it("rejects a second open while one is active", async () => {
     const open: LocalShiftRecord = {
       shiftId: "already",

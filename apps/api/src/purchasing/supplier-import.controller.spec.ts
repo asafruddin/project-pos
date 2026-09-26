@@ -23,14 +23,18 @@ describe("SupplierImportController", () => {
       .compile();
 
     const controller = moduleRef.get(SupplierImportController);
-    const result = await controller.importFile({
-      buffer: buildSupplierCsvTemplate(),
-      originalname: "pemasok-impor-template.csv",
-      size: 80,
-    });
+    const result = await controller.importFile(
+      { userId: "u-admin", role: "catalog_admin" },
+      {
+        buffer: buildSupplierCsvTemplate(),
+        originalname: "pemasok-impor-template.csv",
+        size: 80,
+      },
+    );
     expect(suppliers.importSuppliers).toHaveBeenCalledWith(
       expect.arrayContaining([expect.objectContaining({ name: "Kopi Jaya" })]),
       [],
+      undefined,
     );
     expect(result.created).toBe(1);
   });

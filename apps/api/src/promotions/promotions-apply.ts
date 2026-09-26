@@ -32,8 +32,14 @@ export function promotionFromRow(
   });
 }
 
-export async function loadPromotions(tx: LedgerTx): Promise<PromotionSnapshot[]> {
-  const rows = await tx.select().from(promotions);
+export async function loadPromotions(
+  tx: LedgerTx,
+  storeId: string,
+): Promise<PromotionSnapshot[]> {
+  const rows = await tx
+    .select()
+    .from(promotions)
+    .where(eq(promotions.storeId, storeId));
   return rows
     .map(promotionFromRow)
     .filter((row): row is PromotionSnapshot => row != null);
@@ -44,6 +50,7 @@ export async function applySaleVoucher(
   input: {
     voucherCode: string | null;
     payableMinor: number;
+    storeId: string;
   },
 ): Promise<{ voucher_minor: number; voucher_code: string | null }> {
   const code = input.voucherCode?.trim().toUpperCase() ?? "";
@@ -51,7 +58,7 @@ export async function applySaleVoucher(
   const rows = await tx
     .select()
     .from(vouchers)
-    .where(eq(vouchers.code, code))
+    .where(and(eq(vouchers.code, code), eq(vouchers.storeId, input.storeId)))
     .for("update")
     .limit(1);
   const row = rows[0];
@@ -75,7 +82,7 @@ export async function applySaleVoucher(
 
 export async function restoreSaleVoucher(
   tx: LedgerTx,
-  input: { voucherCode: string | null; voucherMinor: number },
+  input: { voucherCode: string | null; voucherMinor: number; storeId?: string },
 ): Promise<void> {
   const code = input.voucherCode?.trim().toUpperCase() ?? "";
   if (!code || !Number.isInteger(input.voucherMinor) || input.voucherMinor < 1) {
@@ -87,7 +94,11 @@ export async function restoreSaleVoucher(
       remainingMinor: sql`${vouchers.remainingMinor} + ${input.voucherMinor}`,
       updatedAt: new Date(),
     })
-    .where(and(eq(vouchers.code, code)));
+    .where(
+      input.storeId
+        ? and(eq(vouchers.code, code), eq(vouchers.storeId, input.storeId))
+        : eq(vouchers.code, code),
+    );
 }
 
 export { evaluatePromotions };

@@ -57,6 +57,7 @@ export type LoginResponse = {
   store_id: string;
   store_name: string;
   store_logo_url: string | null;
+  register_id: string | null;
 };
 
 export type AuthMeResponse = {
@@ -66,6 +67,7 @@ export type AuthMeResponse = {
   store_id: string;
   store_name: string;
   store_logo_url: string | null;
+  register_id: string | null;
   active: boolean;
 };
 
@@ -548,6 +550,23 @@ export type StoreListResponse = {
 
 export type CreateStoreRequest = {
   name: string;
+};
+
+export type PlatformStoreAccountInput = {
+  username: string;
+  password: string;
+};
+
+export type CreatePlatformStoreRequest = {
+  name: string;
+  owner: PlatformStoreAccountInput;
+  cashier?: PlatformStoreAccountInput;
+};
+
+export type CreatePlatformStoreResponse = {
+  store: StoreRecord;
+  owner: UserAccount;
+  cashier: UserAccount | null;
 };
 
 export type UpdateStoreRequest = {

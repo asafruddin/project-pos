@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Header,
   Param,
@@ -28,10 +29,10 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { AuthUser } from "../auth/jwt.strategy";
 import { RequirePermission } from "../auth/permission.decorator";
 import { PermissionsGuard } from "../auth/permissions.guard";
+import { actorStoreId, assertSameStore } from "../auth/store-scope";
 import {
   CreateRegisterDto,
   CreateStockTransferDto,
-  CreateStoreDto,
   SetStorePriceDto,
   TransitionStockTransferDto,
   UpdateStoreDto,
@@ -49,30 +50,37 @@ export class StoresController {
 
   @Get("stores")
   @RequirePermission("stores", "view")
-  list(): Promise<StoreListResponse> {
-    return this.stores.list();
+  list(@CurrentUser() user: AuthUser): Promise<StoreListResponse> {
+    return this.stores.listForStore(actorStoreId(user));
   }
 
   @Get("stores/:storeId")
   @RequirePermission("stores", "view")
   getStore(
+    @CurrentUser() user: AuthUser,
     @Param("storeId", ParseUUIDPipe) storeId: string,
   ): Promise<StoreRecord> {
+    assertSameStore(user, storeId);
     return this.stores.getById(storeId);
   }
 
   @Post("stores")
   @RequirePermission("stores", "update")
-  createStore(@Body() body: CreateStoreDto): Promise<StoreRecord> {
-    return this.stores.createStore(body);
+  createStore(): Promise<StoreRecord> {
+    throw new ForbiddenException({
+      code: "AUTH_FORBIDDEN",
+      message: "Toko baru hanya dibuat dari konsol platform.",
+    });
   }
 
   @Patch("stores/:storeId")
   @RequirePermission("stores", "update")
   updateStore(
+    @CurrentUser() user: AuthUser,
     @Param("storeId", ParseUUIDPipe) storeId: string,
     @Body() body: UpdateStoreDto,
   ): Promise<StoreRecord> {
+    assertSameStore(user, storeId);
     return this.stores.updateStore(storeId, body);
   }
 
@@ -82,9 +90,11 @@ export class StoresController {
     FileInterceptor("file", { limits: { fileSize: 8 * 1024 * 1024 } }),
   )
   uploadLogo(
+    @CurrentUser() user: AuthUser,
     @Param("storeId", ParseUUIDPipe) storeId: string,
     @UploadedFile() file: { buffer: Buffer; mimetype: string; size: number },
   ): Promise<StoreRecord> {
+    assertSameStore(user, storeId);
     return this.stores.setLogo(storeId, file);
   }
 
@@ -106,15 +116,21 @@ export class StoresController {
 
   @Post("registers")
   @RequirePermission("stores", "update")
-  createRegister(@Body() body: CreateRegisterDto): Promise<RegisterRecord> {
+  createRegister(
+    @CurrentUser() user: AuthUser,
+    @Body() body: CreateRegisterDto,
+  ): Promise<RegisterRecord> {
+    assertSameStore(user, body.store_id);
     return this.stores.createRegister(body);
   }
 
   @Put("stores/prices")
   @RequirePermission("stores", "update")
   setPrice(
+    @CurrentUser() user: AuthUser,
     @Body() body: SetStorePriceDto,
   ): Promise<StorePrice> {
+    assertSameStore(user, body.store_id);
     return this.stores.setPrice({
       ...body,
       price_minor: body.price_minor ?? null,

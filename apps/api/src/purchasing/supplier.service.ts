@@ -3,15 +3,16 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import type {
-  CreateSupplierRequest,
-  Supplier,
-  SupplierImportResult,
-  SupplierListResponse,
-  SpreadsheetImportRowError,
-  UpdateSupplierRequest,
+import {
+  STORE_1_ID,
+  type CreateSupplierRequest,
+  type Supplier,
+  type SupplierImportResult,
+  type SupplierListResponse,
+  type SpreadsheetImportRowError,
+  type UpdateSupplierRequest,
 } from "@pos-apps/types";
-import { desc, eq, ilike, inArray, or } from "drizzle-orm";
+import { desc, eq, ilike, inArray, or, and } from "drizzle-orm";
 import { getDb } from "../db/client";
 import { importExceptionMessage } from "../common/spreadsheet-file";
 import type { SupplierImportParsedRow } from "./supplier-import";
@@ -30,21 +31,29 @@ function blankToNull(value: string | null | undefined): string | null {
 
 @Injectable()
 export class SupplierService {
-  async list(q?: string): Promise<SupplierListResponse> {
+  async list(q?: string, storeId?: string): Promise<SupplierListResponse> {
+    const scoped = storeId || STORE_1_ID;
     const term = q?.trim();
     const rows = term
       ? await getDb()
           .select()
           .from(suppliers)
           .where(
-            or(
-              ilike(suppliers.name, `%${term.replace(/[%_]/g, "\\$&")}%`),
-              ilike(suppliers.contactName, `%${term.replace(/[%_]/g, "\\$&")}%`),
-              ilike(suppliers.phone, `%${term.replace(/[%_]/g, "\\$&")}%`),
+            and(
+              eq(suppliers.storeId, scoped),
+              or(
+                ilike(suppliers.name, `%${term.replace(/[%_]/g, "\\$&")}%`),
+                ilike(suppliers.contactName, `%${term.replace(/[%_]/g, "\\$&")}%`),
+                ilike(suppliers.phone, `%${term.replace(/[%_]/g, "\\$&")}%`),
+              ),
             ),
           )
           .orderBy(suppliers.name)
-      : await getDb().select().from(suppliers).orderBy(suppliers.name);
+      : await getDb()
+          .select()
+          .from(suppliers)
+          .where(eq(suppliers.storeId, scoped))
+          .orderBy(suppliers.name);
 
     return {
       suppliers: rows.map((row) => ({
@@ -61,8 +70,8 @@ export class SupplierService {
     };
   }
 
-  async get(supplierId: string): Promise<Supplier> {
-    const detail = await this.load(supplierId);
+  async get(supplierId: string, storeId?: string): Promise<Supplier> {
+    const detail = await this.load(supplierId, storeId);
     if (!detail) {
       throw new NotFoundException({
         code: "SUPPLIER_NOT_FOUND",
@@ -72,7 +81,10 @@ export class SupplierService {
     return detail;
   }
 
-  async create(input: CreateSupplierRequest): Promise<Supplier> {
+  async create(
+    input: CreateSupplierRequest,
+    storeId?: string,
+  ): Promise<Supplier> {
     const name = input.name.trim();
     if (!name) {
       throw new BadRequestException({
@@ -84,6 +96,7 @@ export class SupplierService {
       const [row] = await tx
         .insert(suppliers)
         .values({
+          storeId: storeId || STORE_1_ID,
           name,
           contactName: blankToNull(input.contact_name),
           phone: blankToNull(input.phone),
@@ -107,6 +120,7 @@ export class SupplierService {
   async update(
     supplierId: string,
     input: UpdateSupplierRequest,
+    storeId?: string,
   ): Promise<Supplier> {
     await getDb().transaction(async (tx) => {
       const existing = await tx
@@ -115,7 +129,7 @@ export class SupplierService {
         .where(eq(suppliers.supplierId, supplierId))
         .limit(1)
         .for("update");
-      if (!existing[0]) {
+      if (!existing[0] || (storeId && existing[0].storeId !== storeId)) {
         throw new NotFoundException({
           code: "SUPPLIER_NOT_FOUND",
           message: "Pemasok tidak ditemukan.",
@@ -151,7 +165,7 @@ export class SupplierService {
         await this.replaceProducts(tx, supplierId, input.products);
       }
     });
-    return this.get(supplierId);
+    return this.get(supplierId, storeId);
   }
 
   private async replaceProducts(
@@ -185,7 +199,10 @@ export class SupplierService {
     );
   }
 
-  private async load(supplierId: string): Promise<Supplier | null> {
+  private async load(
+    supplierId: string,
+    storeId?: string,
+  ): Promise<Supplier | null> {
     const db = getDb();
     const headers = await db
       .select()
@@ -193,7 +210,7 @@ export class SupplierService {
       .where(eq(suppliers.supplierId, supplierId))
       .limit(1);
     const header = headers[0];
-    if (!header) return null;
+    if (!header || (storeId && header.storeId !== storeId)) return null;
 
     const supplied = await db
       .select({
@@ -241,6 +258,7 @@ export class SupplierService {
   async importSuppliers(
     rows: SupplierImportParsedRow[],
     parseErrors: SpreadsheetImportRowError[],
+    storeId?: string,
   ): Promise<SupplierImportResult> {
     const errors: SpreadsheetImportRowError[] = [...parseErrors];
     let created = 0;
@@ -257,7 +275,12 @@ export class SupplierService {
           name: suppliers.name,
         })
         .from(suppliers)
-        .where(inArray(suppliers.name, names));
+        .where(
+          and(
+            inArray(suppliers.name, names),
+            eq(suppliers.storeId, storeId || STORE_1_ID),
+          ),
+        );
       const byName = new Map<string, string[]>();
       for (const row of found) {
         const list = byName.get(row.name) ?? [];
@@ -302,7 +325,7 @@ export class SupplierService {
             email: row.email,
             payment_terms: row.paymentTerms,
             notes: row.notes,
-          });
+          }, storeId);
           created += 1;
           nameToId.set(row.name, createdRow.supplier_id);
         }

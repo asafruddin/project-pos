@@ -20,8 +20,10 @@ import type {
   SpreadsheetImportRowError,
   UpdateCustomerRequest,
 } from "@pos-apps/types";
+import { STORE_1_ID } from "@pos-apps/types";
 import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { getDb } from "../db/client";
+import { actorStoreId } from "../auth/store-scope";
 import { importExceptionMessage } from "../common/spreadsheet-file";
 import type { CustomerImportParsedRow } from "./customer-import";
 import {
@@ -38,7 +40,7 @@ import {
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-type Actor = { role: Role; permissions?: string[] };
+type Actor = { role: Role; permissions?: string[]; storeId?: string };
 
 function canManageCustomers(actor: Actor): boolean {
   return hasPermission(grantsFor(actor), "customers", "update");
@@ -78,29 +80,43 @@ function escapeIlike(term: string): string {
 
 @Injectable()
 export class CustomersService {
-  async list(q?: string): Promise<CustomerListResponse> {
+  async list(q?: string, storeId?: string): Promise<CustomerListResponse> {
+    const scoped = storeId || STORE_1_ID;
     const term = q?.trim();
+    const scope = eq(customers.storeId, scoped);
     const rows = term
       ? await getDb()
           .select()
           .from(customers)
           .where(
-            or(
-              ilike(customers.name, `%${escapeIlike(term)}%`),
-              ilike(customers.phone, `%${escapeIlike(term)}%`),
-              ilike(customers.email, `%${escapeIlike(term)}%`),
+            and(
+              scope,
+              or(
+                ilike(customers.name, `%${escapeIlike(term)}%`),
+                ilike(customers.phone, `%${escapeIlike(term)}%`),
+                ilike(customers.email, `%${escapeIlike(term)}%`),
+              ),
             ),
           )
           .orderBy(customers.name)
-      : await getDb().select().from(customers).orderBy(customers.name);
+      : await getDb()
+          .select()
+          .from(customers)
+          .where(scope)
+          .orderBy(customers.name);
     return { customers: await this.withPrices(rows) };
   }
 
-  async listGroups(): Promise<CustomerGroupListResponse> {
+  async listGroups(storeId?: string): Promise<CustomerGroupListResponse> {
     const rows = await getDb()
       .selectDistinct({ groupName: customers.groupName })
       .from(customers)
-      .where(sql`${customers.groupName} is not null`);
+      .where(
+        and(
+          eq(customers.storeId, storeId || STORE_1_ID),
+          sql`${customers.groupName} is not null`,
+        ),
+      );
     return {
       groups: rows
         .map((row) => row.groupName)
@@ -109,9 +125,9 @@ export class CustomersService {
     };
   }
 
-  async get(customerId: string): Promise<Customer> {
+  async get(customerId: string, storeId?: string): Promise<Customer> {
     const row = await this.load(customerId);
-    if (!row) {
+    if (!row || (storeId && row.storeId !== storeId)) {
       throw new NotFoundException({
         code: "CUSTOMER_NOT_FOUND",
         message: "Pelanggan tidak ditemukan.",
@@ -145,6 +161,7 @@ export class CustomersService {
       });
     }
 
+    const storeId = actorStoreId(actor);
     const db = getDb();
     if (input.customer_id) {
       const existing = await db
@@ -153,6 +170,12 @@ export class CustomersService {
         .where(eq(customers.customerId, input.customer_id))
         .limit(1);
       if (existing[0]) {
+        if (existing[0].storeId !== storeId) {
+          throw new ForbiddenException({
+            code: "AUTH_FORBIDDEN",
+            message: "Pelanggan milik toko lain.",
+          });
+        }
         return {
           customer: mapCustomer(existing[0]),
           warnings: [],
@@ -166,7 +189,9 @@ export class CustomersService {
       const dup = await db
         .select({ customerId: customers.customerId })
         .from(customers)
-        .where(eq(customers.phone, parsed.phone))
+        .where(
+          and(eq(customers.storeId, storeId), eq(customers.phone, parsed.phone)),
+        )
         .limit(1);
       if (dup.length) warnings.push("DUPLICATE_PHONE");
     }
@@ -181,6 +206,7 @@ export class CustomersService {
           email: parsed.email,
           notes: parsed.notes,
           groupName: parsed.group_name,
+          storeId,
           ...(canManageCustomers(actor) &&
           Number.isInteger(input.store_credit_minor) &&
           (input.store_credit_minor ?? 0) >= 0
@@ -220,7 +246,7 @@ export class CustomersService {
     actor: Actor,
   ): Promise<Customer> {
     const current = await this.load(customerId);
-    if (!current) {
+    if (!current || current.storeId !== actorStoreId(actor)) {
       throw new NotFoundException({
         code: "CUSTOMER_NOT_FOUND",
         message: "Pelanggan tidak ditemukan.",
@@ -288,7 +314,7 @@ export class CustomersService {
   ): Promise<Customer> {
     this.requireAdmin(actor);
     const current = await this.load(customerId);
-    if (!current) {
+    if (!current || current.storeId !== actorStoreId(actor)) {
       throw new NotFoundException({
         code: "CUSTOMER_NOT_FOUND",
         message: "Pelanggan tidak ditemukan.",
@@ -382,7 +408,7 @@ export class CustomersService {
       });
     }
     const current = await this.load(customerId);
-    if (!current) {
+    if (!current || current.storeId !== actorStoreId(actor)) {
       throw new NotFoundException({
         code: "CUSTOMER_NOT_FOUND",
         message: "Pelanggan tidak ditemukan.",
@@ -391,8 +417,11 @@ export class CustomersService {
     await getDb().delete(customers).where(eq(customers.customerId, customerId));
   }
 
-  async history(customerId: string): Promise<CustomerHistoryResponse> {
-    const customer = await this.get(customerId);
+  async history(
+    customerId: string,
+    storeId?: string,
+  ): Promise<CustomerHistoryResponse> {
+    const customer = await this.get(customerId, storeId);
     const db = getDb();
     const saleRows = await db
       .select({

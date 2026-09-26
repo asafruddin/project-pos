@@ -12,6 +12,7 @@ const STORE_ID_KEY = "pos_cashier_store_id";
 const STORE_NAME_KEY = "pos_cashier_store_name";
 const STORE_LOGO_URL_KEY = "pos_cashier_store_logo_url";
 const STORE_LOGO_DATA_KEY = "pos_cashier_store_logo_data";
+const REGISTER_ID_KEY = "pos_cashier_register_id";
 
 export type CashierSession = {
   accessToken: string;
@@ -21,6 +22,7 @@ export type CashierSession = {
   storeId?: string | null;
   storeName?: string | null;
   storeLogoUrl?: string | null;
+  registerId?: string | null;
 };
 
 export type StoreIdentity = {
@@ -55,9 +57,12 @@ function writeStoreIdentity(input: {
   storeId?: string | null;
   storeName?: string | null;
   storeLogoUrl?: string | null;
+  registerId?: string | null;
 }): void {
   if (input.storeId) localStorage.setItem(STORE_ID_KEY, input.storeId);
   if (input.storeName) localStorage.setItem(STORE_NAME_KEY, input.storeName);
+  if (input.registerId) localStorage.setItem(REGISTER_ID_KEY, input.registerId);
+  else if (input.registerId === null) localStorage.removeItem(REGISTER_ID_KEY);
   if (input.storeLogoUrl) {
     localStorage.setItem(STORE_LOGO_URL_KEY, input.storeLogoUrl);
   } else if (input.storeLogoUrl === null) {
@@ -76,6 +81,7 @@ export function saveSession(session: CashierSession): void {
     storeId: session.storeId,
     storeName: session.storeName,
     storeLogoUrl: session.storeLogoUrl ?? null,
+    registerId: session.registerId ?? null,
   });
 }
 
@@ -83,6 +89,7 @@ export function patchStoreIdentity(input: {
   storeId?: string | null;
   storeName?: string | null;
   storeLogoUrl?: string | null;
+  registerId?: string | null;
 }): void {
   if (typeof window === "undefined") return;
   writeStoreIdentity(input);
@@ -111,6 +118,7 @@ export function clearSession(): void {
   localStorage.removeItem(STORE_NAME_KEY);
   localStorage.removeItem(STORE_LOGO_URL_KEY);
   localStorage.removeItem(STORE_LOGO_DATA_KEY);
+  localStorage.removeItem(REGISTER_ID_KEY);
   // PIN unlock is tab-scoped; clear so Menu stays gated after Sign out / Day Close.
   if (typeof sessionStorage !== "undefined") {
     sessionStorage.removeItem("pos_cashier_pin_unlocked");
@@ -160,6 +168,7 @@ export function getSession(): CashierSession | null {
     storeId: store.storeId,
     storeName: store.storeName,
     storeLogoUrl: store.storeLogoUrl,
+    registerId: localStorage.getItem(REGISTER_ID_KEY),
   };
 }
 

@@ -6,7 +6,6 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
-  Query,
   UseGuards,
 } from "@nestjs/common";
 import type {
@@ -38,8 +37,8 @@ export class InventoryController {
 
   @Get("overview")
   @RequirePermission("inventory", "view")
-  overview(@Query("store_id") storeId?: string): Promise<StockOverviewResponse> {
-    return this.inventory.overview(storeId);
+  overview(@CurrentUser() user: AuthUser): Promise<StockOverviewResponse> {
+    return this.inventory.overview(user.storeId);
   }
 
   @Post("products/:productId/unpack")
@@ -48,13 +47,12 @@ export class InventoryController {
     @Param("productId", ParseUUIDPipe) productId: string,
     @Body() body: UnpackUnitDto,
     @CurrentUser() user: AuthUser,
-    @Query("store_id") storeId?: string,
   ): Promise<UnpackUnitResponse> {
     return this.inventory.unpack(
       productId,
       body ?? {},
       user.userId,
-      storeId || user.storeId,
+      user.storeId,
     );
   }
 
@@ -64,15 +62,14 @@ export class InventoryController {
     @Param("productId", ParseUUIDPipe) productId: string,
     @Body() body: MarkDamagedDto,
     @CurrentUser() user: AuthUser,
-    @Query("store_id") storeId?: string,
   ): Promise<StockOverviewItem> {
-    return this.inventory.markDamaged(productId, body, user.userId, storeId);
+    return this.inventory.markDamaged(productId, body, user.userId, user.storeId);
   }
 
   @Get("opnames")
   @RequirePermission("inventory", "view")
-  listOpnames(): Promise<OpnameListResponse> {
-    return this.opnames.list();
+  listOpnames(@CurrentUser() user: AuthUser): Promise<OpnameListResponse> {
+    return this.opnames.list(user.storeId);
   }
 
   @Post("opnames")
@@ -81,15 +78,16 @@ export class InventoryController {
     @Body() body: CreateOpnameDto,
     @CurrentUser() user: AuthUser,
   ): Promise<OpnameDetail> {
-    return this.opnames.create(body, user.userId);
+    return this.opnames.create(body, user.userId, user.storeId);
   }
 
   @Get("opnames/:opnameId")
   @RequirePermission("inventory", "view")
   getOpname(
     @Param("opnameId", ParseUUIDPipe) opnameId: string,
+    @CurrentUser() user: AuthUser,
   ): Promise<OpnameDetail> {
-    return this.opnames.get(opnameId);
+    return this.opnames.get(opnameId, user.storeId);
   }
 
   @Patch("opnames/:opnameId/counts")

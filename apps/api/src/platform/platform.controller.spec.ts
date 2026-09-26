@@ -44,6 +44,7 @@ describe("PlatformController", () => {
       createOperator: jest.fn(),
       updateOperator: jest.fn(),
       createAccount: jest.fn(),
+      createStore: jest.fn(),
       updateAccount: jest.fn(),
     };
     const moduleRef = await Test.createTestingModule({

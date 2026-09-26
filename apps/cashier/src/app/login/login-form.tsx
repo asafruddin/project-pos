@@ -10,6 +10,7 @@ import { saveSession } from "@/lib/auth-token";
 import { getApiUrl } from "@/lib/api-client";
 import { prefetchStoreLogo } from "@/lib/use-store-logo";
 import { copy, type LangPref } from "@/lib/preferences";
+import { adoptTenantStoreId } from "@pos-apps/local-db";
 
 export function LoginForm({ lang }: { lang: LangPref }) {
   const router = useRouter();
@@ -58,7 +59,11 @@ export function LoginForm({ lang }: { lang: LangPref }) {
         storeId: ok.store_id,
         storeName: ok.store_name,
         storeLogoUrl: ok.store_logo_url,
+        registerId: ok.register_id,
       });
+      if (ok.store_id) {
+        await adoptTenantStoreId(ok.store_id);
+      }
       void prefetchStoreLogo(ok.store_logo_url);
       router.replace("/pin");
       router.refresh();

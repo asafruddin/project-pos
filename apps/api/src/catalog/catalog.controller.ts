@@ -51,8 +51,8 @@ export class CatalogController {
   ): Promise<ProductListResponse> {
     const overlayStore =
       user.role === "cashier" || user.role === "supervisor"
-        ? user.storeId
-        : undefined;
+        ? (user.storeId ?? "00000000-0000-4000-8000-000000000001")
+        : user.storeId ?? "00000000-0000-4000-8000-000000000001";
     const page = Number.parseInt(pageRaw ?? "", 10);
     const limit = Number.parseInt(limitRaw ?? "", 10);
     const result = await this.catalog.list(overlayStore, {

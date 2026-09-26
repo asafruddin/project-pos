@@ -11,7 +11,7 @@ import {
   type UnpackUnitResponse,
 } from "@pos-apps/types";
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { asc, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "../db/client";
 import { products, productUnitConversions, stockMovements } from "../db/schema";
 import { insertStockMovement } from "../db/stock-ledger";
@@ -38,6 +38,7 @@ export class InventoryService {
         trackStock: products.trackStock,
       })
       .from(products)
+      .where(eq(products.storeId, store))
       .orderBy(asc(products.name));
 
     const sums = await getDb()
@@ -80,31 +81,12 @@ export class InventoryService {
   }
 
   private async sellableQty(
-    tx: {
-      select: (...args: never[]) => {
-        from: (table: typeof stockMovements) => {
-          where: (cond: unknown) => Promise<Array<{ qty: string }>>;
-        };
-      };
-    },
-    storeId: string,
-    productId: string,
-    store1Projection: number,
+    _tx: unknown,
+    _storeId: string,
+    _productId: string,
+    cachedQty: number,
   ): Promise<number> {
-    if (storeId === STORE_1_ID) return store1Projection;
-    const sums = await tx
-      .select({
-        qty: sql<string>`coalesce(sum(${stockMovements.qtyDelta}), 0)`,
-      } as never)
-      .from(stockMovements)
-      .where(
-        and(
-          eq(stockMovements.storeId, storeId),
-          eq(stockMovements.bucket, "sellable"),
-          eq(stockMovements.productId, productId),
-        ),
-      );
-    return toQty(sums[0]?.qty);
+    return cachedQty;
   }
 
   /**
@@ -210,16 +192,14 @@ export class InventoryService {
 
       const fromStockQty = fromSellable + parsed.from_delta;
       const toStockQty = toSellable + parsed.to_delta;
-      if (movementStore === STORE_1_ID) {
-        await tx
-          .update(products)
-          .set({ stockQty: fromStockQty, updatedAt: new Date() })
-          .where(eq(products.productId, fromProduct.productId));
-        await tx
-          .update(products)
-          .set({ stockQty: toStockQty, updatedAt: new Date() })
-          .where(eq(products.productId, toProduct.productId));
-      }
+      await tx
+        .update(products)
+        .set({ stockQty: fromStockQty, updatedAt: new Date() })
+        .where(eq(products.productId, fromProduct.productId));
+      await tx
+        .update(products)
+        .set({ stockQty: toStockQty, updatedAt: new Date() })
+        .where(eq(products.productId, toProduct.productId));
 
       return {
         from_product_id: fromProduct.productId,
@@ -283,15 +263,13 @@ export class InventoryService {
         sourceId,
         actorId: actorId ?? null,
       });
-      if (movementStore === STORE_1_ID) {
-        await tx
-          .update(products)
-          .set({
-            stockQty: existing.stockQty - parsed.qty,
-            updatedAt: new Date(),
-          })
-          .where(eq(products.productId, productId));
-      }
+      await tx
+        .update(products)
+        .set({
+          stockQty: existing.stockQty - parsed.qty,
+          updatedAt: new Date(),
+        })
+        .where(eq(products.productId, productId));
     });
 
     const overview = await this.overview(storeId);

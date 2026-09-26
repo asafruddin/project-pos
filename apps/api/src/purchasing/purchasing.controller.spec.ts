@@ -33,6 +33,7 @@ describe("PurchasingController", () => {
     expect(purchaseOrders.create).toHaveBeenCalledWith(
       { supplier_id: "s1" },
       "u-admin",
+      undefined,
     );
   });
 });

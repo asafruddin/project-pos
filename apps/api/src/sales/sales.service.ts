@@ -21,21 +21,23 @@ import type {
   SyncVoidRequest,
   SyncVoidResponse,
 } from "@pos-apps/types";
-import { REGISTER_1_ID, STORE_1_ID } from "@pos-apps/types";
-import { and, asc, desc, eq, gte, inArray, lt } from "drizzle-orm";
+import { STORE_1_ID } from "@pos-apps/types";
+import { and, desc, eq, gte, inArray, lt } from "drizzle-orm";
 import { getDb } from "../db/client";
 import { insertStockMovement } from "../db/stock-ledger";
 import { applySaleLoyalty, applyVoidLoyalty } from "../loyalty/loyalty-apply";
 import { applySaleVoucher, restoreSaleVoucher } from "../promotions/promotions-apply";
-import { customers, products, registers, sales, saleReturns, saleVoids } from "../db/schema";
+import { firstRegisterId } from "../stores/register-for-store";
+import { customers, products, sales, saleReturns, saleVoids } from "../db/schema";
 
 @Injectable()
 export class SalesService {
-  async listToday(): Promise<SalesListResponse> {
+  async listToday(storeId?: string): Promise<SalesListResponse> {
     const db = getDb();
     const start = startOfUtcDay(new Date());
     const end = new Date(start);
     end.setUTCDate(end.getUTCDate() + 1);
+    const scoped = storeId || STORE_1_ID;
 
     const rows = await db
       .select({
@@ -47,7 +49,13 @@ export class SalesService {
       })
       .from(sales)
       .leftJoin(saleVoids, eq(saleVoids.saleId, sales.saleId))
-      .where(and(gte(sales.completedAt, start), lt(sales.completedAt, end)))
+      .where(
+        and(
+          eq(sales.storeId, scoped),
+          gte(sales.completedAt, start),
+          lt(sales.completedAt, end),
+        ),
+      )
       .orderBy(desc(sales.completedAt));
 
     const items: SalesListItem[] = rows.map((r) => ({
@@ -102,22 +110,7 @@ export class SalesService {
       }
 
       const saleStoreId = storeId || STORE_1_ID;
-      let saleRegisterId = REGISTER_1_ID;
-      if (saleStoreId !== STORE_1_ID) {
-        const regs = await tx
-          .select({ registerId: registers.registerId })
-          .from(registers)
-          .where(eq(registers.storeId, saleStoreId))
-          .orderBy(asc(registers.createdAt))
-          .limit(1);
-        if (!regs[0]) {
-          throw new BadRequestException({
-            code: "STORE_INVALID",
-            message: "Toko kasir tidak memiliki register.",
-          });
-        }
-        saleRegisterId = regs[0].registerId;
-      }
+      const saleRegisterId = await firstRegisterId(saleStoreId);
 
       const lineTotal = request.lines.reduce(
         (total, line) => total + line.qty * line.price_minor,
@@ -224,7 +217,7 @@ export class SalesService {
         });
       }
 
-      if (saleStoreId === STORE_1_ID) {
+      if (saleStoreId) {
         for (const product of accepted.products) {
           if (product.track_stock === false) continue;
           await tx
@@ -241,6 +234,7 @@ export class SalesService {
       await applySaleVoucher(tx, {
         voucherCode: request.promotions?.voucher_code ?? null,
         payableMinor: beforeVoucher,
+        storeId: saleStoreId,
       });
       const loyaltyApplied = await applySaleLoyalty(tx, {
         customerId: optionalCustomerId(request.customer_id),
@@ -393,15 +387,13 @@ export class SalesService {
           sourceId: request.void_id,
           actorId: actorId ?? null,
         });
-        if (sale.storeId === STORE_1_ID) {
-          await tx
-            .update(products)
-            .set({
-              stockQty: product.stockQty + line.qty,
-              updatedAt: new Date(),
-            })
-            .where(eq(products.productId, line.product_id));
-        }
+        await tx
+          .update(products)
+          .set({
+            stockQty: product.stockQty + line.qty,
+            updatedAt: new Date(),
+          })
+          .where(eq(products.productId, line.product_id));
       }
 
       await tx.insert(saleVoids).values({
@@ -419,6 +411,7 @@ export class SalesService {
       await restoreSaleVoucher(tx, {
         voucherCode: sale.promotions?.voucher_code ?? null,
         voucherMinor: sale.promotions?.voucher_minor ?? 0,
+        storeId: sale.storeId,
       });
 
       const credit = storeCreditTenderTotal(sale.payment);

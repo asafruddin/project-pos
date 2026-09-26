@@ -5,7 +5,6 @@ import {
 } from "@nestjs/common";
 import { receiveGoods, transitionPurchaseOrder } from "@pos-apps/domain";
 import {
-  STORE_1_ID,
   type PaymentStatus,
   type PurchaseOrderDetail,
   type ReceiveGoodsRequest,
@@ -119,7 +118,7 @@ export class GoodsReceiptService {
           );
         await insertStockMovement(tx, {
           productId: row.product_id,
-          storeId: STORE_1_ID,
+          storeId: header.storeId,
           qtyDelta: row.qty,
           bucket: "sellable",
           reason: "penerimaan barang",

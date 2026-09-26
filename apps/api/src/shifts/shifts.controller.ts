@@ -31,20 +31,21 @@ export class ShiftsController {
   constructor(private readonly shifts: ShiftsService) {}
 
   @Get("current")
-  current(): Promise<CurrentShiftResponse> {
-    return this.shifts.current();
+  current(@CurrentUser() user: AuthUser): Promise<CurrentShiftResponse> {
+    return this.shifts.current(user.storeId);
   }
 
   @Get()
-  list(): Promise<ShiftListResponse> {
-    return this.shifts.list();
+  list(@CurrentUser() user: AuthUser): Promise<ShiftListResponse> {
+    return this.shifts.list(user.storeId);
   }
 
   @Get(":shiftId")
   get(
+    @CurrentUser() user: AuthUser,
     @Param("shiftId", ParseUUIDPipe) shiftId: string,
   ): Promise<ShiftDetailResponse> {
-    return this.shifts.get(shiftId);
+    return this.shifts.get(shiftId, user.storeId);
   }
 
   @Post()
@@ -54,7 +55,7 @@ export class ShiftsController {
     @CurrentUser() user: AuthUser,
     @Body() body: OpenShiftDto,
   ): Promise<OpenShiftResponse> {
-    return this.shifts.open(body, user.userId);
+    return this.shifts.open(body, user.userId, user.storeId);
   }
 
   @Post(":shiftId/cash")

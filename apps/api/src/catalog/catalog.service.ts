@@ -196,6 +196,7 @@ type NamedTx = {
 
 async function ensureBrand(
   tx: NamedTx,
+  storeId: string,
   name: string | null | undefined,
 ): Promise<string | null> {
   const trimmed = blankToNull(name ?? null);
@@ -203,10 +204,13 @@ async function ensureBrand(
   const existing = await tx
     .select()
     .from(brands)
-    .where(eq(brands.name, trimmed))
+    .where(and(eq(brands.storeId, storeId), eq(brands.name, trimmed)))
     .limit(1);
   if (existing[0]) return existing[0].brandId as string;
-  const [row] = await tx.insert(brands).values({ name: trimmed }).returning();
+  const [row] = await tx
+    .insert(brands)
+    .values({ storeId, name: trimmed })
+    .returning();
   return row.brandId as string;
 }
 
@@ -260,38 +264,15 @@ export class CatalogService {
   ): Promise<Map<string, number>> {
     const result = new Map<string, number>();
     if (!productIds.length) return result;
-    if (storeId === STORE_1_ID) {
-      const rows = await getDb()
-        .select({
-          productId: products.productId,
-          stockQty: products.stockQty,
-        })
-        .from(products)
-        .where(inArray(products.productId, productIds));
-      for (const row of rows) {
-        result.set(row.productId, row.stockQty);
-      }
-      return result;
-    }
-    const sums = await getDb()
+    const rows = await getDb()
       .select({
-        productId: stockMovements.productId,
-        qty: sql<string>`coalesce(sum(${stockMovements.qtyDelta}), 0)`,
+        productId: products.productId,
+        stockQty: products.stockQty,
       })
-      .from(stockMovements)
-      .where(
-        and(
-          eq(stockMovements.storeId, storeId),
-          eq(stockMovements.bucket, "sellable"),
-          inArray(stockMovements.productId, productIds),
-        ),
-      )
-      .groupBy(stockMovements.productId);
-    for (const row of sums) {
-      result.set(row.productId, toQty(row.qty));
-    }
-    for (const id of productIds) {
-      if (!result.has(id)) result.set(id, 0);
+      .from(products)
+      .where(inArray(products.productId, productIds));
+    for (const row of rows) {
+      result.set(row.productId, row.stockQty);
     }
     return result;
   }
@@ -353,7 +334,10 @@ export class CatalogService {
     const stockStore = storeId || STORE_1_ID;
     const db = getDb();
 
-    const [totalRow] = await db.select({ value: count() }).from(products);
+    const [totalRow] = await db
+      .select({ value: count() })
+      .from(products)
+      .where(eq(products.storeId, stockStore));
     const total = Number(totalRow?.value ?? 0);
     const total_pages = total === 0 ? 0 : Math.ceil(total / limit);
 
@@ -368,6 +352,7 @@ export class CatalogService {
       .leftJoin(categories, eq(products.categoryId, categories.categoryId))
       .leftJoin(brands, eq(products.brandId, brands.brandId))
       .leftJoin(units, eq(products.unitId, units.unitId))
+      .where(eq(products.storeId, stockStore))
       .orderBy(asc(products.name))
       .limit(limit)
       .offset(offset);
@@ -449,7 +434,7 @@ export class CatalogService {
           storeId,
           input.category_name,
         );
-        const brandId = await ensureBrand(tx as never, input.brand_name);
+        const brandId = await ensureBrand(tx as never, storeId, input.brand_name);
         const unitId = await ensureUnit(tx as never, storeId, input.unit_name);
         const [row] = await tx
           .insert(products)
@@ -471,11 +456,13 @@ export class CatalogService {
             brandId,
             unitId,
             tags: input.tags ?? [],
+            storeId,
           })
           .returning();
 
         await insertStockMovement(tx, {
           productId: row.productId,
+          storeId,
           qtyDelta: stock.qty_delta,
           bucket: "sellable",
           reason: stock.reason,
@@ -501,7 +488,7 @@ export class CatalogService {
     input: UpdateProductRequest,
     storeId: string = STORE_1_ID,
   ): Promise<Product> {
-    const existing = await this.requireProduct(productId);
+    const existing = await this.requireProduct(productId, storeId);
     if (input.price_minor !== undefined) {
       if (!Number.isInteger(input.price_minor) || input.price_minor < 0) {
         throw new BadRequestException({
@@ -528,7 +515,7 @@ export class CatalogService {
             : existing.categoryId;
         const brandId =
           input.brand_name !== undefined
-            ? await ensureBrand(tx as never, input.brand_name)
+            ? await ensureBrand(tx as never, storeId, input.brand_name)
             : existing.brandId;
         const unitId =
           input.unit_name !== undefined
@@ -782,7 +769,12 @@ export class CatalogService {
           sku: products.sku,
         })
         .from(products)
-        .where(inArray(products.sku, uniqueSkus));
+        .where(
+          and(
+            eq(products.storeId, storeId),
+            inArray(products.sku, uniqueSkus),
+          ),
+        );
       for (const row of existing) {
         if (row.sku) skuToId.set(row.sku, row.productId);
       }
@@ -799,7 +791,7 @@ export class CatalogService {
         if (row.parentSku) {
           let resolved = skuToId.get(row.parentSku);
           if (!resolved) {
-            resolved = await this.lookupSku(row.parentSku);
+            resolved = await this.lookupSku(row.parentSku, storeId);
             if (resolved) skuToId.set(row.parentSku, resolved);
           }
           if (!resolved) {
@@ -855,11 +847,14 @@ export class CatalogService {
     };
   }
 
-  private async lookupSku(sku: string): Promise<string | undefined> {
+  private async lookupSku(
+    sku: string,
+    storeId: string,
+  ): Promise<string | undefined> {
     const rows = await getDb()
       .select({ productId: products.productId })
       .from(products)
-      .where(eq(products.sku, sku))
+      .where(and(eq(products.storeId, storeId), eq(products.sku, sku)))
       .limit(1);
     return rows[0]?.productId;
   }
@@ -916,14 +911,17 @@ export class CatalogService {
     return patch;
   }
 
-  private async requireProduct(productId: string): Promise<ProductRow> {
+  private async requireProduct(
+    productId: string,
+    storeId?: string,
+  ): Promise<ProductRow> {
     const rows = await getDb()
       .select()
       .from(products)
       .where(eq(products.productId, productId))
       .limit(1);
     const row = rows[0];
-    if (!row) {
+    if (!row || (storeId && row.storeId !== storeId)) {
       throw new NotFoundException({
         code: "CATALOG_NOT_FOUND",
         message: "Produk tidak ditemukan.",

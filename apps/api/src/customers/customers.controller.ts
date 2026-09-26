@@ -37,13 +37,18 @@ export class CustomersController {
   constructor(private readonly customers: CustomersService) {}
 
   @Get()
-  list(@Query("q") q?: string): Promise<CustomerListResponse> {
-    return this.customers.list(q);
+  list(
+    @CurrentUser() user: AuthUser,
+    @Query("q") q?: string,
+  ): Promise<CustomerListResponse> {
+    return this.customers.list(q, user.storeId);
   }
 
   @Get("groups")
-  listGroups(): Promise<CustomerGroupListResponse> {
-    return this.customers.listGroups();
+  listGroups(
+    @CurrentUser() user: AuthUser,
+  ): Promise<CustomerGroupListResponse> {
+    return this.customers.listGroups(user.storeId);
   }
 
   @Put("group-prices")
@@ -72,8 +77,9 @@ export class CustomersController {
   @Get(":customerId/history")
   history(
     @Param("customerId", ParseUUIDPipe) customerId: string,
+    @CurrentUser() user: AuthUser,
   ): Promise<CustomerHistoryResponse> {
-    return this.customers.history(customerId);
+    return this.customers.history(customerId, user.storeId);
   }
 
   @Put(":customerId/prices")
@@ -94,8 +100,9 @@ export class CustomersController {
   @Get(":customerId")
   get(
     @Param("customerId", ParseUUIDPipe) customerId: string,
+    @CurrentUser() user: AuthUser,
   ): Promise<Customer> {
-    return this.customers.get(customerId);
+    return this.customers.get(customerId, user.storeId);
   }
 
   @Patch(":customerId")

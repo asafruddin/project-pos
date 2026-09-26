@@ -12,8 +12,9 @@ import type {
   UpsertVoucherRequest,
   Voucher,
 } from "@pos-apps/types";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, and } from "drizzle-orm";
 import { getDb } from "../db/client";
+import { actorStoreId } from "../auth/store-scope";
 import { promotions, vouchers } from "../db/schema";
 import { promotionFromRow } from "./promotions-apply";
 
@@ -51,20 +52,23 @@ function mapVoucher(row: typeof vouchers.$inferSelect): Voucher {
 
 @Injectable()
 export class PromotionsService {
-  async list(): Promise<{ promotions: Promotion[] }> {
+  async list(storeId?: string): Promise<{ promotions: Promotion[] }> {
+    const scoped = actorStoreId({ storeId });
     const rows = await getDb()
       .select()
       .from(promotions)
+      .where(eq(promotions.storeId, scoped))
       .orderBy(desc(promotions.updatedAt));
     return { promotions: rows.map(mapPromotion) };
   }
 
   async upsert(
     input: UpsertPromotionRequest,
-    actor: { role: Role; permissions?: string[] },
+    actor: { role: Role; permissions?: string[]; storeId?: string | null },
     promotionId?: string,
   ): Promise<Promotion> {
     this.requireAdmin(actor);
+    const storeId = actorStoreId(actor);
     const parsed = normalizePromotion({
       promotion_id: promotionId ?? crypto.randomUUID(),
       ...input,
@@ -96,7 +100,12 @@ export class PromotionsService {
       const [row] = await getDb()
         .update(promotions)
         .set(values)
-        .where(eq(promotions.promotionId, promotionId))
+        .where(
+          and(
+            eq(promotions.promotionId, promotionId),
+            eq(promotions.storeId, storeId),
+          ),
+        )
         .returning();
       if (!row) {
         throw new NotFoundException({
@@ -108,16 +117,24 @@ export class PromotionsService {
     }
     const [row] = await getDb()
       .insert(promotions)
-      .values({ promotionId: parsed.promotion_id, ...values })
+      .values({ promotionId: parsed.promotion_id, storeId, ...values })
       .returning();
     return mapPromotion(row!);
   }
 
-  async remove(promotionId: string, actor: { role: Role; permissions?: string[] }): Promise<void> {
+  async remove(
+    promotionId: string,
+    actor: { role: Role; permissions?: string[]; storeId?: string | null },
+  ): Promise<void> {
     this.requireAdmin(actor);
     const deleted = await getDb()
       .delete(promotions)
-      .where(eq(promotions.promotionId, promotionId))
+      .where(
+        and(
+          eq(promotions.promotionId, promotionId),
+          eq(promotions.storeId, actorStoreId(actor)),
+        ),
+      )
       .returning({ promotionId: promotions.promotionId });
     if (!deleted.length) {
       throw new NotFoundException({
@@ -127,21 +144,27 @@ export class PromotionsService {
     }
   }
 
-  async listVouchers(actor: { role: Role; permissions?: string[] }): Promise<{ vouchers: Voucher[] }> {
+  async listVouchers(actor: {
+    role: Role;
+    permissions?: string[];
+    storeId?: string | null;
+  }): Promise<{ vouchers: Voucher[] }> {
     this.requireAdmin(actor);
     const rows = await getDb()
       .select()
       .from(vouchers)
+      .where(eq(vouchers.storeId, actorStoreId(actor)))
       .orderBy(vouchers.code);
     return { vouchers: rows.map(mapVoucher) };
   }
 
   async upsertVoucher(
     input: UpsertVoucherRequest,
-    actor: { role: Role; permissions?: string[] },
+    actor: { role: Role; permissions?: string[]; storeId?: string | null },
     voucherId?: string,
   ): Promise<Voucher> {
     this.requireAdmin(actor);
+    const storeId = actorStoreId(actor);
     const code = input.code.trim().toUpperCase();
     if (!code || !Number.isInteger(input.remaining_minor) || input.remaining_minor < 0) {
       throw new BadRequestException({
@@ -159,7 +182,12 @@ export class PromotionsService {
       const [row] = await getDb()
         .update(vouchers)
         .set(values)
-        .where(eq(vouchers.voucherId, voucherId))
+        .where(
+          and(
+            eq(vouchers.voucherId, voucherId),
+            eq(vouchers.storeId, storeId),
+          ),
+        )
         .returning();
       if (!row) {
         throw new NotFoundException({
@@ -169,15 +197,23 @@ export class PromotionsService {
       }
       return mapVoucher(row);
     }
-    const [row] = await getDb().insert(vouchers).values(values).returning();
+    const [row] = await getDb()
+      .insert(vouchers)
+      .values({ ...values, storeId })
+      .returning();
     return mapVoucher(row!);
   }
 
-  async lookupVoucher(code: string): Promise<Voucher> {
+  async lookupVoucher(code: string, storeId?: string): Promise<Voucher> {
     const rows = await getDb()
       .select()
       .from(vouchers)
-      .where(eq(vouchers.code, code.trim().toUpperCase()))
+      .where(
+        and(
+          eq(vouchers.code, code.trim().toUpperCase()),
+          eq(vouchers.storeId, actorStoreId({ storeId })),
+        ),
+      )
       .limit(1);
     if (!rows[0] || !rows[0].enabled) {
       throw new NotFoundException({

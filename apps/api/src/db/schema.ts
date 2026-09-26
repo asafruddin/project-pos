@@ -106,13 +106,20 @@ export const categories = pgTable(
   (t) => [uniqueIndex("categories_store_name_unique").on(t.storeId, t.name)],
 );
 
-export const brands = pgTable("brands", {
-  brandId: uuid("brand_id").primaryKey().defaultRandom(),
-  name: text("name").notNull().unique(),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const brands = pgTable(
+  "brands",
+  {
+    brandId: uuid("brand_id").primaryKey().defaultRandom(),
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => stores.storeId),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [uniqueIndex("brands_store_name_unique").on(t.storeId, t.name)],
+);
 
 /** Store-scoped sell unit (pcs, kg, slop) — not report quantity sold. */
 export const units = pgTable(
@@ -155,6 +162,9 @@ export const products = pgTable(
     brandId: uuid("brand_id").references(() => brands.brandId),
     unitId: uuid("unit_id").references(() => units.unitId),
     tags: text("tags").array().notNull().default(sql`'{}'`),
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => stores.storeId),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -173,7 +183,7 @@ export const products = pgTable(
       "products_compare_at_minor_nonneg",
       sql`${t.compareAtMinor} IS NULL OR ${t.compareAtMinor} >= 0`,
     ),
-    uniqueIndex("products_sku_unique").on(t.sku),
+    uniqueIndex("products_store_sku_unique").on(t.storeId, t.sku),
     foreignKey({
       columns: [t.parentId],
       foreignColumns: [t.productId],
@@ -356,6 +366,9 @@ export type PurchaseOrderStatus =
 
 export const suppliers = pgTable("suppliers", {
   supplierId: uuid("supplier_id").primaryKey().defaultRandom(),
+  storeId: uuid("store_id")
+    .notNull()
+    .references(() => stores.storeId),
   name: text("name").notNull(),
   contactName: text("contact_name"),
   phone: text("phone"),
@@ -612,6 +625,9 @@ export const customers = pgTable(
     notes: text("notes"),
     groupName: text("group_name"),
     storeCreditMinor: integer("store_credit_minor").notNull().default(0),
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => stores.storeId),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -836,15 +852,22 @@ export const promotions = pgTable(
   ],
 );
 
-export const vouchers = pgTable("vouchers", {
-  voucherId: uuid("voucher_id").primaryKey().defaultRandom(),
-  code: text("code").notNull().unique(),
-  remainingMinor: integer("remaining_minor").notNull().default(0),
-  enabled: boolean("enabled").notNull().default(true),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const vouchers = pgTable(
+  "vouchers",
+  {
+    voucherId: uuid("voucher_id").primaryKey().defaultRandom(),
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => stores.storeId),
+    code: text("code").notNull(),
+    remainingMinor: integer("remaining_minor").notNull().default(0),
+    enabled: boolean("enabled").notNull().default(true),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [uniqueIndex("vouchers_store_code_unique").on(t.storeId, t.code)],
+);
 
 export type PromotionRow = typeof promotions.$inferSelect;
 export type VoucherRow = typeof vouchers.$inferSelect;

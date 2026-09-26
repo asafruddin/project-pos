@@ -1,7 +1,7 @@
 "use client";
 
 import { TableSkeleton } from "@pos-apps/ui/molecules";
-import { CreateLink, RowLink } from "@pos-apps/ui/organisms";
+import { RowLink } from "@pos-apps/ui/organisms";
 import { useCallback, useEffect, useState } from "react";
 import type { ApiErrorBody, StoreListResponse, StoreRecord } from "@pos-apps/types";
 import { STORE_1_ID } from "@pos-apps/types";
@@ -65,7 +65,6 @@ export function StoresPanel({ canEdit }: { canEdit: boolean }) {
         {canEdit ? (
           <div className="flex flex-wrap gap-2">
             <RowLink href="/stores/prices">Harga toko</RowLink>
-            <CreateLink href="/stores/new">Tambah toko</CreateLink>
           </div>
         ) : null}
       </div>

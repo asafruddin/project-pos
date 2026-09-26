@@ -43,6 +43,7 @@ const productRow = {
   brandId: null,
   unitId: null,
   tags: [],
+  storeId: "00000000-0000-4000-8000-000000000001",
   createdAt: now,
   updatedAt: now,
 };
@@ -276,29 +277,33 @@ describe("CatalogService", () => {
       select: jest
         .fn()
         .mockReturnValueOnce({
-          from: async () => [{ value: 2 }],
+          from: () => ({
+            where: async () => [{ value: 2 }],
+          }),
         })
         .mockReturnValueOnce({
           from: () => ({
             leftJoin: () => ({
               leftJoin: () => ({
                 leftJoin: () => ({
-                  orderBy: () => ({
-                    limit: () => ({
-                      offset: async () => [
-                        {
-                          product: productRow,
-                          categoryName: null,
-                          brandName: null,
-                          unitName: null,
-                        },
-                        {
-                          product: inactive,
-                          categoryName: null,
-                          brandName: null,
-                          unitName: null,
-                        },
-                      ],
+                  where: () => ({
+                    orderBy: () => ({
+                      limit: () => ({
+                        offset: async () => [
+                          {
+                            product: productRow,
+                            categoryName: null,
+                            brandName: null,
+                            unitName: null,
+                          },
+                          {
+                            product: inactive,
+                            categoryName: null,
+                            brandName: null,
+                            unitName: null,
+                          },
+                        ],
+                      }),
                     }),
                   }),
                 }),
@@ -334,23 +339,27 @@ describe("CatalogService", () => {
       select: jest
         .fn()
         .mockReturnValueOnce({
-          from: async () => [{ value: 1 }],
+          from: () => ({
+            where: async () => [{ value: 1 }],
+          }),
         })
         .mockReturnValueOnce({
           from: () => ({
             leftJoin: () => ({
               leftJoin: () => ({
                 leftJoin: () => ({
-                  orderBy: () => ({
-                    limit: () => ({
-                      offset: async () => [
-                        {
-                          product: productRow,
-                          categoryName: null,
-                          brandName: null,
-                          unitName: null,
-                        },
-                      ],
+                  where: () => ({
+                    orderBy: () => ({
+                      limit: () => ({
+                        offset: async () => [
+                          {
+                            product: productRow,
+                            categoryName: null,
+                            brandName: null,
+                            unitName: null,
+                          },
+                        ],
+                      }),
                     }),
                   }),
                 }),

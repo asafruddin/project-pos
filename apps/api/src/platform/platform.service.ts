@@ -11,6 +11,7 @@ import {
   evaluateUserAccount,
 } from "@pos-apps/domain";
 import type {
+  CreatePlatformStoreResponse,
   PlatformOperator,
   PlatformOperatorListResponse,
   StoreListResponse,
@@ -20,8 +21,9 @@ import type {
 } from "@pos-apps/types";
 import { STORE_1_ID } from "@pos-apps/types";
 import { and, asc, eq, ne } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
 import { getDb } from "../db/client";
-import { platformUsers, stores, users } from "../db/schema";
+import { platformUsers, registers, stores, users } from "../db/schema";
 import type { PlatformAuthUser } from "./platform-jwt.strategy";
 
 function toOperator(
@@ -202,14 +204,148 @@ export class PlatformService {
   }
 
   async listStores(): Promise<StoreListResponse> {
-    const storeRows = await getDb()
-      .select()
-      .from(stores)
-      .orderBy(asc(stores.createdAt));
+    const db = getDb();
+    const [storeRows, registerRows] = await Promise.all([
+      db.select().from(stores).orderBy(asc(stores.createdAt)),
+      db.select().from(registers).orderBy(asc(registers.createdAt)),
+    ]);
     return {
       stores: storeRows.map(toStore),
-      registers: [],
+      registers: registerRows.map((row) => ({
+        register_id: row.registerId,
+        store_id: row.storeId,
+        name: row.name,
+        created_at: row.createdAt.toISOString(),
+      })),
     };
+  }
+
+  async createStore(input: {
+    name: string;
+    owner: { username: string; password: string };
+    cashier?: { username: string; password: string };
+  }): Promise<CreatePlatformStoreResponse> {
+    const name = input.name.trim();
+    if (!name) {
+      throw new BadRequestException({
+        code: "STORE_INVALID",
+        message: "Nama toko wajib diisi.",
+      });
+    }
+
+    const ownerParsed = evaluateUserAccount({
+      username: input.owner.username,
+      password: input.owner.password,
+      role: "owner",
+      store_id: STORE_1_ID,
+      require_password: true,
+    });
+    if (!ownerParsed.ok) {
+      throw new BadRequestException({
+        code: ownerParsed.code,
+        message: ownerParsed.message,
+      });
+    }
+
+    let cashierParsed: Extract<
+      ReturnType<typeof evaluateUserAccount>,
+      { ok: true }
+    > | null = null;
+    if (input.cashier) {
+      const parsed = evaluateUserAccount({
+        username: input.cashier.username,
+        password: input.cashier.password,
+        role: "cashier",
+        store_id: STORE_1_ID,
+        require_password: true,
+      });
+      if (!parsed.ok) {
+        throw new BadRequestException({
+          code: parsed.code,
+          message: parsed.message,
+        });
+      }
+      if (parsed.username === ownerParsed.username) {
+        throw new BadRequestException({
+          code: "USER_INVALID",
+          message: "Username kasir harus berbeda dari owner.",
+        });
+      }
+      cashierParsed = parsed;
+    }
+
+    const db = getDb();
+    try {
+      return await db.transaction(async (tx) => {
+        const [store] = await tx
+          .insert(stores)
+          .values({ storeId: randomUUID(), name })
+          .returning();
+        if (!store) {
+          throw new BadRequestException({
+            code: "STORE_INVALID",
+            message: "Gagal membuat toko.",
+          });
+        }
+        await tx.insert(registers).values({
+          registerId: randomUUID(),
+          storeId: store.storeId,
+          name: "Register 1",
+        });
+
+        const ownerHash = await hash(input.owner.password, 10);
+        const [ownerRow] = await tx
+          .insert(users)
+          .values({
+            username: ownerParsed.username,
+            passwordHash: ownerHash,
+            role: "owner",
+            storeId: store.storeId,
+            active: true,
+          })
+          .returning();
+        if (!ownerRow) {
+          throw new BadRequestException({
+            code: "USER_INVALID",
+            message: "Gagal membuat owner.",
+          });
+        }
+
+        let cashier: UserAccount | null = null;
+        if (cashierParsed && input.cashier) {
+          const cashierHash = await hash(input.cashier.password, 10);
+          const [cashierRow] = await tx
+            .insert(users)
+            .values({
+              username: cashierParsed.username,
+              passwordHash: cashierHash,
+              role: "cashier",
+              storeId: store.storeId,
+              active: true,
+            })
+            .returning();
+          if (!cashierRow) {
+            throw new BadRequestException({
+              code: "USER_INVALID",
+              message: "Gagal membuat kasir.",
+            });
+          }
+          cashier = toUser(cashierRow);
+        }
+
+        return {
+          store: toStore(store),
+          owner: toUser(ownerRow),
+          cashier,
+        };
+      });
+    } catch (err) {
+      if (err instanceof BadRequestException) throw err;
+      throw new BadRequestException({
+        code: "USER_INVALID",
+        message: "Username sudah dipakai.",
+      });
+    }
   }
 
   async createAccount(input: {

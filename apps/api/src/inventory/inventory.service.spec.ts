@@ -41,7 +41,8 @@ describe("InventoryService", () => {
         .fn()
         .mockReturnValueOnce({
           from: () => ({
-            orderBy: async () => [
+            where: () => ({
+              orderBy: async () => [
               {
                 productId,
                 name: "Latte",
@@ -50,6 +51,7 @@ describe("InventoryService", () => {
                 trackStock: true,
               },
             ],
+            }),
           }),
         })
         .mockReturnValueOnce({
@@ -81,7 +83,8 @@ describe("InventoryService", () => {
         .fn()
         .mockReturnValueOnce({
           from: () => ({
-            orderBy: async () => [
+            where: () => ({
+              orderBy: async () => [
               {
                 productId,
                 name: "Espresso",
@@ -90,6 +93,7 @@ describe("InventoryService", () => {
                 trackStock: true,
               },
             ],
+            }),
           }),
         })
         .mockReturnValueOnce({
@@ -119,7 +123,8 @@ describe("InventoryService", () => {
         .fn()
         .mockReturnValueOnce({
           from: () => ({
-            orderBy: async () => [
+            where: () => ({
+              orderBy: async () => [
               {
                 productId,
                 name: "Jasa",
@@ -128,6 +133,7 @@ describe("InventoryService", () => {
                 trackStock: false,
               },
             ],
+            }),
           }),
         })
         .mockReturnValueOnce({
@@ -178,7 +184,8 @@ describe("InventoryService", () => {
         .fn()
         .mockReturnValueOnce({
           from: () => ({
-            orderBy: async () => [
+            where: () => ({
+              orderBy: async () => [
               {
                 productId,
                 name: "Latte",
@@ -187,6 +194,7 @@ describe("InventoryService", () => {
                 trackStock: true,
               },
             ],
+            }),
           }),
         })
         .mockReturnValueOnce({

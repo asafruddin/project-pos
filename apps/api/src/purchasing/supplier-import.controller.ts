@@ -14,7 +14,9 @@ import {
   PRODUCT_IMPORT_MAX_BYTES,
   type SupplierImportResult,
 } from "@pos-apps/types";
+import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import type { AuthUser } from "../auth/jwt.strategy";
 import { RequirePermission } from "../auth/permission.decorator";
 import { PermissionsGuard } from "../auth/permissions.guard";
 import { inferUploadFilename } from "../common/spreadsheet-file";
@@ -61,6 +63,7 @@ export class SupplierImportController {
     FileInterceptor("file", { limits: { fileSize: PRODUCT_IMPORT_MAX_BYTES } }),
   )
   async importFile(
+    @CurrentUser() user: AuthUser,
     @UploadedFile()
     file:
       | {
@@ -93,6 +96,10 @@ export class SupplierImportController {
         message: "File tidak berisi data pemasok.",
       });
     }
-    return this.suppliers.importSuppliers(parsed.rows, parsed.errors);
+    return this.suppliers.importSuppliers(
+      parsed.rows,
+      parsed.errors,
+      user.storeId,
+    );
   }
 }

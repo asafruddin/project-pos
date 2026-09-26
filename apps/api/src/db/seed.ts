@@ -16,8 +16,8 @@ const DEMO_USERS = [
 ];
 
 const DEMO_PRODUCTS = [
-  { name: "Espresso", priceMinor: 18000, stockQty: 50 },
-  { name: "Latte", priceMinor: 25000, stockQty: 40 },
+  { name: "Espresso", priceMinor: 18000, stockQty: 50, storeId: STORE_1_ID },
+  { name: "Latte", priceMinor: 25000, stockQty: 40, storeId: STORE_1_ID },
 ];
 
 async function seed() {
@@ -142,6 +142,7 @@ async function seed() {
       name: "Sari",
       phone: "081200000001",
       notes: "Pelanggan demo",
+      storeId: STORE_1_ID,
     })
     .onConflictDoNothing();
 

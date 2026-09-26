@@ -32,7 +32,12 @@ export async function openShiftIn(
   store: ShiftStore,
   outbox: ShiftOutboxStore,
   openingCashMinor: number,
-  opts?: { shiftId?: string; openedAt?: string },
+  opts?: {
+    shiftId?: string;
+    openedAt?: string;
+    storeId?: string;
+    registerId?: string;
+  },
 ): Promise<LocalShiftRecord> {
   const existing = getOpenShiftFrom(await store.list());
   const parsed = openShift({
@@ -43,8 +48,8 @@ export async function openShiftIn(
   const openedAt = opts?.openedAt ?? new Date().toISOString();
   const record: LocalShiftRecord = {
     shiftId: opts?.shiftId ?? crypto.randomUUID(),
-    storeId: STORE_1_ID,
-    registerId: REGISTER_1_ID,
+    storeId: opts?.storeId ?? STORE_1_ID,
+    registerId: opts?.registerId ?? REGISTER_1_ID,
     openedAt,
     openingCashMinor: parsed.opening_cash_minor,
     status: "open",
@@ -101,11 +106,13 @@ export async function getOpenShift(): Promise<LocalShiftRecord | null> {
 
 export async function openLocalShift(
   openingCashMinor: number,
+  opts?: { storeId?: string; registerId?: string },
 ): Promise<LocalShiftRecord> {
   return openShiftIn(
     await deviceShiftStore(),
     await deviceShiftOutbox(),
     openingCashMinor,
+    opts,
   );
 }
 

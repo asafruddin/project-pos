@@ -106,6 +106,11 @@ export {
 export { getLoyaltyProgram, replaceLoyaltyProgram } from "./loyalty.js";
 export { getCachedPromotions, replacePromotions } from "./promotions.js";
 export {
+  adoptTenantStoreId,
+  clearStoreScopedCaches,
+  getCachedTenantStoreId,
+} from "./tenant-cache.js";
+export {
   adoptServerOpenShift,
   getOpenShift,
   listPendingShiftOpens,

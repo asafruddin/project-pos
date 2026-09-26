@@ -20,11 +20,12 @@ import type {
   UserAccount,
   UserListResponse,
 } from "@pos-apps/types";
-import { ROLE_LABELS, STORE_1_ID } from "@pos-apps/types";
+import { ROLE_LABELS } from "@pos-apps/types";
 import { and, eq, ne } from "drizzle-orm";
 import { getDb } from "../db/client";
-import { rolePermissions, stores, users } from "../db/schema";
+import { rolePermissions, users } from "../db/schema";
 import type { AuthUser } from "../auth/jwt.strategy";
+import { actorStoreId } from "../auth/store-scope";
 import { isRole } from "../auth/roles";
 
 function toUser(row: typeof users.$inferSelect): UserAccount {
@@ -51,7 +52,10 @@ function requireEmployees(actor: AuthUser): void {
 export class UsersService {
   async list(actor: AuthUser): Promise<UserListResponse> {
     requireEmployees(actor);
-    const rows = await getDb().select().from(users);
+    const rows = await getDb()
+      .select()
+      .from(users)
+      .where(eq(users.storeId, actorStoreId(actor)));
     return { users: rows.map(toUser) };
   }
 
@@ -71,11 +75,12 @@ export class UsersService {
         message: "Anda tidak dapat menetapkan peran itu.",
       });
     }
+    const storeId = actorStoreId(actor);
     const parsed = evaluateUserAccount({
       username: input.username,
       password: input.password,
       role: input.role,
-      store_id: input.store_id,
+      store_id: storeId,
       require_password: true,
     });
     if (!parsed.ok) {
@@ -83,19 +88,6 @@ export class UsersService {
         code: parsed.code,
         message: parsed.message,
       });
-    }
-    if (parsed.store_id !== STORE_1_ID) {
-      const storeRows = await getDb()
-        .select({ storeId: stores.storeId })
-        .from(stores)
-        .where(eq(stores.storeId, parsed.store_id))
-        .limit(1);
-      if (!storeRows[0]) {
-        throw new BadRequestException({
-          code: "USER_INVALID",
-          message: "Toko tidak ditemukan.",
-        });
-      }
     }
 
     const passwordHash = await hash(input.password, 10);
@@ -106,7 +98,7 @@ export class UsersService {
           username: parsed.username,
           passwordHash,
           role: parsed.role,
-          storeId: parsed.store_id,
+          storeId: storeId,
           active: true,
         })
         .returning();
@@ -150,7 +142,7 @@ export class UsersService {
       .where(eq(users.userId, userId))
       .limit(1);
     const row = existing[0];
-    if (!row) {
+    if (!row || row.storeId !== actorStoreId(actor)) {
       throw new NotFoundException({
         code: "USER_NOT_FOUND",
         message: "Pengguna tidak ditemukan.",
@@ -165,18 +157,11 @@ export class UsersService {
       });
     }
 
-    if (input.store_id && input.store_id !== STORE_1_ID) {
-      const storeRows = await db
-        .select({ storeId: stores.storeId })
-        .from(stores)
-        .where(eq(stores.storeId, input.store_id))
-        .limit(1);
-      if (!storeRows[0]) {
-        throw new BadRequestException({
-          code: "USER_INVALID",
-          message: "Toko tidak ditemukan.",
-        });
-      }
+    if (input.store_id && input.store_id !== actorStoreId(actor)) {
+      throw new ForbiddenException({
+        code: "AUTH_FORBIDDEN",
+        message: "Tidak dapat memindahkan karyawan ke toko lain.",
+      });
     }
 
     if (input.password != null && input.password.length > 0 && input.password.length < 8) {
@@ -197,7 +182,7 @@ export class UsersService {
         const others = await db
           .select({ userId: users.userId })
           .from(users)
-          .where(and(eq(users.role, "owner"), eq(users.active, true), ne(users.userId, userId)));
+          .where(and(eq(users.role, "owner"), eq(users.active, true), eq(users.storeId, row.storeId), ne(users.userId, userId)));
         if (others.length === 0) {
           throw new ForbiddenException({
             code: "AUTH_FORBIDDEN",
@@ -211,7 +196,7 @@ export class UsersService {
       username: row.username,
       password: input.password,
       role: nextRole,
-      store_id: input.store_id ?? row.storeId,
+      store_id: row.storeId,
       require_password: false,
     });
     if (!parsed.ok) {
