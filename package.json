@@ -6,6 +6,7 @@
     "build": "turbo run build",
     "dev": "turbo run dev --parallel",
     "dev:cashier": "turbo run dev --filter=@pos-apps/cashier",
+    "dev:mobile": "turbo run build --filter=@pos-apps/mobile^... && pnpm --filter @pos-apps/mobile start",
     "dev:dashboard": "turbo run dev --filter=@pos-apps/dashboard",
     "dev:platform": "turbo run dev --filter=@pos-apps/platform",
     "dev:api": "turbo run dev --filter=@pos-apps/api",
