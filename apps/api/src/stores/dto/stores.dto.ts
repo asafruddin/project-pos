@@ -2,6 +2,7 @@ import { Transform, Type } from "class-transformer";
 import {
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsIn,
   IsInt,
   IsOptional,
@@ -25,10 +26,19 @@ export class CreateStoreDto {
 }
 
 export class UpdateStoreDto {
+  @IsOptional()
   @Transform(({ value }: { value: unknown }) => trim(value))
   @IsString()
   @MinLength(1, { message: "Nama toko wajib diisi." })
-  name!: string;
+  name?: string;
+
+  @IsOptional()
+  @IsIn(["daily", "shift", "manual"])
+  queue_reset_mode?: "daily" | "shift" | "manual";
+
+  @IsOptional()
+  @IsBoolean()
+  queue_reset_now?: boolean;
 }
 
 export class CreateRegisterDto {

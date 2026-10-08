@@ -39,6 +39,7 @@
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.4",
     "phosphor-react-native": "^3.0.6",
+    "pos-printer": "file:./modules/pos-printer",
     "react": "19.2.3",
     "react-native": "0.86.3",
     "react-native-safe-area-context": "~5.7.0",
@@ -60,5 +61,10 @@
     "react-dom": "19.2.3",
     "sharp": "^0.35.5",
     "typescript": "~6.0.3"
+  },
+  "expo": {
+    "autolinking": {
+      "nativeModulesDir": "./modules"
+    }
   }
 }

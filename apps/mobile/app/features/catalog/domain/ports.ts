@@ -7,6 +7,8 @@ export interface CatalogRepository {
   replaceAll(products: CatalogProduct[], pulledAtIso: string): void;
   /** Sellable products (active leaf rows), name-sorted. */
   listSellable(): CatalogProduct[];
+  /** Rows that have variants (containers, any status). */
+  listVariantParents(): CatalogProduct[];
   count(): number;
   getPulledAt(): string | null;
   getById(productId: string): CatalogProduct | null;

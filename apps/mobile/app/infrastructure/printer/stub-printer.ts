@@ -46,6 +46,10 @@ export class StubPrinter implements Printer {
     if (__DEV__) console.log(`[StubPrinter] printed ${bytes.length} bytes`);
   }
 
+  keepAlive(_enabled: boolean): void {}
+
+  async disconnect(): Promise<void> {}
+
   private set(next: PrinterStatus): void {
     this.status = next;
     for (const l of this.listeners) l(next);

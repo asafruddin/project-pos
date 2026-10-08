@@ -125,7 +125,15 @@ export function useCheckout() {
       setError(t("shiftNeedOpen"));
       return;
     }
-    container.cart.getState().set({ paying: true, payMethod: "cash", cashReceived: "" });
+    container.cart.getState().set({
+      paying: true,
+      payMethod: "cash",
+      cashReceived: "",
+      couponCode: "",
+      voucherCode: "",
+      managerDiscount: "",
+      managerPin: "",
+    });
   }, [cart.lines.length, container, t]);
 
   const confirm = useCallback(async () => {
@@ -143,7 +151,6 @@ export function useCheckout() {
         managerDiscountMinor: managerMinor,
         managerPin: state.managerPin,
       });
-      container.useCases.printReceipt.execute(sale, sale.guestName);
       const name = sale.guestName;
       state.clear();
       setCompleted({ sale, name });

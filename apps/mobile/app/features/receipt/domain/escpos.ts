@@ -89,9 +89,16 @@ export class EscPosBuilder {
     return this;
   }
 
+  /** 1 = normal, 2 = double width and height. */
+  size(multiplier: 1 | 2): this {
+    this.chunks.push(new Uint8Array([GS, 0x21, multiplier === 2 ? 0x11 : 0x00]));
+    return this;
+  }
+
   cut(): this {
+    // Feed past the tear bar only. GS V 0 (full cut) makes many 58mm SPP printers
+    // drop Bluetooth as "end of job", which turns the printer LED off.
     this.feed(6);
-    this.chunks.push(new Uint8Array([GS, 0x56, 0x00]));
     return this;
   }
 

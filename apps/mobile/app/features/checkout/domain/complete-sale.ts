@@ -1,11 +1,13 @@
-import { evaluateSplitTender } from "@pos-apps/domain";
+import { evaluateSplitTender, nextQueueNumber } from "@pos-apps/domain";
 import { AppError, isAppError } from "@/core/errors/app-error";
 import type { Clock } from "@/core/ports/clock";
 import type { IdGenerator } from "@/core/ports/id";
 import type { Cart } from "@/features/cart/domain/cart";
 import type { PinService } from "@/features/pin/domain/pin-service";
 import type { PromotionRepository, VoucherRemote } from "@/features/promotions/domain/ports";
+import type { QueueSettingsStore } from "@/features/queue/domain/queue-settings";
 import type { ShiftRepository } from "@/features/shift/domain/ports";
+import { startOfLocalDay } from "@/utils/day";
 import type { DeviceIdProvider, SalesRepository } from "./ports";
 import { cashChange, priceCart, type PricingBreakdown } from "./pricing";
 import type { CompletedSale } from "./sale";
@@ -52,6 +54,7 @@ export class CompleteSaleUseCase {
     private readonly device: DeviceIdProvider,
     private readonly online: () => boolean,
     private readonly onQueued: () => void,
+    private readonly queue: QueueSettingsStore,
   ) {}
 
   async execute(input: CompleteSaleInput): Promise<CompletedSale> {
@@ -82,6 +85,8 @@ export class CompleteSaleUseCase {
     if (!tender.ok) throw new AppError("VALIDATION", tender.code);
 
     const now = this.clock.nowIso();
+    // No awaits between here and recordCompletedSale, so two sales never share a number.
+    const queueNumber = this.nextQueueNumber(now, shift.openedAt);
     const sale: CompletedSale = {
       saleId: this.ids.uuid(),
       deviceId: this.device.getDeviceId(),
@@ -96,6 +101,7 @@ export class CompleteSaleUseCase {
       promotions: this.snapshot(pricing, input.couponCode, voucherRemaining !== null ? input.voucherCode : null),
       customerId: null,
       guestName: input.guestName?.trim() || null,
+      queueNumber,
       shiftId: shift.shiftId,
       voidedAt: null,
       voidId: null,
@@ -103,6 +109,21 @@ export class CompleteSaleUseCase {
     this.sales.recordCompletedSale(sale);
     this.onQueued();
     return sale;
+  }
+
+  private nextQueueNumber(nowIso: string, shiftOpenedAt: string): number {
+    const settings = this.queue.get();
+    const dayStart = startOfLocalDay(new Date(nowIso)).toISOString();
+    // Fetch only as far back as the queue window can reach; nextQueueNumber applies the exact cut.
+    const since =
+      settings.mode === "daily" ? dayStart : settings.mode === "shift" ? shiftOpenedAt : (settings.resetAt ?? "1970-01-01T00:00:00.000Z");
+    return nextQueueNumber({
+      mode: settings.mode,
+      resetAt: settings.resetAt,
+      dayStart,
+      shiftOpenedAt,
+      sales: this.sales.listCompletedSince(since),
+    });
   }
 
   private snapshot(pricing: PricingBreakdown, coupon?: string | null, voucherCode?: string | null): CompletedSale["promotions"] {

@@ -45,6 +45,8 @@ export class SalesService {
         completedAt: sales.completedAt,
         amountMinor: sales.amountMinor,
         payment: sales.payment,
+        guestName: sales.guestName,
+        queueNumber: sales.queueNumber,
         voidedAt: saleVoids.voidedAt,
       })
       .from(sales)
@@ -64,6 +66,8 @@ export class SalesService {
       amount_minor: r.amountMinor,
       voided_at: r.voidedAt ? r.voidedAt.toISOString() : null,
       payment: toListPayment(r.payment, r.amountMinor),
+      guest_name: r.guestName ?? null,
+      queue_number: r.queueNumber ?? null,
     }));
 
     const active = items.filter((s) => !s.voided_at);
@@ -264,6 +268,7 @@ export class SalesService {
         lines: request.lines,
         customerId: optionalCustomerId(request.customer_id),
         guestName: optionalGuestName(request.guest_name),
+        queueNumber: request.queue_number ?? null,
         shiftId,
         loyalty: {
           redeem_points: loyaltyApplied.redeem_points,
@@ -453,6 +458,10 @@ function validateSyncRequest(request: SyncSaleRequest): void {
     !request.device_id ||
     !Number.isFinite(Date.parse(request.completed_at)) ||
     !request.lines?.length ||
+    (request.queue_number != null &&
+      (!Number.isInteger(request.queue_number) ||
+        request.queue_number < 1 ||
+        request.queue_number > 1_000_000)) ||
     !request.payment ||
     (request.payment.method != null &&
       request.payment.method !== "cash" &&

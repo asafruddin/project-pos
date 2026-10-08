@@ -24,7 +24,7 @@ export const copyEN = {
   printerNone: "No Bluetooth printer saved on this device.",
   printerReady: "Saved printer: {name}",
   printerTest: "Test print",
-  printerHint: "Open this page in Google Chrome (desktop or Android), not an in-app preview. Chrome shows a device list — there is no separate “Allow Bluetooth” popup. The printer must be BLE ESC/POS (58mm). iOS uses the system print dialog.",
+  printerHint: "Scan, connect, and send a test page to a 58mm ESC/POS Bluetooth printer.",
   printerPrinting: "Printing…",
   printerTestOk: "Test print sent.",
   printerTestFail: "Test print failed. Check the printer and try again.",

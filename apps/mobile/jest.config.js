@@ -10,6 +10,10 @@ module.exports = {
   transformIgnorePatterns: ["/node_modules/(?!.*@noble)"],
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/app/$1",
+    "^pos-printer$": "<rootDir>/test/helpers/pos-printer-mock.js",
+    "^react-native$": "<rootDir>/test/helpers/react-native-mock.js",
+    "^expo$": "<rootDir>/test/helpers/expo-mock.js",
+    "^expo-modules-core$": "<rootDir>/test/helpers/expo-mock.js",
     "^expo/virtual/env$": "<rootDir>/test/helpers/expo-env.js",
   },
   testMatch: ["<rootDir>/test/**/*.spec.ts", "<rootDir>/app/**/*.spec.ts"],

@@ -5,6 +5,7 @@ import { Button } from "@pos-apps/ui/atoms";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/templates/app-shell";
+import { getQueueSettings } from "@pos-apps/local-db";
 import { getStoreIdentity } from "@/lib/auth-token";
 import { isPinUnlocked } from "@/lib/pin-session";
 import { applyTheme, copy, getLang } from "@/lib/preferences";
@@ -27,6 +28,7 @@ export default function SettingsPage() {
   const [lang, setLang] = useState(getLang());
   const t = copy(lang);
   const [ready, setReady] = useState(false);
+  const [queueMode, setQueueMode] = useState<"daily" | "shift" | "manual">("daily");
   const [secure, setSecure] = useState(true);
   const [chromeFamily, setChromeFamily] = useState(true);
   const [supported, setSupported] = useState(false);
@@ -35,6 +37,10 @@ export default function SettingsPage() {
   const pairingRef = useRef(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    void getQueueSettings().then((q) => setQueueMode(q.mode));
+  }, []);
 
   useEffect(() => {
     applyTheme();
@@ -210,6 +216,20 @@ export default function SettingsPage() {
             {t.printerRemove}
           </Button>
         </div>
+      </section>
+
+      <section className="mt-8 max-w-lg space-y-2">
+        <h2 className="text-sm font-semibold text-foreground">{t.queueResetLabel}</h2>
+        <div className="rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm">
+          <p className="font-medium text-foreground">
+            {queueMode === "shift"
+              ? t.queueResetShift
+              : queueMode === "manual"
+                ? t.queueResetManual
+                : t.queueResetDaily}
+          </p>
+        </div>
+        <p className="text-sm text-muted-foreground">{t.queueResetHint}</p>
       </section>
     </AppShell>
   );

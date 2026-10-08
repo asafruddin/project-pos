@@ -19,8 +19,14 @@ const config: ExpoConfig = {
       monochromeImage: "./assets/android-icon-monochrome.png",
     },
     predictiveBackGestureEnabled: false,
-    // Bluetooth/foreground-service permissions are added with the native
-    // printer module (see docs/02-mobile/printer.md).
+    // Resize above the keyboard so the login form can move up instead of staying covered.
+    softwareKeyboardLayoutMode: "resize",
+    permissions: [
+      "android.permission.BLUETOOTH",
+      "android.permission.BLUETOOTH_ADMIN",
+      "android.permission.BLUETOOTH_CONNECT",
+      "android.permission.BLUETOOTH_SCAN",
+    ],
   },
   plugins: [
     "expo-sqlite",
@@ -28,6 +34,7 @@ const config: ExpoConfig = {
     "expo-asset",
     "expo-font",
     "expo-image",
+    "./plugins/with-bluetooth-printer",
     [
       "expo-splash-screen",
       {

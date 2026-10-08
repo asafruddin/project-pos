@@ -10,6 +10,8 @@ export interface SalesRepository {
   getSale(saleId: string): CompletedSale | null;
   /** Complete sales whose `completedAt` falls in the local calendar day of `day`, newest first. */
   listForLocalDay(day: Date): CompletedSale[];
+  /** Complete sales (voided included) with `completedAt >= sinceIso`, any day. */
+  listCompletedSince(sinceIso: string): CompletedSale[];
   listCashViews(): CashSaleView[];
   /**
    * Atomically: mark the sale voided, put sold quantities back (tracked products only)

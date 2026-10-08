@@ -139,7 +139,7 @@ export default function TransactionsScreen() {
               <Card key={sale.saleId} style={{ gap: 10, opacity: voided ? 0.75 : 1 }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
                   <View style={{ flex: 1, gap: 2 }}>
-                    <Text size={13} muted tabular>{time(sale.completedAt)} · {shortSaleId(sale.saleId)}</Text>
+                    <Text size={13} muted tabular>{sale.queueNumber ? `#${sale.queueNumber} · ` : ""}{time(sale.completedAt)} · {shortSaleId(sale.saleId)}</Text>
                     <Text weight="medium" numberOfLines={2}>{items || "—"}</Text>
                     <Text size={12} muted>{t("holdLineCount", { count: qty })} · {receiptName(sale) ?? t("txWalkIn")} · {payLabel(sale, t)}</Text>
                   </View>

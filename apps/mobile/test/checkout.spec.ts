@@ -208,3 +208,41 @@ describe("void sale", () => {
     expect(await code(h2.voidSale.execute(old.saleId))).toBe("VOID_NOT_ALLOWED");
   });
 });
+
+describe("queue numbers", () => {
+  const sell = async (h: ReturnType<typeof createHarness>) =>
+    h.completeSale.execute({ cart: cartOf(h, 1), method: "cash", cashReceivedMinor: 99_999 });
+
+  it("numbers sales 1, 2, stores them, sends them, and restarts on a new day", async () => {
+    const h = createHarness();
+    h.catalog.replaceAll([product({ stockQty: 99 })], "t");
+    h.openShift.execute(0);
+
+    const first = await sell(h);
+    h.clock.advance(60_000);
+    const second = await sell(h);
+    expect([first.queueNumber, second.queueNumber]).toEqual([1, 2]);
+    expect(h.sales.getSale(second.saleId)?.queueNumber).toBe(2);
+    const sync = drainOutbox(h.outbox).find((r) => r.kind === "sale.sync" && r.entityId === second.saleId);
+    expect(JSON.stringify(sync?.payload)).toContain('"queue_number":2');
+
+    h.clock.advance(36 * 3_600_000);
+    expect((await sell(h)).queueNumber).toBe(1);
+  });
+
+  it("manual mode keeps counting across days until a reset", async () => {
+    const h = createHarness();
+    h.catalog.replaceAll([product({ stockQty: 99 })], "t");
+    h.openShift.execute(0);
+    h.queueSettings.save({ queue_reset_mode: "manual", queue_reset_at: null });
+
+    expect((await sell(h)).queueNumber).toBe(1);
+    h.clock.advance(36 * 3_600_000);
+    expect((await sell(h)).queueNumber).toBe(2);
+
+    h.clock.advance(1_000);
+    h.queueSettings.save({ queue_reset_mode: "manual", queue_reset_at: h.clock.nowIso() });
+    h.clock.advance(1_000);
+    expect((await sell(h)).queueNumber).toBe(1);
+  });
+});

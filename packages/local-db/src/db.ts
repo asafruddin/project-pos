@@ -28,6 +28,10 @@ export type CatalogProductRecord = {
   stockQty: number;
   status: "active" | "inactive";
   parentId: string | null;
+  /** Child variant option value, e.g. "L" / "Hot". */
+  variantLabel?: string | null;
+  /** Parent variant type names in axis order, e.g. ["Size", "Temperature"]. */
+  variantGroups?: string[];
   sku?: string | null;
   categoryName?: string | null;
   unitName?: string | null;
@@ -68,6 +72,8 @@ export type LocalSaleRecord = {
   customerId?: string | null;
   /** Receipt-only guest name. Not a customer profile. */
   guestName?: string | null;
+  /** Receipt queue number, assigned on this device when the sale completes. */
+  queueNumber?: number | null;
   /** Required after 2C (AD-16). */
   shiftId?: string | null;
   /** Redeem snapshot only — earn is computed after Sync (AD-14). */

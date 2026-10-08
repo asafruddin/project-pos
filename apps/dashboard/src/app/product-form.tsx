@@ -20,10 +20,23 @@ import type {
   ProductImage,
   ProductListResponse,
   UnitListResponse,
+  VariantGroupListResponse,
+  VariantGroupRecord,
 } from "@pos-apps/types";
 import { catalogRequest } from "@/lib/catalog-request";
 import { fetchAllCatalogProducts } from "@/lib/fetch-all-catalog";
 import { formatIdr } from "@/lib/format-money";
+import {
+  VariantMatrix,
+  VariantPriceSummary,
+  draftFromProducts,
+  emptyVariantDraft,
+  priceSummary,
+  saveVariantRows,
+  stockTotal,
+  validateDraft,
+  type VariantDraft,
+} from "./variant-matrix";
 
 type FormState = {
   name: string;
@@ -44,6 +57,7 @@ type FormState = {
   maxQty: string;
   tags: string;
   parentId: string;
+  variantLabel: string;
   trackStock: boolean;
 };
 
@@ -69,6 +83,7 @@ const emptyForm: FormState = {
   maxQty: "",
   tags: "",
   parentId: "",
+  variantLabel: "",
   trackStock: true,
 };
 
@@ -109,6 +124,7 @@ function formFromProduct(p: Product): FormState {
     maxQty: p.max_qty == null ? "" : String(p.max_qty),
     tags: (p.tags ?? []).join(", "),
     parentId: p.parent_id ?? "",
+    variantLabel: p.variant_label ?? "",
     trackStock: p.track_stock ?? true,
   };
 }
@@ -137,6 +153,9 @@ export function ProductForm({
   const [loading, setLoading] = useState(Boolean(productId || parentId));
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
   const [unitOptions, setUnitOptions] = useState<string[]>([]);
+  const [variantGroups, setVariantGroups] = useState<VariantGroupRecord[]>([]);
+  const [variantDraft, setVariantDraft] = useState<VariantDraft>(emptyVariantDraft);
+  const [variantErrorKey, setVariantErrorKey] = useState<string | null>(null);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [conversionEnabled, setConversionEnabled] = useState(false);
   const [conversionFromId, setConversionFromId] = useState("");
@@ -144,10 +163,14 @@ export function ProductForm({
   const [hadConversion, setHadConversion] = useState(false);
 
   const loadLookups = useCallback(async () => {
-    const [cats, unitsRes] = await Promise.all([
+    const [cats, unitsRes, variantsRes] = await Promise.all([
       catalogRequest<CategoryListResponse>("/catalog/categories"),
       catalogRequest<UnitListResponse>("/catalog/units"),
+      catalogRequest<VariantGroupListResponse>("/catalog/variants"),
     ]);
+    if (variantsRes.ok) {
+      setVariantGroups(variantsRes.data.variant_groups);
+    }
     if (cats.ok) {
       setCategoryOptions(cats.data.categories.map((row) => row.name));
     }
@@ -180,6 +203,12 @@ export function ProductForm({
     }
     setProduct(found);
     setForm(formFromProduct(found));
+    setVariantDraft(
+      draftFromProducts(
+        found,
+        products.filter((row) => row.parent_id === found.product_id),
+      ),
+    );
     if (found.unit_conversion) {
       setConversionEnabled(true);
       setHadConversion(true);
@@ -232,6 +261,10 @@ export function ProductForm({
   }, [loadCatalog, loadLookups, loadProduct, parentId, productId]);
 
   const editingId = productId ?? createdProductId ?? null;
+  const variantOn = variantDraft.enabled && !form.parentId;
+  const existingChildren = editingId
+    ? allProducts.filter((row) => row.parent_id === editingId)
+    : [];
   const editingImages = product?.images ?? [];
   const pricePreview = parseNonNegInt(form.price);
 
@@ -309,16 +342,52 @@ export function ProductForm({
     setImagePreview(URL.createObjectURL(file));
   }
 
+  async function persistVariants(parent: Product, children: Product[]): Promise<boolean> {
+    const failure = await saveVariantRows({
+      parent,
+      draft: variantDraft,
+      groups: variantGroups,
+      children,
+      trackStock: form.trackStock,
+      shared: {
+        category_name: form.category.trim() || null,
+        brand_name: form.brand.trim() || null,
+        unit_name: form.unit.trim() || null,
+      },
+    });
+    if (!failure) return true;
+    // Parent (and some variants) may already be saved: refresh so a retry updates instead of duplicating.
+    const products = await loadCatalog();
+    if (products) setAllProducts(products);
+    setError(`Produk tersimpan, tetapi varian gagal: ${failure}`);
+    return false;
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setPending(true);
     setError(null);
-    const price_minor = parseNonNegInt(form.price);
-    const stock_qty = form.trackStock
-      ? editingId
-        ? parseIntQty(form.stock)
-        : parseNonNegInt(form.stock)
-      : 0;
+    if (variantOn) {
+      const problem = validateDraft(variantDraft);
+      if (problem) {
+        setVariantErrorKey(problem.key ?? null);
+        setError(problem.message);
+        setPending(false);
+        return;
+      }
+      setVariantErrorKey(null);
+    }
+    const price_minor = variantOn
+      ? priceSummary(variantDraft).min
+      : parseNonNegInt(form.price);
+    // Variant parents are containers: their own stock is never edited here.
+    const stock_qty = variantOn
+      ? (form.originalStock ?? 0)
+      : form.trackStock
+        ? editingId
+          ? parseIntQty(form.stock)
+          : parseNonNegInt(form.stock)
+        : 0;
     if (!form.name.trim() || price_minor === null) {
       setError("Nama dan harga harus valid (harga bilangan bulat ≥ 0).");
       setPending(false);
@@ -361,6 +430,9 @@ export function ProductForm({
         .map((tag) => tag.trim())
         .filter(Boolean),
       parent_id: form.parentId.trim() || null,
+      ...(form.parentId.trim()
+        ? {}
+        : { variant_groups: variantOn ? variantDraft.axes.map((a) => a.name) : [] }),
     };
     if (form.cost.trim() && catalogFields.cost_minor === null) {
       setError("Harga modal harus bilangan bulat ≥ 0.");
@@ -432,6 +504,10 @@ export function ProductForm({
         setPending(false);
         return;
       }
+      if (variantOn && !(await persistVariants(updated.data, existingChildren))) {
+        setPending(false);
+        return;
+      }
     } else {
       const created = await catalogRequest<Product>("/catalog/products", {
         method: "POST",
@@ -463,6 +539,10 @@ export function ProductForm({
         }
       }
       if (!(await saveUnitConversion(created.data.product_id))) {
+        setPending(false);
+        return;
+      }
+      if (variantOn && !(await persistVariants(created.data, []))) {
         setPending(false);
         return;
       }
@@ -592,7 +672,11 @@ export function ProductForm({
         <div className="flex flex-col gap-4">
           <FormSection
             title="Produk"
-            description="Nama yang tampil di kasir. SKU dan barcode opsional."
+            description={
+              variantOn
+                ? "Nama yang tampil di kasir. SKU dan barcode diisi per varian di bawah."
+                : "Nama yang tampil di kasir. SKU dan barcode opsional."
+            }
           >
             <FormField id="name" label="Nama" required>
               <Input
@@ -605,6 +689,21 @@ export function ProductForm({
                 className={formInputClass}
               />
             </FormField>
+            {form.parentId ? (
+              <FormField
+                id="variantLabel"
+                label="Varian"
+                hint="Diatur dari halaman produk induk (bagian Varian)."
+              >
+                <Input
+                  id="variantLabel"
+                  value={form.variantLabel}
+                  readOnly
+                  disabled
+                  className={formInputClass}
+                />
+              </FormField>
+            ) : null}
             <FormField id="description" label="Deskripsi" hint="Opsional. Tampil di katalog, bukan di Checkout.">
               <Textarea
                 id="description"
@@ -616,6 +715,7 @@ export function ProductForm({
                 rows={3}
               />
             </FormField>
+            {variantOn ? null : (
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField id="sku" label="SKU">
                 <Input
@@ -638,6 +738,7 @@ export function ProductForm({
                 />
               </FormField>
             </div>
+            )}
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField id="category" label="Kategori">
                 <Select
@@ -771,6 +872,18 @@ export function ProductForm({
             </FormField>
           </FormSection>
 
+          {form.parentId ? null : (
+            <VariantMatrix
+              draft={variantDraft}
+              onChange={setVariantDraft}
+              groups={variantGroups}
+              trackStock={form.trackStock}
+              disabled={pending}
+              lockEnabled={existingChildren.length > 0}
+              errorKey={variantErrorKey}
+            />
+          )}
+
           <FormSection
               title="Gambar"
               description="Gambar utama dipakai kasir setelah menyegarkan menu. Pilih satu gambar utama saat membuat produk."
@@ -875,6 +988,9 @@ export function ProductForm({
         </div>
 
         <div className="flex flex-col gap-4">
+          {variantOn ? (
+            <VariantPriceSummary draft={variantDraft} />
+          ) : (
           <FormSection
             title="Harga"
             description="Angka utuh Rupiah. 15000 = Rp15.000."
@@ -924,11 +1040,14 @@ export function ProductForm({
               </FormField>
             </div>
           </FormSection>
+          )}
 
           <FormSection
             title="Stok"
             description={
-              form.trackStock
+              variantOn
+                ? "Berlaku untuk semua varian. Kasir tetap bisa menjual meski stok habis."
+                : form.trackStock
                 ? "Kasir tetap bisa menjual meski stok habis."
                 : "Stok tidak terbatas. Kasir bisa menjual tanpa habis."
             }
@@ -954,7 +1073,17 @@ export function ProductForm({
                 Produk non-stok
               </Button>
             </div>
-            {form.trackStock ? (
+            {variantOn && form.trackStock ? (
+              <>
+                <div className="rounded-xl bg-secondary/40 p-3">
+                  <p className="text-xs text-muted-foreground">Total stok (dijumlah dari varian)</p>
+                  <p className="text-xl font-semibold">{stockTotal(variantDraft)}</p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Jumlah dan stok min/max diisi per varian.
+                </p>
+              </>
+            ) : form.trackStock ? (
               <>
                 <FormField id="stock" label="Jumlah" required>
                   <Input

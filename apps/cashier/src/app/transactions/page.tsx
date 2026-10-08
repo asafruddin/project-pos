@@ -225,6 +225,7 @@ export default function TransactionsPage() {
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead className="px-3">{t.txColTime}</TableHead>
+                <TableHead className="px-3">{t.txColQueue}</TableHead>
                 <TableHead className="px-3">{t.txColRef}</TableHead>
                 <TableHead className="px-3">{t.txColItems}</TableHead>
                 <TableHead className="px-3">{t.txColCustomer}</TableHead>
@@ -252,6 +253,9 @@ export default function TransactionsPage() {
                             {day: "numeric", month: "short", year: "2-digit", hour: "2-digit", minute: "2-digit" },
                           )
                         : "—"}
+                    </TableCell>
+                    <TableCell className="px-3 py-3 font-semibold">
+                      {sale.queueNumber ? `#${sale.queueNumber}` : "—"}
                     </TableCell>
                     <TableCell className="px-3 py-3">
                       <span

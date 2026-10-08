@@ -67,6 +67,12 @@ export class DrizzleCatalogRepository implements CatalogRepository {
     return sellableProducts(rows);
   }
 
+  listVariantParents(): CatalogProduct[] {
+    const rows = this.db.select().from(catalogProducts).all().map(toDomain);
+    const parentIds = new Set(rows.map((p) => p.parentId).filter((id): id is string => Boolean(id)));
+    return rows.filter((p) => parentIds.has(p.productId));
+  }
+
   count(): number {
     return this.db.select({ n: sql<number>`count(*)` }).from(catalogProducts).get()?.n ?? 0;
   }

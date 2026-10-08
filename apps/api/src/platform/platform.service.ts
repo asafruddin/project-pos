@@ -56,6 +56,8 @@ function toStore(row: typeof stores.$inferSelect): StoreRecord {
     created_at: row.createdAt.toISOString(),
     logo_public_id: row.logoPublicId ?? null,
     logo_secure_url: row.logoSecureUrl ?? null,
+    queue_reset_mode: row.queueResetMode ?? "daily",
+    queue_reset_at: row.queueResetAt ? row.queueResetAt.toISOString() : null,
   };
 }
 

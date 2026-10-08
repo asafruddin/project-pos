@@ -296,6 +296,58 @@ describe("SalesService.acceptSync", () => {
     );
   });
 
+  it("stores the device queue_number", async () => {
+    acceptCompleteSaleMock.mockReturnValue({
+      ok: true,
+      products: [
+        {
+          product_id: "22222222-2222-4222-8222-222222222222",
+          stock_qty: 0,
+        },
+      ],
+    });
+    const insertValues = jest.fn().mockResolvedValue(undefined);
+    getDbMock.mockReturnValue({
+      transaction: async (fn: (tx: unknown) => Promise<unknown>) =>
+        fn({
+          select: () => ({
+            from: () => ({
+              where: () => ({
+                limit: async () => [],
+                for: async () => [
+                  {
+                    product_id: "22222222-2222-4222-8222-222222222222",
+                    stock_qty: 2,
+                  },
+                ],
+              }),
+            }),
+          }),
+          update: () => ({
+            set: () => ({
+              where: async () => undefined,
+            }),
+          }),
+          insert: () => ({
+            values: insertValues,
+          }),
+        }),
+    } as never);
+
+    await expect(
+      service.acceptSync(validRequest({ queue_number: 7 })),
+    ).resolves.toMatchObject({ accepted: true, already_accepted: false });
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({ queueNumber: 7 }),
+    );
+  });
+
+  it.each([0, -1, 1.5, 2_000_000])("rejects invalid queue_number %p", async (queue_number) => {
+    await expect(
+      service.acceptSync(validRequest({ queue_number })),
+    ).rejects.toMatchObject({ response: { code: "SALE_INVALID_SYNC" } });
+  });
+
   it("accepts payment equal to line total minus loyalty discount", async () => {
     acceptCompleteSaleMock.mockReturnValue({
       ok: true,

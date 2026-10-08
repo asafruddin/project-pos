@@ -75,6 +75,13 @@ export const stores = pgTable("stores", {
   name: text("name").notNull(),
   logoPublicId: text("logo_public_id"),
   logoSecureUrl: text("logo_secure_url"),
+  /** When receipt queue numbers restart: each day, each shift, or only on manual reset. */
+  queueResetMode: text("queue_reset_mode")
+    .notNull()
+    .default("daily")
+    .$type<"daily" | "shift" | "manual">(),
+  /** Last manual "reset now"; devices restart their queue from this moment. */
+  queueResetAt: timestamp("queue_reset_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -104,6 +111,23 @@ export const categories = pgTable(
       .defaultNow(),
   },
   (t) => [uniqueIndex("categories_store_name_unique").on(t.storeId, t.name)],
+);
+
+/** Store-scoped variant type (Size, Temperature) with its allowed option values. */
+export const variantGroups = pgTable(
+  "variant_groups",
+  {
+    variantGroupId: uuid("variant_group_id").primaryKey().defaultRandom(),
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => stores.storeId),
+    name: text("name").notNull(),
+    options: text("options").array().notNull().default(sql`'{}'`),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [uniqueIndex("variant_groups_store_name_unique").on(t.storeId, t.name)],
 );
 
 export const brands = pgTable(
@@ -158,6 +182,12 @@ export const products = pgTable(
     maxQty: integer("max_qty"),
     trackStock: boolean("track_stock").notNull().default(true),
     parentId: uuid("parent_id"),
+    /** Child variants: option value shown in the cashier picker (e.g. "L", "Hot"). */
+    variantLabel: text("variant_label"),
+    /** Child variants: one value per parent axis, aligned to the parent's `variantGroups`. */
+    variantValues: text("variant_values").array().notNull().default(sql`'{}'`),
+    /** Parent products: variant type names in axis order (e.g. ["Size", "Temperature"]). */
+    variantGroups: text("variant_groups").array().notNull().default(sql`'{}'`),
     categoryId: uuid("category_id").references(() => categories.categoryId),
     brandId: uuid("brand_id").references(() => brands.brandId),
     unitId: uuid("unit_id").references(() => units.unitId),
@@ -184,6 +214,9 @@ export const products = pgTable(
       sql`${t.compareAtMinor} IS NULL OR ${t.compareAtMinor} >= 0`,
     ),
     uniqueIndex("products_store_sku_unique").on(t.storeId, t.sku),
+    uniqueIndex("products_parent_variant_label_unique")
+      .on(t.parentId, sql`lower(${t.variantLabel})`)
+      .where(sql`${t.parentId} IS NOT NULL AND ${t.variantLabel} IS NOT NULL`),
     foreignKey({
       columns: [t.parentId],
       foreignColumns: [t.productId],
@@ -346,6 +379,7 @@ export const stockOpnameLines = pgTable(
 export type UserRow = typeof users.$inferSelect;
 export type ProductRow = typeof products.$inferSelect;
 export type CategoryRow = typeof categories.$inferSelect;
+export type VariantGroupRow = typeof variantGroups.$inferSelect;
 export type BrandRow = typeof brands.$inferSelect;
 export type UnitRow = typeof units.$inferSelect;
 export type ProductImageRow = typeof productImages.$inferSelect;
@@ -526,6 +560,8 @@ export const sales = pgTable("sales", {
   customerId: uuid("customer_id"),
   /** Receipt-only guest name. Not a customer profile. */
   guestName: text("guest_name"),
+  /** Receipt queue number assigned by the device at completion (per device, resets per store setting). */
+  queueNumber: integer("queue_number"),
   /** Required on new Sync after 2C (AD-16). No FK — sale retry must not wait on Shift row. */
   shiftId: uuid("shift_id"),
   loyalty: jsonb("loyalty").$type<{

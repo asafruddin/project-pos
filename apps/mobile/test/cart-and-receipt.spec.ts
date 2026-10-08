@@ -1,7 +1,7 @@
 import { addProduct, cartFromParked, cartItemCount, cartTotalMinor, emptyCart, pruneToSellable, raiseStockCap, setQty } from "@/features/cart/domain/cart";
 import type { CatalogProduct } from "@/features/catalog/domain/product";
 import type { CompletedSale } from "@/features/checkout/domain/sale";
-import { encodeSaleReceipt, type ReceiptLabels } from "@/features/receipt/domain/receipt-encoder";
+import { encodeKitchenReceipt, encodeSaleReceipt, queueNumberForDay, type ReceiptLabels } from "@/features/receipt/domain/receipt-encoder";
 import { base64ToBytes, bytesToBase64 } from "@/utils/base64";
 import { formatIdr } from "@/utils/money";
 
@@ -54,24 +54,25 @@ describe("money + base64", () => {
 
 describe("receipt encoder", () => {
   const labels: ReceiptLabels = {
-    customerCopy: "Customer", walkIn: "Walk-in", voided: "VOID", total: "Total",
+    customerCopy: "Customer", kitchenCopy: "Kitchen", walkIn: "Walk-in", voided: "VOID", total: "Total",
     cash: "Cash", qris: "QRIS", storeCredit: "Store credit", thanks: "Thanks from {store}",
     promoDiscount: "Promo", voucher: "Voucher", managerDiscount: "Manager discount",
+    queue: "Queue", guest: "Name",
   };
   const sale: CompletedSale = {
     saleId: "abcdef12-0000-4000-8000-000000000000",
     deviceId: "d", createdAt: "2025-01-01T03:00:00.000Z", completedAt: "2025-01-01T03:00:00.000Z",
     lines: [{ productId: "p1", name: "Kopi Susu", qty: 2, priceMinor: 18000 }],
     payment: { method: "cash", amountMinor: 36000, tenders: [{ method: "cash", amountMinor: 36000 }] },
-    promotions: null, customerId: null, guestName: "Budi", shiftId: "s", voidedAt: null, voidId: null,
+    promotions: null, customerId: null, guestName: "Budi", queueNumber: 7, shiftId: "s", voidedAt: null, voidId: null,
   };
 
   const decode = (b: Uint8Array) => new TextDecoder().decode(b);
 
-  it("is a valid ESC/POS job: init first, cut last", () => {
+  it("is a valid ESC/POS job: init first, tear feed last", () => {
     const bytes = encodeSaleReceipt(sale, { storeName: "Warung A", labels });
     expect(Array.from(bytes.slice(0, 2))).toEqual([0x1b, 0x40]);
-    expect(Array.from(bytes.slice(-3))).toEqual([0x1d, 0x56, 0x00]);
+    expect(Array.from(bytes.slice(-3))).toEqual([0x1b, 0x64, 0x06]);
   });
 
   it("prints discount rows between subtotal and tenders", () => {
@@ -90,16 +91,45 @@ describe("receipt encoder", () => {
   });
 
   it("prints the store, short id, guest, lines and total within 32 columns", () => {
-    const text = decode(encodeSaleReceipt(sale, { storeName: "Warung A", labels }));
+    const text = decode(encodeSaleReceipt(sale, { storeName: "Warung A", labels, queueNumber: 7 }));
     expect(text).toContain("Warung A");
     expect(text).toContain("ABCDEF12");
-    expect(text).toContain("Budi");
+    expect(text).toContain("Queue");
+    expect(text).toContain("#7");
+    expect(text).toContain("Name: Budi");
     expect(text).toContain("Kopi Susu");
     expect(text).toContain("2 x Rp 18.000");
     expect(text).toContain("Rp 36.000");
     expect(text).toContain("Thanks from Warung A");
     const lines = text.split("\n").filter((l) => /^[ -~]*$/.test(l));
     expect(lines.every((l) => l.length <= 32)).toBe(true);
+  });
+
+  it("prints two kitchen tickets with names, quantities, queue and guest", () => {
+    const bytes = encodeKitchenReceipt(sale, { storeName: "Warung A", labels, queueNumber: 7, customerName: "Budi" });
+    const text = decode(bytes);
+    expect(text.split("Kitchen").length - 1).toBe(2);
+    expect(text.split("#7").length - 1).toBe(2);
+    expect(text.split("Name: Budi").length - 1).toBe(2);
+    expect(text).toContain("Kopi Susu");
+    expect(text).toContain("x2");
+    expect(text).not.toContain("Rp");
+    expect(text).not.toContain("Cash");
+    const cut = [0x1d, 0x56, 0x00];
+    let cuts = 0;
+    for (let i = 0; i <= bytes.length - 3; i += 1) {
+      if (bytes[i] === cut[0] && bytes[i + 1] === cut[1] && bytes[i + 2] === cut[2]) cuts += 1;
+    }
+    expect(cuts).toBe(0);
+  });
+
+  it("assigns a stable 1-based queue number for the day", () => {
+    expect(queueNumberForDay("b", [
+      { saleId: "c", completedAt: "2025-01-01T04:00:00.000Z" },
+      { saleId: "a", completedAt: "2025-01-01T03:00:00.000Z" },
+      { saleId: "b", completedAt: "2025-01-01T03:00:00.000Z" },
+    ])).toBe(2);
+    expect(queueNumberForDay("new", [])).toBe(1);
   });
 });
 

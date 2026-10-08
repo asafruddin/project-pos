@@ -42,6 +42,10 @@ function blankToNull(value: string | null | undefined): string | null {
   return trimmed.length ? trimmed : null;
 }
 
+function cleanList(values: string[] | undefined): string[] {
+  return (values ?? []).map((v) => v.trim()).filter(Boolean);
+}
+
 function toProduct(
   row: ProductRow,
   extras?: {
@@ -68,6 +72,9 @@ function toProduct(
     max_qty: row.maxQty ?? null,
     track_stock: row.trackStock ?? true,
     parent_id: row.parentId ?? null,
+    variant_label: row.variantLabel ?? null,
+    variant_groups: row.variantGroups ?? [],
+    variant_values: row.variantValues ?? [],
     category_id: row.categoryId ?? null,
     category_name: extras?.category_name ?? null,
     brand_id: row.brandId ?? null,
@@ -138,6 +145,12 @@ function rethrowCatalogWriteError(err: unknown): never {
       throw new ConflictException({
         code: "CATALOG_UNIT_CONFLICT",
         message: "Nama satuan sudah digunakan.",
+      });
+    }
+    if (constraint === "products_parent_variant_label_unique") {
+      throw new ConflictException({
+        code: "CATALOG_VARIANT_LABEL_CONFLICT",
+        message: "Nama varian sudah digunakan pada produk ini.",
       });
     }
     if (constraint === "brands_name_unique") {
@@ -452,6 +465,11 @@ export class CatalogService {
             maxQty: input.max_qty ?? null,
             trackStock: input.track_stock ?? true,
             parentId: input.parent_id ?? null,
+            variantLabel:
+              blankToNull(input.variant_label) ??
+              (cleanList(input.variant_values).join(" / ") || null),
+            variantGroups: cleanList(input.variant_groups),
+            variantValues: cleanList(input.variant_values),
             categoryId,
             brandId,
             unitId,
@@ -543,6 +561,18 @@ export class CatalogService {
             maxQty: input.max_qty !== undefined ? input.max_qty : existing.maxQty,
             trackStock: input.track_stock ?? existing.trackStock,
             parentId: input.parent_id !== undefined ? input.parent_id : existing.parentId,
+            variantLabel:
+              input.variant_label !== undefined
+                ? blankToNull(input.variant_label)
+                : existing.variantLabel,
+            variantGroups:
+              input.variant_groups !== undefined
+                ? cleanList(input.variant_groups)
+                : existing.variantGroups,
+            variantValues:
+              input.variant_values !== undefined
+                ? cleanList(input.variant_values)
+                : existing.variantValues,
             categoryId,
             brandId,
             unitId,

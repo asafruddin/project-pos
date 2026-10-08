@@ -1,5 +1,6 @@
 import { Transform } from "class-transformer";
 import {
+  ArrayMaxSize,
   IsArray,
   IsBoolean,
   IsIn,
@@ -8,6 +9,7 @@ import {
   IsString,
   IsUUID,
   Max,
+  MaxLength,
   Min,
   MinLength,
 } from "class-validator";
@@ -74,6 +76,25 @@ export class UpdateProductDto {
   @IsOptional()
   @IsUUID()
   parent_id?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  variant_label?: string | null;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(3)
+  @IsString({ each: true })
+  @MaxLength(60, { each: true })
+  variant_groups?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(3)
+  @IsString({ each: true })
+  @MaxLength(60, { each: true })
+  variant_values?: string[];
 
   @IsOptional()
   @IsString()

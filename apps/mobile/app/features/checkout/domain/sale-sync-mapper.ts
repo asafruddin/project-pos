@@ -21,6 +21,7 @@ export function toSyncSaleRequest(sale: CompletedSale): SyncSaleRequest {
     lines: sale.lines.map((l) => ({ product_id: l.productId, qty: l.qty, price_minor: l.priceMinor })),
     ...(sale.customerId ? { customer_id: sale.customerId } : {}),
     ...(sale.guestName?.trim() ? { guest_name: sale.guestName.trim() } : {}),
+    ...(sale.queueNumber ? { queue_number: sale.queueNumber } : {}),
     shift_id: sale.shiftId,
     ...(hasPromo && promo
       ? {

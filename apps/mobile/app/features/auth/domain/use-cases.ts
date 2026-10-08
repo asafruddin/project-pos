@@ -1,5 +1,6 @@
 import { hasPermission } from "@pos-apps/types";
 import { AppError } from "@/core/errors/app-error";
+import type { QueueSettingsStore } from "@/features/queue/domain/queue-settings";
 import type { AuthGateway, Credentials, SessionStore } from "./ports";
 import type { Session } from "./session";
 
@@ -7,6 +8,7 @@ export class LoginUseCase {
   constructor(
     private readonly gateway: AuthGateway,
     private readonly sessions: SessionStore,
+    private readonly queue?: QueueSettingsStore,
   ) {}
 
   async execute(credentials: Credentials): Promise<Session> {
@@ -20,6 +22,7 @@ export class LoginUseCase {
       throw new AppError("VALIDATION", "NOT_CASHIER");
     }
     await this.sessions.save(session);
+    this.queue?.save({ queue_reset_mode: session.queueResetMode, queue_reset_at: session.queueResetAt });
     return session;
   }
 }
@@ -29,6 +32,7 @@ export class RefreshIdentityUseCase {
   constructor(
     private readonly gateway: AuthGateway,
     private readonly sessions: SessionStore,
+    private readonly queue?: QueueSettingsStore,
   ) {}
 
   async execute(): Promise<void> {
@@ -39,5 +43,6 @@ export class RefreshIdentityUseCase {
       storeLogoUrl: me.store_logo_url,
       registerId: me.register_id,
     });
+    this.queue?.save({ queue_reset_mode: me.queue_reset_mode, queue_reset_at: me.queue_reset_at });
   }
 }

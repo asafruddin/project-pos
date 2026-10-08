@@ -28,6 +28,7 @@ import { useStore } from "zustand";
 import { ConnectivityBanner } from "./ConnectivityBanner";
 import { OpenShiftDialog } from "./OpenShiftDialog";
 import { PrefControls, themeIcon, themeLabel } from "./PrefControls";
+import { PrinterIndicator } from "./PrinterBadge";
 import { StoreLogo } from "./StoreLogo";
 
 type NavItem = { route: keyof RootStackParamList; label: string; icon: (color: string, active: boolean) => ReactNode; bottom?: boolean };
@@ -164,6 +165,7 @@ export function AppShell({ title, subtitle, headerActions, children, aside, scro
               {wide && subtitle ? <Text size={14} muted numberOfLines={1}>{subtitle}</Text> : null}
             </View>
             <View style={styles.actions}>
+              <PrinterIndicator />
               {headerActions}
               {aside && layout === "phone" ? (
                 <Button

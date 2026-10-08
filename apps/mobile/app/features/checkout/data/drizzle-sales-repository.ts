@@ -61,6 +61,7 @@ export class DrizzleSalesRepository implements SalesRepository {
           promotionsJson: sale.promotions ? JSON.stringify(sale.promotions) : null,
           customerId: sale.customerId,
           guestName: sale.guestName,
+          queueNumber: sale.queueNumber,
           shiftId: sale.shiftId,
         })
         .onConflictDoNothing()
@@ -102,6 +103,11 @@ export class DrizzleSalesRepository implements SalesRepository {
       .where(and(gte(sales.completedAt, startOfLocalDay(day).toISOString()), lt(sales.completedAt, endOfLocalDay(day).toISOString())))
       .orderBy(desc(sales.completedAt))
       .all();
+    return this.hydrate(rows);
+  }
+
+  listCompletedSince(sinceIso: string): CompletedSale[] {
+    const rows = this.db.select().from(sales).where(gte(sales.completedAt, sinceIso)).orderBy(desc(sales.completedAt)).all();
     return this.hydrate(rows);
   }
 
@@ -175,6 +181,7 @@ export class DrizzleSalesRepository implements SalesRepository {
       promotions: parse<SalePromotions | null>(r.promotionsJson, null),
       customerId: r.customerId,
       guestName: r.guestName,
+      queueNumber: r.queueNumber,
       shiftId: r.shiftId ?? "",
       voidedAt: r.voidedAt,
       voidId: r.voidId,

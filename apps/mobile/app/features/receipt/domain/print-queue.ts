@@ -30,6 +30,7 @@ export class PrintQueue {
   private again = false;
   private unsubscribe: (() => void) | null = null;
   private listeners = new Set<() => void>();
+  private held = false;
 
   constructor(
     private readonly jobs: PrintJobRepository,
@@ -57,6 +58,16 @@ export class PrintQueue {
 
   pendingCount(): number {
     return this.jobs.pendingCount();
+  }
+
+  /** Pause draining so a foreground print (preview) is not doubled by the queue. */
+  hold(): void {
+    this.held = true;
+  }
+
+  release(): void {
+    this.held = false;
+    void this.process();
   }
 
   /** Persist a job and try to print it; returns immediately after persisting. */
@@ -94,7 +105,9 @@ export class PrintQueue {
   private async drain(): Promise<void> {
     for (const job of this.jobs.listPending()) {
       try {
-        if (!isPrinterReady(this.printer.getStatus())) await this.printer.connect();
+        const status = this.printer.getStatus();
+        if (this.held || status.state === "unconfigured") return;
+        if (!isPrinterReady(status)) await this.printer.connect();
         await this.printer.print(base64ToBytes(job.payloadB64));
         this.jobs.markPrinted(job.jobId, this.clock.nowMs());
       } catch (error) {

@@ -4,7 +4,7 @@ export { StoreLogo } from "./StoreLogo";
 export { PinPad } from "./PinPad";
 export { PrefControls, themeIcon, themeLabel } from "./PrefControls";
 export { SyncBadge } from "./SyncBadge";
-export { PrinterBadge } from "./PrinterBadge";
+export { PrinterBadge, PrinterIndicator } from "./PrinterBadge";
 export { ConnectivityBanner } from "./ConnectivityBanner";
 export { AppShell, CART_BAR_HEIGHT } from "./AppShell";
 export { OpenShiftDialog } from "./OpenShiftDialog";

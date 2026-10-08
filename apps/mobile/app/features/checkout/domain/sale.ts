@@ -33,6 +33,8 @@ export type CompletedSale = {
   promotions: SalePromotions | null;
   customerId: string | null;
   guestName: string | null;
+  /** Receipt queue number assigned on this device; null for sales made before queue numbers. */
+  queueNumber: number | null;
   shiftId: string;
   voidedAt: string | null;
   voidId: string | null;

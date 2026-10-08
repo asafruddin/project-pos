@@ -138,10 +138,12 @@ export default function SalesPage() {
       ) : (
         <div className="overflow-hidden rounded-xl border border-border bg-card shadow-card mt-3">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-md border-collapse text-left text-sm">
+            <table className="w-full min-w-xl border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b border-border text-muted-foreground">
+                  <th className="px-4 py-3 font-medium">Antrian</th>
                   <th className="px-4 py-3 font-medium">Waktu</th>
+                  <th className="px-4 py-3 font-medium">Nama</th>
                   <th className="px-4 py-3 font-medium">Metode</th>
                   <th className="px-4 py-3 font-medium">Total</th>
                   <th className="px-4 py-3 font-medium">Status</th>
@@ -155,11 +157,19 @@ export default function SalesPage() {
                       key={s.sale_id}
                       className="border-b border-border/60 last:border-0"
                     >
+                      <td className="px-4 py-3 font-semibold text-foreground">
+                        {s.queue_number ? `#${s.queue_number}` : "—"}
+                      </td>
                       <td className="px-4 py-3 text-foreground">
                         {new Intl.DateTimeFormat("id-ID", {
                           dateStyle: "medium",
                           timeStyle: "short",
                         }).format(new Date(s.completed_at))}
+                      </td>
+                      <td className="px-4 py-3 text-foreground">
+                        {s.guest_name?.trim() || (
+                          <span className="text-muted-foreground">Tanpa nama</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-foreground">
                         <div>{method.label}</div>

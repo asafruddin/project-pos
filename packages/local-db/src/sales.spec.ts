@@ -29,4 +29,9 @@ describe("toSyncSaleRequest", () => {
     const payload = toSyncSaleRequest(completeSale({ guestName: "   " }));
     assert.equal("guest_name" in payload, false);
   });
+
+  it("sends queue_number only when the sale has one", () => {
+    assert.equal(toSyncSaleRequest(completeSale({ queueNumber: 7 })).queue_number, 7);
+    assert.equal("queue_number" in toSyncSaleRequest(completeSale()), false);
+  });
 });

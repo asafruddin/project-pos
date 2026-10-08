@@ -32,7 +32,9 @@ import {
   customerFromApi,
   getCatalogPulledAt,
   isValidSellablePrice,
+  groupCatalogVariants,
   listCatalogProducts,
+  listCatalogVariantParents,
   replaceCatalog,
   replaceCustomers,
   replaceLoyaltyProgram,
@@ -50,6 +52,7 @@ import type {
 import { AppShell } from "@/components/templates/app-shell";
 import { CartPanel } from "@/components/organisms/cart-panel";
 import { CatalogProductThumb } from "@/components/molecules/catalog-product-thumb";
+import { VariantPickerDialog } from "@/components/organisms/variant-picker-dialog";
 import { UnpackConfirmDialog } from "@/components/organisms/unpack-confirm-dialog";
 import { useCart } from "@/components/providers/cart-context";
 import { getAccessToken, isAccessTokenExpired } from "@/lib/auth-token";
@@ -137,6 +140,11 @@ export default function MenuPage() {
   const t = copy(lang);
   const [ready, setReady] = useState(false);
   const [products, setProducts] = useState<CatalogProductRecord[]>([]);
+  const [variantParents, setVariantParents] = useState<CatalogProductRecord[]>([]);
+  const [variantTarget, setVariantTarget] = useState<{
+    parent: CatalogProductRecord;
+    variants: CatalogProductRecord[];
+  } | null>(null);
   const [pulledAt, setPulledAt] = useState<string | null>(null);
   const [pullError, setPullError] = useState<string | null>(null);
   const [pulling, setPulling] = useState(false);
@@ -185,15 +193,19 @@ export default function MenuPage() {
     [products, searchQuery, categoryFilter, stockFilter, sortBy, lang],
   );
 
+  const menuItems = useMemo(
+    () => groupCatalogVariants(visibleProducts, variantParents),
+    [visibleProducts, variantParents],
+  );
   const totalPages = Math.max(
     1,
-    Math.ceil(visibleProducts.length / CATALOG_PAGE_SIZE),
+    Math.ceil(menuItems.length / CATALOG_PAGE_SIZE),
   );
   const pagedProducts = useMemo(() => {
     const safePage = Math.min(Math.max(1, page), totalPages);
     const start = (safePage - 1) * CATALOG_PAGE_SIZE;
-    return visibleProducts.slice(start, start + CATALOG_PAGE_SIZE);
-  }, [visibleProducts, page, totalPages]);
+    return menuItems.slice(start, start + CATALOG_PAGE_SIZE);
+  }, [menuItems, page, totalPages]);
 
   useEffect(() => {
     setViewMode(readCatalogView());
@@ -210,6 +222,7 @@ export default function MenuPage() {
   const refreshLocal = useCallback(async () => {
     const rows = withLivePackStock(await listCatalogProducts());
     setProducts(rows);
+    setVariantParents(await listCatalogVariantParents());
     setPulledAt(await getCatalogPulledAt());
   }, []);
 
@@ -327,6 +340,7 @@ export default function MenuPage() {
       }
       const sellable = withLivePackStock(await listCatalogProducts());
       setProducts(sellable);
+      setVariantParents(await listCatalogVariantParents());
       setPulledAt(await getCatalogPulledAt());
       pruneToSellable(sellable);
       try {
@@ -733,10 +747,23 @@ export default function MenuPage() {
                 : "flex min-h-0 flex-1 flex-col content-start gap-2 overflow-y-auto pb-2"
             }
           >
-            {pagedProducts.map((p) => {
-              const selectedQty = lines.find(
-                (line) => line.productId === p.productId,
-              )?.qty ?? 0;
+            {pagedProducts.map((item) => {
+              const group = item.kind === "group" ? item : null;
+              const p: CatalogProductRecord = group
+                ? {
+                    ...group.parent,
+                    priceMinor: group.minPriceMinor,
+                    stockQty: group.totalStockQty ?? 0,
+                    trackStock: group.totalStockQty !== null,
+                  }
+                : (item as Extract<typeof item, { kind: "product" }>).product;
+              const selectedQty = group
+                ? lines
+                    .filter((line) =>
+                      group.variants.some((v) => v.productId === line.productId),
+                    )
+                    .reduce((n, line) => n + line.qty, 0)
+                : (lines.find((line) => line.productId === p.productId)?.qty ?? 0);
               const priceOk = isValidSellablePrice(p.priceMinor);
               const unlimited = !tracksCatalogStock(p);
               const inStock = priceOk && (unlimited || p.stockQty > 0);
@@ -751,7 +778,9 @@ export default function MenuPage() {
                 : `${t.stock} ${p.stockQty}`;
               const priceLabel =
                 inStock || unpackable
-                  ? formatIdr(p.priceMinor, lang)
+                  ? group && group.minPriceMinor !== group.maxPriceMinor
+                    ? `${t.variantFrom} ${formatIdr(p.priceMinor, lang)}`
+                    : formatIdr(p.priceMinor, lang)
                   : p.stockQty <= 0
                     ? t.stockOut
                     : t.catalogBlockedPrice;
@@ -762,6 +791,13 @@ export default function MenuPage() {
                     disabled={!clickable}
                     variant="outline"
                     onClick={() => {
+                      if (group) {
+                        setVariantTarget({
+                          parent: group.parent,
+                          variants: group.variants,
+                        });
+                        return;
+                      }
                       if (inStock) {
                         add(p);
                         return;
@@ -835,6 +871,13 @@ export default function MenuPage() {
                             : "flex flex-wrap items-center gap-x-2 gap-y-1 text-sm"
                         }
                       >
+                        {group ? (
+                          <span className="hidden rounded-md bg-secondary px-1.5 py-0.5 text-xs font-medium text-secondary-foreground md:inline-flex">
+                            {formatTemplate(t.variantCount, {
+                              count: group.variants.length,
+                            })}
+                          </span>
+                        ) : null}
                         {p.unitName ? (
                           <span className="hidden rounded-md bg-secondary px-1.5 py-0.5 text-xs font-medium text-secondary-foreground md:inline-flex">
                             {p.unitName}
@@ -866,8 +909,8 @@ export default function MenuPage() {
             <p className="hidden text-sm text-muted-foreground md:block">
               {formatTemplate(t.catalogShowing, {
                 from: (page - 1) * CATALOG_PAGE_SIZE + 1,
-                to: Math.min(page * CATALOG_PAGE_SIZE, visibleProducts.length),
-                count: visibleProducts.length,
+                to: Math.min(page * CATALOG_PAGE_SIZE, menuItems.length),
+                count: menuItems.length,
               })}
             </p>
             <div className="flex items-center gap-2">
@@ -900,6 +943,18 @@ export default function MenuPage() {
         </>
       )}
       </div>
+
+      <VariantPickerDialog
+        lang={lang}
+        parent={variantTarget?.parent ?? null}
+        variants={variantTarget?.variants ?? []}
+        quantities={Object.fromEntries(lines.map((l) => [l.productId, l.qty]))}
+        onPick={(variant) => {
+          add(variant);
+          setVariantTarget(null);
+        }}
+        onClose={() => setVariantTarget(null)}
+      />
 
       <UnpackConfirmDialog
         lang={lang}

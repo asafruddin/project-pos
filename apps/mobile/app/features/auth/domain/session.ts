@@ -9,6 +9,9 @@ export type Session = {
   /** API path of the store logo (`/stores/:id/logo`), fetched with the token. */
   storeLogoUrl: string | null;
   registerId: string | null;
+  /** Store-wide queue reset setting from login (cached separately for offline use). */
+  queueResetMode?: "daily" | "shift" | "manual";
+  queueResetAt?: string | null;
 };
 
 export type StoreIdentity = {

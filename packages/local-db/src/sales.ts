@@ -1,10 +1,11 @@
 import {
   evaluateSplitTender,
+  nextQueueNumber,
   stackSaleDiscounts,
   storeCreditTenderTotal,
   tendersFromPayment,
 } from "@pos-apps/domain";
-import type { SyncSaleRequest, SyncVoidRequest } from "@pos-apps/types";
+import type { QueueResetMode, SyncSaleRequest, SyncVoidRequest } from "@pos-apps/types";
 import { openLocalDb, type LocalSaleLine, type LocalSaleRecord } from "./db.js";
 import { tracksCatalogStock } from "./catalog.js";
 import { endOfLocalDay, startOfLocalDay } from "./day-bounds.js";
@@ -25,6 +26,49 @@ export async function getDeviceId(): Promise<string> {
   const deviceId = crypto.randomUUID();
   await db.put("meta", deviceId, DEVICE_ID_KEY);
   return deviceId;
+}
+
+const QUEUE_SETTINGS_KEY = "queueSettings";
+
+export type QueueSettingsRecord = {
+  mode: QueueResetMode;
+  resetAt: string | null;
+};
+
+const DEFAULT_QUEUE_SETTINGS: QueueSettingsRecord = { mode: "daily", resetAt: null };
+
+/** Cache the store-wide queue reset setting (from login / `/auth/me`) for offline use. */
+export async function saveQueueSettings(settings: {
+  queue_reset_mode?: QueueResetMode | null;
+  queue_reset_at?: string | null;
+}): Promise<void> {
+  const mode = settings.queue_reset_mode;
+  if (mode !== "daily" && mode !== "shift" && mode !== "manual") return;
+  const db = await openLocalDb();
+  const record: QueueSettingsRecord = { mode, resetAt: settings.queue_reset_at ?? null };
+  await db.put("meta", JSON.stringify(record), QUEUE_SETTINGS_KEY);
+}
+
+async function readQueueSettings(store: {
+  get: (key: string) => Promise<string | undefined>;
+}): Promise<QueueSettingsRecord> {
+  const raw = await store.get(QUEUE_SETTINGS_KEY);
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as Partial<QueueSettingsRecord>;
+      if (parsed.mode === "daily" || parsed.mode === "shift" || parsed.mode === "manual") {
+        return { mode: parsed.mode, resetAt: parsed.resetAt ?? null };
+      }
+    } catch {
+      /* default below */
+    }
+  }
+  return DEFAULT_QUEUE_SETTINGS;
+}
+
+export async function getQueueSettings(): Promise<QueueSettingsRecord> {
+  const db = await openLocalDb();
+  return readQueueSettings({ get: (key) => db.get("meta", key) });
 }
 
 export async function createIncompleteSale(
@@ -76,7 +120,7 @@ export async function completeSale(
 ): Promise<LocalSaleRecord> {
   const db = await openLocalDb();
   const tx = db.transaction(
-    ["sales", "syncOutbox", "catalogProducts", "shifts", "customers"],
+    ["sales", "syncOutbox", "catalogProducts", "shifts", "customers", "meta"],
     "readwrite",
   );
   const sale = await tx.objectStore("sales").get(saleId);
@@ -187,10 +231,22 @@ export async function completeSale(
     }
   }
   const completedAt = new Date().toISOString();
+  // Same transaction as the sale write, so two quick sales never share a queue number.
+  const queueSettings = await readQueueSettings(tx.objectStore("meta"));
+  const queueNumber = nextQueueNumber({
+    mode: queueSettings.mode,
+    resetAt: queueSettings.resetAt,
+    dayStart: startOfLocalDay(new Date(completedAt)).toISOString(),
+    shiftOpenedAt: openShiftRow.openedAt,
+    sales: (await tx.objectStore("sales").getAll()).filter(
+      (row) => row.status === "complete" && !!row.completedAt,
+    ) as Array<{ completedAt: string; queueNumber?: number | null }>,
+  });
   const completed: LocalSaleRecord = {
     ...sale,
     status: "complete",
     completedAt,
+    queueNumber,
     payment: {
       method: parsed.method,
       amountMinor: parsed.amount_minor,
@@ -412,6 +468,7 @@ export function toSyncSaleRequest(sale: LocalSaleRecord): SyncSaleRequest {
     })),
     ...(sale.customerId ? { customer_id: sale.customerId } : {}),
     ...(sale.guestName?.trim() ? { guest_name: sale.guestName.trim() } : {}),
+    ...(sale.queueNumber ? { queue_number: sale.queueNumber } : {}),
     ...(sale.shiftId ? { shift_id: sale.shiftId } : {}),
     ...(sale.loyalty &&
     (sale.loyalty.redeemPoints > 0 || sale.loyalty.discountMinor > 0)

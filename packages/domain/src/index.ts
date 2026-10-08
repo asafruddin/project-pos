@@ -2719,3 +2719,41 @@ export function canDeactivatePlatformOperator(input: {
 }
 
 
+
+export type QueueResetMode = "daily" | "shift" | "manual";
+
+export type QueueNumberInput = {
+  mode: QueueResetMode;
+  /** Last manual "reset now" (ISO); applies in every mode. */
+  resetAt: string | null;
+  /** Start of the sale's local day (ISO), used by `daily` (and as the `shift` fallback). */
+  dayStart: string;
+  /** `openedAt` of the open shift (ISO), used by `shift`. */
+  shiftOpenedAt: string | null;
+  /** This device's complete sales (voided ones included — they keep their number). */
+  sales: ReadonlyArray<{ completedAt: string; queueNumber?: number | null }>;
+};
+
+/**
+ * Next receipt queue number for a device. The counter restarts when the queue window starts:
+ * day start (`daily`), shift open (`shift`) or never (`manual`) — and always after `resetAt`.
+ * Sales that predate queue numbers (no `queueNumber`) still count so numbers never repeat.
+ */
+export function nextQueueNumber(input: QueueNumberInput): number {
+  const starts: number[] = [];
+  if (input.mode === "daily") starts.push(Date.parse(input.dayStart));
+  if (input.mode === "shift") {
+    starts.push(Date.parse(input.shiftOpenedAt ?? input.dayStart));
+  }
+  if (input.resetAt) starts.push(Date.parse(input.resetAt));
+  const windowStart = starts.filter(Number.isFinite).reduce((a, b) => Math.max(a, b), -Infinity);
+
+  let count = 0;
+  let highest = 0;
+  for (const sale of input.sales) {
+    if (Date.parse(sale.completedAt) < windowStart) continue;
+    count += 1;
+    if (sale.queueNumber && sale.queueNumber > highest) highest = sale.queueNumber;
+  }
+  return Math.max(highest, count) + 1;
+}

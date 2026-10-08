@@ -25,11 +25,10 @@ import { useCheckout } from "@/features/checkout/presentation/useCheckout";
 import type { Layout } from "@/hooks/useBreakpoint";
 import { useT } from "@/i18n";
 import { radius, useTheme } from "@/theme";
-import { formatGroupedInt, formatGroupedIntInput, formatIdr, parseGroupedInt } from "@/utils/money";
+import { cashPresets, formatGroupedInt, formatGroupedIntInput, formatIdr, parseGroupedInt } from "@/utils/money";
 import { ParkedCartsDialog } from "./ParkedCartsDialog";
 import { ReceiptPreviewDialog } from "./ReceiptPreviewDialog";
 
-const CASH_PRESETS = [10_000, 20_000, 50_000, 100_000] as const;
 /** Bottom nav height on phones (icon 36 + label + padding), kept in sync with AppShell. */
 const BOTTOM_NAV = 64;
 
@@ -173,56 +172,66 @@ function CartBody({ c }: { c: Checkout }) {
         <PaySection c={c} />
       ) : (
         <>
-          <ScrollView style={styles.fill} contentContainerStyle={styles.lines} keyboardShouldPersistTaps="handled">
-            <View>
-              <Text weight="medium" style={{ marginBottom: 6 }}>{t("receiptName")}</Text>
-              <TextField
-                value={cart.guestName}
-                onChangeText={(v) => cart.set({ guestName: v })}
-                placeholder={t("receiptNamePh")}
-                maxLength={80}
-                autoComplete="name"
-                editable={!c.busy}
-                right={
-                  cart.guestName ? (
-                    <Button variant="ghost" size="iconSm" accessibilityLabel={t("receiptNameClear")} icon={<XIcon size={16} weight="bold" color={colors.mutedForeground} />} onPress={() => cart.set({ guestName: "" })} />
-                  ) : undefined
-                }
-                hint={t("receiptNameHint")}
-              />
-            </View>
-            {empty ? <Text muted>{t("cartEmpty")}</Text> : null}
-            {cart.lines.map((line) => (
-              <View key={line.productId} style={[styles.line, { borderColor: colors.border }]}>
-                <View style={{ flex: 1 }}>
-                  <Text weight="medium" numberOfLines={2}>{line.name}</Text>
-                  <Text size={13} muted tabular>{formatIdr(line.priceMinor, lang)} × {line.qty} = {formatIdr(line.priceMinor * line.qty, lang)}</Text>
-                </View>
-                <View style={styles.stepper}>
-                  <Button variant="outline" size="iconSm" accessibilityLabel={`${t("qtyDown")} ${line.name}`} icon={<MinusIcon size={16} weight="bold" color={colors.foreground} />} onPress={() => cart.setQty(line.productId, line.qty - 1)} />
-                  <Text weight="semibold" tabular style={{ minWidth: 24, textAlign: "center" }}>{line.qty}</Text>
-                  <Button
-                    variant="outline"
-                    size="iconSm"
-                    accessibilityLabel={`${t("qtyUp")} ${line.name}`}
-                    disabled={line.maxQty !== null && line.qty >= line.maxQty}
-                    icon={<PlusIcon size={16} weight="bold" color={colors.foreground} />}
-                    onPress={() => cart.setQty(line.productId, line.qty + 1)}
-                  />
-                  <Button variant="ghost" size="iconSm" accessibilityLabel={`${t("removeLine")} ${line.name}`} icon={<TrashSimpleIcon size={16} weight="bold" color={colors.destructive} />} onPress={() => cart.setQty(line.productId, 0)} />
-                </View>
-              </View>
-            ))}
-          </ScrollView>
-          <View style={[styles.footer, { borderTopColor: colors.border }]}>
-            <View style={styles.totalRow}>
-              <Text size={16} weight="semibold">{t("total")}</Text>
-              <Text size={18} weight="bold" tabular>{formatIdr(pricing.lineTotalMinor, lang)}</Text>
-            </View>
-            {!c.hasShift && !empty ? <Text size={13} color={colors.warning}>{t("shiftNeedOpen")}</Text> : null}
-            <Button size="lg" label={c.busy ? t("pending") : t("pay")} loading={c.busy} disabled={empty || !c.hasShift} onPress={c.startPay} />
-            <Button variant="outline" label={t("hold")} icon={<ArchiveTrayIcon size={18} weight="duotone" color={colors.foreground} />} disabled={empty || c.busy} onPress={c.hold} />
+          <View style={styles.nameBlock}>
+            <Text weight="medium" style={{ marginBottom: 6 }}>{t("receiptName")}</Text>
+            <TextField
+              value={cart.guestName}
+              onChangeText={(v) => cart.set({ guestName: v })}
+              placeholder={t("receiptNamePh")}
+              maxLength={80}
+              autoComplete="name"
+              editable={!c.busy}
+              right={
+                cart.guestName ? (
+                  <Button variant="ghost" size="iconSm" accessibilityLabel={t("receiptNameClear")} icon={<XIcon size={16} weight="bold" color={colors.mutedForeground} />} onPress={() => cart.set({ guestName: "" })} />
+                ) : undefined
+              }
+              hint={t("receiptNameHint")}
+            />
           </View>
+          <ScrollView style={styles.fill} contentContainerStyle={empty ? styles.emptyWrap : styles.lines} keyboardShouldPersistTaps="handled">
+            {empty ? (
+              <View style={styles.empty}>
+                <ShoppingCartIcon size={40} weight="duotone" color={`${colors.mutedForeground}80`} />
+                <Text muted>{t("cartEmpty")}</Text>
+              </View>
+            ) : (
+              cart.lines.map((line) => (
+                <View key={line.productId} style={[styles.line, { borderBottomColor: colors.border }]}>
+                  <Text weight="medium" numberOfLines={2}>{line.name}</Text>
+                  <View style={styles.lineRow}>
+                    <Text size={14} style={{ flex: 1 }} tabular>
+                      {formatIdr(line.priceMinor, lang)} × {line.qty} = {formatIdr(line.priceMinor * line.qty, lang)}
+                    </Text>
+                    <View style={styles.stepper}>
+                      <Button variant="outline" size="iconSm" accessibilityLabel={`${t("qtyDown")} ${line.name}`} icon={<MinusIcon size={16} weight="bold" color={colors.foreground} />} onPress={() => cart.setQty(line.productId, line.qty - 1)} />
+                      <Text weight="semibold" tabular style={{ minWidth: 24, textAlign: "center" }}>{line.qty}</Text>
+                      <Button
+                        variant="outline"
+                        size="iconSm"
+                        accessibilityLabel={`${t("qtyUp")} ${line.name}`}
+                        disabled={line.maxQty !== null && line.qty >= line.maxQty}
+                        icon={<PlusIcon size={16} weight="bold" color={colors.foreground} />}
+                        onPress={() => cart.setQty(line.productId, line.qty + 1)}
+                      />
+                      <Button variant="ghost" size="iconSm" accessibilityLabel={`${t("removeLine")} ${line.name}`} icon={<TrashSimpleIcon size={16} weight="bold" color={colors.destructive} />} onPress={() => cart.setQty(line.productId, 0)} />
+                    </View>
+                  </View>
+                </View>
+              ))
+            )}
+          </ScrollView>
+          {empty ? null : (
+            <View style={[styles.footer, { borderTopColor: colors.border }]}>
+              <View style={styles.totalRow}>
+                <Text size={16} weight="semibold">{t("total")}</Text>
+                <Text size={18} weight="bold" tabular>{formatIdr(pricing.payableMinor, lang)}</Text>
+              </View>
+              {!c.hasShift ? <Text size={13} color={colors.warning}>{t("shiftNeedOpen")}</Text> : null}
+              <Button size="lg" label={c.busy ? t("pending") : t("pay")} loading={c.busy} disabled={!c.hasShift} onPress={c.startPay} />
+              <Button variant="outline" size="lg" label={t("hold")} icon={<ArchiveTrayIcon size={18} weight="duotone" color={colors.foreground} />} disabled={c.busy} onPress={c.hold} />
+            </View>
+          )}
         </>
       )}
     </View>
@@ -235,91 +244,53 @@ function PaySection({ c }: { c: Checkout }) {
   const { cart, pricing, cash } = c;
   const qris = cart.payMethod === "qris";
   const received = parseGroupedInt(cart.cashReceived);
-  const activePreset = CASH_PRESETS.find((p) => received === p);
+  const presets = cashPresets(pricing.payableMinor);
+  const activePreset = presets.find((amount) => received === amount);
+  const presetRows = [presets.slice(0, 2), presets.slice(2)].filter((row) => row.length > 0);
 
   return (
     <View style={styles.fill}>
-      <ScrollView style={styles.fill} contentContainerStyle={styles.lines} keyboardShouldPersistTaps="handled">
-        <Text weight="medium">{qris ? t("qrisPayment") : t("cashPayment")} {formatIdr(pricing.payableMinor, lang)}</Text>
-
+      <View style={[styles.payHeader, { borderBottomColor: colors.border }]}>
+        <Text weight="medium">
+          {qris ? t("qrisPayment") : t("cashPayment")} {formatIdr(pricing.payableMinor, lang)}
+        </Text>
         {pricing.payableMinor > 0 ? (
           <SegmentedControl
             value={cart.payMethod}
             disabled={c.busy}
-            onChange={(m) => cart.set({ payMethod: m, ...(m === "qris" ? { cashReceived: "" } : {}) })}
+            onChange={(method) => cart.set({ payMethod: method, ...(method === "qris" ? { cashReceived: "" } : {}) })}
             segments={[
               { value: "cash", label: t("cashTender") },
               { value: "qris", label: t("qris") },
             ]}
           />
         ) : null}
-
-        <View style={[styles.discounts, { borderColor: colors.border, backgroundColor: `${colors.secondary}66` }]}>
-          <Row label={t("total")} value={formatIdr(pricing.lineTotalMinor, lang)} />
-          {pricing.promoDiscountMinor > 0 ? (
-            <Row
-              label={`${t("promoDiscount")}${pricing.appliedPromotions.length ? ` (${pricing.appliedPromotions.map((p) => p.name).join(", ")})` : ""}`}
-              value={`−${formatIdr(pricing.promoDiscountMinor, lang)}`}
-            />
-          ) : null}
-          {pricing.managerDiscountMinor > 0 ? <Row label={t("managerDiscount")} value={`−${formatIdr(pricing.managerDiscountMinor, lang)}`} /> : null}
-          {pricing.voucherMinor > 0 ? <Row label={t("voucher")} value={`−${formatIdr(pricing.voucherMinor, lang)}`} /> : null}
-        </View>
-
-        <TextField
-          label={t("coupon")}
-          value={cart.couponCode}
-          onChangeText={(v) => cart.set({ couponCode: v.toUpperCase() })}
-          autoCapitalize="characters"
-          autoCorrect={false}
-          editable={!c.busy}
-          error={pricing.couponInvalid}
-          hint={pricing.couponInvalid ? t("couponInvalid") : undefined}
-        />
-        <TextField
-          label={t("voucher")}
-          value={cart.voucherCode}
-          onChangeText={(v) => cart.set({ voucherCode: v.toUpperCase() })}
-          autoCapitalize="characters"
-          autoCorrect={false}
-          editable={!c.busy}
-          error={c.voucher.status === "invalid"}
-          hint={c.voucher.status === "invalid" ? t("voucherInvalid") : c.voucher.status === "offline" ? t("voucherOffline") : undefined}
-        />
-        <TextField
-          label={t("managerDiscount")}
-          value={cart.managerDiscount}
-          onChangeText={(v) => cart.set({ managerDiscount: formatGroupedIntInput(v, lang) })}
-          keyboardType="number-pad"
-          editable={!c.busy}
-        />
-        {pricing.managerDiscountMinor > 0 ? (
-          <TextField
-            label={t("managerPin")}
-            value={cart.managerPin}
-            onChangeText={(v) => cart.set({ managerPin: v.replace(/\D/g, "").slice(0, 6) })}
-            keyboardType="number-pad"
-            secureTextEntry
-            maxLength={6}
-            editable={!c.busy}
-          />
-        ) : null}
-
+      </View>
+      <ScrollView style={styles.fill} contentContainerStyle={styles.lines} keyboardShouldPersistTaps="handled">
         {!qris && pricing.payableMinor > 0 ? (
-          <View style={{ gap: 8 }}>
-            <Text weight="medium">{t("cashReceived")}</Text>
-            <View style={styles.presets}>
-              {CASH_PRESETS.map((amount) => (
-                <Button
-                  key={amount}
-                  variant={activePreset === amount ? "default" : "secondary"}
-                  size="sm"
-                  label={formatGroupedInt(amount, lang)}
-                  accessibilityLabel={`${t("cashReceived")} ${formatIdr(amount, lang)}`}
-                  disabled={c.busy}
-                  onPress={() => cart.set({ cashReceived: formatGroupedInt(amount, lang) })}
-                  style={{ flex: 1, minWidth: 64 }}
-                />
+          <View style={[styles.cashCard, { borderColor: colors.border, backgroundColor: `${colors.muted}4d` }]}>
+            <View style={styles.totalRow}>
+              <Text weight="medium">{t("cashReceived")}</Text>
+              <Text size={12} muted>
+                {t("total")} {formatIdr(pricing.payableMinor, lang)}
+              </Text>
+            </View>
+            <View style={{ gap: 8 }}>
+              {presetRows.map((row) => (
+                <View key={row[0]} style={styles.presetRow}>
+                  {row.map((amount) => (
+                    <Button
+                      key={amount}
+                      variant={activePreset === amount ? "default" : "secondary"}
+                      label={formatGroupedInt(amount, lang)}
+                      accessibilityLabel={`${t("cashReceived")} ${formatIdr(amount, lang)}`}
+                      disabled={c.busy}
+                      onPress={() => cart.set({ cashReceived: formatGroupedInt(amount, lang) })}
+                      style={styles.preset}
+                    />
+                  ))}
+                  {row.length === 1 ? <View style={styles.preset} /> : null}
+                </View>
               ))}
             </View>
             <TextField
@@ -327,33 +298,32 @@ function PaySection({ c }: { c: Checkout }) {
               onChangeText={(v) => cart.set({ cashReceived: formatGroupedIntInput(v, lang) })}
               keyboardType="number-pad"
               accessibilityLabel={t("cashReceived")}
+              placeholder="0"
               editable={!c.busy}
+              left={<Text size={14} weight="medium" muted>Rp</Text>}
+              style={styles.cashInput}
             />
-            <Row
-              label={c.cashShort ? t("cashShortLabel") : t("cashChange")}
-              value={formatIdr(c.cashShort ? cash.shortMinor : cash.changeMinor, lang)}
-              emphasis
-              danger={c.cashShort && cart.cashReceived.trim() !== ""}
-            />
+            <View
+              style={[
+                styles.cashStatus,
+                { backgroundColor: c.cashShort ? `${colors.destructive}1a` : `${colors.primary}1a` },
+              ]}
+            >
+              <Text weight="medium" color={c.cashShort ? colors.destructive : colors.primary}>
+                {c.cashShort ? t("cashShortLabel") : t("cashChange")}
+              </Text>
+              <Text size={16} weight="semibold" color={c.cashShort ? colors.destructive : colors.primary} tabular>
+                {formatIdr(c.cashShort ? cash.shortMinor : cash.changeMinor, lang)}
+              </Text>
+            </View>
           </View>
         ) : null}
-
-        <Text size={13} muted>{t("receiptHint")}</Text>
       </ScrollView>
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
+        <Text size={13} muted>{t("receiptHint")}</Text>
         <Button size="lg" label={c.busy ? t("pending") : t("confirmReceipt")} loading={c.busy} disabled={c.cashShort} onPress={() => void c.confirm()} />
-        <Button variant="ghost" label={t("cancelCheckout")} disabled={c.busy} onPress={c.cancelPay} />
+        <Button variant="ghost" size="lg" label={t("cancelCheckout")} disabled={c.busy} onPress={c.cancelPay} />
       </View>
-    </View>
-  );
-}
-
-function Row({ label, value, emphasis, danger }: { label: string; value: string; emphasis?: boolean; danger?: boolean }) {
-  const { colors } = useTheme();
-  return (
-    <View style={styles.totalRow}>
-      <Text weight={emphasis ? "semibold" : "regular"} color={danger ? colors.destructive : undefined} style={{ flexShrink: 1 }}>{label}</Text>
-      <Text weight={emphasis ? "semibold" : "regular"} color={danger ? colors.destructive : undefined} tabular>{value}</Text>
     </View>
   );
 }
@@ -369,11 +339,19 @@ const styles = StyleSheet.create({
   body: { flex: 1, minHeight: 0 },
   fill: { flex: 1 },
   alert: { marginHorizontal: 16, marginTop: 12, borderWidth: 1, borderRadius: radius.xl, paddingHorizontal: 12, paddingVertical: 8 },
+  nameBlock: { paddingHorizontal: 16, paddingTop: 16 },
   lines: { padding: 16, gap: 12 },
-  line: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderRadius: radius.xl, padding: 10 },
+  emptyWrap: { flexGrow: 1, justifyContent: "center" },
+  empty: { alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 24 },
+  line: { gap: 8, borderBottomWidth: StyleSheet.hairlineWidth, paddingBottom: 12 },
+  lineRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
   stepper: { flexDirection: "row", alignItems: "center", gap: 4 },
   footer: { padding: 16, gap: 8, borderTopWidth: StyleSheet.hairlineWidth },
   totalRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
-  discounts: { borderWidth: 1, borderRadius: radius.xl, padding: 12, gap: 4 },
-  presets: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  payHeader: { gap: 12, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  cashCard: { gap: 12, borderWidth: 1, borderRadius: radius.xl, padding: 12 },
+  presetRow: { flexDirection: "row", gap: 8 },
+  preset: { flex: 1 },
+  cashInput: { textAlign: "right", fontSize: 18 },
+  cashStatus: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, borderRadius: radius.lg, paddingHorizontal: 12, paddingVertical: 8 },
 });

@@ -47,6 +47,7 @@ import { SaleReceiptPreview } from "@/components/organisms/sale-receipt";
 import { UnpackConfirmDialog } from "@/components/organisms/unpack-confirm-dialog";
 import { authorizedFetch } from "@/lib/api-client";
 import {
+  cashPresets,
   formatGroupedInt,
   formatGroupedIntInput,
   formatIdr,
@@ -62,8 +63,6 @@ type Props = {
   lang: LangPref;
   onCompleted: (sale: LocalSaleRecord) => Promise<void>;
 };
-
-const CASH_PRESETS = [10_000, 20_000, 50_000, 100_000] as const;
 
 function parkedLabel(parked: ParkedCartRecord): string {
   const first = parked.lines[0]?.name ?? "";
@@ -188,7 +187,8 @@ export function CartPanel({ lang, onCompleted }: Props) {
     cashKnown && cashReceivedMinor >= payable
       ? cashReceivedMinor - payable
       : 0;
-  const selectedCashPreset = CASH_PRESETS.find(
+  const cashPresetAmounts = cashPresets(payable);
+  const selectedCashPreset = cashPresetAmounts.find(
     (amount) => cashKnown && cashReceivedMinor === amount,
   );
 
@@ -867,7 +867,7 @@ export function CartPanel({ lang, onCompleted }: Props) {
                   role="group"
                   aria-label={t.cashReceived}
                 >
-                  {CASH_PRESETS.map((amount) => {
+                  {cashPresetAmounts.map((amount) => {
                     const active = selectedCashPreset === amount;
                     return (
                       <Button

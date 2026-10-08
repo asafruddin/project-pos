@@ -8,7 +8,7 @@ export { ArchiveIcon as ArchiveTrayIcon } from "phosphor-react-native/src/icons/
 export { ArrowLeftIcon } from "phosphor-react-native/src/icons/ArrowLeft";
 export { ArrowsClockwiseIcon } from "phosphor-react-native/src/icons/ArrowsClockwise";
 export { BackspaceIcon } from "phosphor-react-native/src/icons/Backspace";
-export { BankIcon } from "phosphor-react-native/src/icons/Bank";
+export { BluetoothIcon } from "phosphor-react-native/src/icons/Bluetooth";
 export { CalendarCheckIcon } from "phosphor-react-native/src/icons/CalendarCheck";
 export { CaretDownIcon } from "phosphor-react-native/src/icons/CaretDown";
 export { CaretRightIcon } from "phosphor-react-native/src/icons/CaretRight";

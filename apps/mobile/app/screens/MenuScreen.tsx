@@ -29,6 +29,8 @@ import {
   type CatalogFilters,
 } from "@/features/catalog/domain/catalog-view";
 import { canOfferUnpack, tracksStock, withLivePackStock, type CatalogProduct } from "@/features/catalog/domain/product";
+import { VariantSheet } from "@/components/pos/VariantSheet";
+import { groupVariants, type CatalogMenuItem } from "@/features/catalog/domain/variants";
 import { useImageUris } from "@/hooks/useImageUris";
 import { useLayout } from "@/hooks/useBreakpoint";
 import { useOnline } from "@/hooks/useOnline";
@@ -55,11 +57,16 @@ export default function MenuScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const products = useMemo(() => withLivePackStock(container.repositories.catalog.listSellable()), [container, catalogVersion, salesVersion]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const variantParents = useMemo(() => container.repositories.catalog.listVariantParents(), [container, catalogVersion]);
+
   const [filters, setFilters] = useState<CatalogFilters>(() => defaultFilters(prefs.lang));
   const [page, setPage] = useState(1);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [pulling, setPulling] = useState(false);
   const [pullError, setPullError] = useState<string | null>(null);
+  const [variantTarget, setVariantTarget] = useState<{ parent: CatalogProduct; variants: CatalogProduct[] } | null>(null);
+  const [variantOpen, setVariantOpen] = useState(false);
   const [unpackTarget, setUnpackTarget] = useState<CatalogProduct | null>(null);
   const [unpackBusy, setUnpackBusy] = useState(false);
   const [unpackError, setUnpackError] = useState<string | null>(null);
@@ -68,7 +75,9 @@ export default function MenuScreen() {
   const effective = { ...filters, lang };
   const categories = useMemo(() => categoriesOf(products, lang), [products, lang]);
   const visible = useMemo(() => filterAndSort(products, effective), [products, filters, lang]); // eslint-disable-line react-hooks/exhaustive-deps
-  const { rows, page: safePage, totalPages } = paginate(visible, page);
+  // Variants are separate catalog rows; the menu shows one card per product and picks the variant in a sheet.
+  const menuItems = useMemo(() => groupVariants(visible, variantParents), [visible, variantParents]);
+  const { rows, page: safePage, totalPages } = paginate(menuItems, page);
   const qtyById = useMemo(() => new Map(lines.map((l) => [l.productId, l.qty])), [lines]);
   const view = prefs.catalogView;
   const cols = view === "grid" ? Math.max(2, Math.floor((gridWidth + GRID_GAP) / (MIN_TILE + GRID_GAP))) : 1;
@@ -94,6 +103,19 @@ export default function MenuScreen() {
       setPulling(false);
     }
   }
+
+  const onPressGroup = useCallback((item: Extract<CatalogMenuItem, { kind: "group" }>) => {
+    setVariantTarget({ parent: item.parent, variants: item.variants });
+    setVariantOpen(true);
+  }, []);
+
+  const onPickVariant = useCallback(
+    (variant: CatalogProduct) => {
+      container.cart.getState().add(variant);
+      setVariantOpen(false);
+    },
+    [container],
+  );
 
   const onPressProduct = useCallback(
     (p: CatalogProduct) => {
@@ -197,24 +219,50 @@ export default function MenuScreen() {
               key={`${view}-${cols}`}
               data={rows}
               numColumns={cols}
-              keyExtractor={(p) => p.productId}
+              keyExtractor={(item) => (item.kind === "group" ? item.parent.productId : item.product.productId)}
               columnWrapperStyle={cols > 1 ? { gap: GRID_GAP } : undefined}
               contentContainerStyle={{ padding: 12, gap: GRID_GAP }}
               keyboardShouldPersistTaps="handled"
               initialNumToRender={12}
               windowSize={7}
-              renderItem={({ item }) => (
-                <View style={cols > 1 ? styles.cell : undefined}>
-                  <ProductCard
-                    product={item}
-                    view={view}
-                    selectedQty={qtyById.get(item.productId) ?? 0}
-                    imageUri={imageUris.get(item.productId)}
-                    unpackable={canOfferUnpack(item, online, products) && tracksStock(item) && item.stockQty <= 0}
-                    onPress={onPressProduct}
-                  />
-                </View>
-              )}
+              renderItem={({ item }) => {
+                if (item.kind === "group") {
+                  const card: CatalogProduct = {
+                    ...item.parent,
+                    priceMinor: item.minPriceMinor,
+                    stockQty: item.totalStockQty ?? 0,
+                    trackStock: item.totalStockQty !== null,
+                  };
+                  const selectedQty = item.variants.reduce((n, v) => n + (qtyById.get(v.productId) ?? 0), 0);
+                  return (
+                    <View style={cols > 1 ? styles.cell : undefined}>
+                      <ProductCard
+                        product={card}
+                        view={view}
+                        selectedQty={selectedQty}
+                        imageUri={imageUris.get(item.parent.productId)}
+                        unpackable={false}
+                        variantCount={item.variants.length}
+                        priceFrom={item.minPriceMinor !== item.maxPriceMinor}
+                        onPress={() => onPressGroup(item)}
+                      />
+                    </View>
+                  );
+                }
+                const p = item.product;
+                return (
+                  <View style={cols > 1 ? styles.cell : undefined}>
+                    <ProductCard
+                      product={p}
+                      view={view}
+                      selectedQty={qtyById.get(p.productId) ?? 0}
+                      imageUri={imageUris.get(p.productId)}
+                      unpackable={canOfferUnpack(p, online, products) && tracksStock(p) && p.stockQty <= 0}
+                      onPress={onPressProduct}
+                    />
+                  </View>
+                );
+              }}
               ListFooterComponent={
                 totalPages > 1 ? (
                   <View style={[styles.pager, { borderTopColor: colors.border }]}>
@@ -236,6 +284,14 @@ export default function MenuScreen() {
         categories={categories}
         onChange={patch}
         onClear={() => patch({ category: "", stock: "all", sort: "name-asc" })}
+      />
+      <VariantSheet
+        open={variantOpen}
+        parent={variantTarget?.parent ?? null}
+        variants={variantTarget?.variants ?? []}
+        quantities={qtyById}
+        onPick={onPickVariant}
+        onClose={() => setVariantOpen(false)}
       />
       <UnpackDialog
         product={unpackTarget}

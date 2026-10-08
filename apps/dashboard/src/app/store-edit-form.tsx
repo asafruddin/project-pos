@@ -9,13 +9,19 @@ import {
   FormBody,
   formPageClassName,
 } from "@pos-apps/ui/organisms";
-import { Input, Skeleton } from "@pos-apps/ui/atoms";
+import { Button, Input, Skeleton } from "@pos-apps/ui/atoms";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ApiErrorBody, StoreRecord } from "@pos-apps/types";
+import type { ApiErrorBody, QueueResetMode, StoreRecord } from "@pos-apps/types";
 import { storeLogoFilePath } from "@pos-apps/types";
 import { authorizedFetch } from "@/lib/api-client";
 import { useAuthorizedImage } from "@/lib/use-authorized-image";
+
+const QUEUE_MODES: Array<{ value: QueueResetMode; label: string; hint: string }> = [
+  { value: "daily", label: "Harian", hint: "Mulai dari 1 setiap hari baru." },
+  { value: "shift", label: "Per shift", hint: "Mulai dari 1 setiap shift dibuka." },
+  { value: "manual", label: "Manual", hint: "Lanjut terus sampai Anda menekan Reset sekarang." },
+];
 
 function errorMessage(res: Response, body: unknown): string {
   return (body as ApiErrorBody)?.message ?? `Gagal (${res.status})`;
@@ -31,6 +37,9 @@ export function StoreEditForm({
   const router = useRouter();
   const [name, setName] = useState("");
   const [hasLogo, setHasLogo] = useState(false);
+  const [queueMode, setQueueMode] = useState<QueueResetMode>("daily");
+  const [queueResetAt, setQueueResetAt] = useState<string | null>(null);
+  const [queueMessage, setQueueMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -59,6 +68,8 @@ export function StoreEditForm({
       const store = data as StoreRecord;
       setName(store.name);
       setHasLogo(Boolean(store.logo_public_id || store.logo_secure_url));
+      setQueueMode(store.queue_reset_mode ?? "daily");
+      setQueueResetAt(store.queue_reset_at ?? null);
       setMissing(false);
       setError(null);
     } catch {
@@ -111,6 +122,32 @@ export function StoreEditForm({
     }
   }
 
+  async function onResetQueue() {
+    if (!canEdit || pending) return;
+    if (!window.confirm("Reset antrian sekarang? Nomor berikutnya di semua perangkat mulai dari 1.")) {
+      return;
+    }
+    setPending(true);
+    setError(null);
+    setQueueMessage(null);
+    try {
+      const res = await authorizedFetch(`/stores/${storeId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ queue_reset_now: true }),
+      });
+      const data = (await res.json().catch(() => ({}))) as StoreRecord | ApiErrorBody;
+      if (!res.ok) {
+        setError(errorMessage(res, data));
+        return;
+      }
+      setQueueResetAt((data as StoreRecord).queue_reset_at ?? null);
+      setQueueMessage("Antrian direset. Perangkat menerima ini saat tersambung berikutnya.");
+    } finally {
+      setPending(false);
+    }
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (!canEdit || pending) return;
@@ -120,7 +157,7 @@ export function StoreEditForm({
       const res = await authorizedFetch(`/stores/${storeId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, queue_reset_mode: queueMode }),
       });
       if (!res.ok) {
         setError(errorMessage(res, await res.json().catch(() => ({}))));
@@ -172,6 +209,42 @@ export function StoreEditForm({
               className={formInputClass}
             />
           </FormField>
+        </FormSection>
+        <FormSection
+          title="Antrian"
+          description="Nomor antrian tampil di struk dan daftar transaksi. Dihitung per perangkat kasir."
+        >
+          <div className="grid gap-2 sm:grid-cols-3">
+            {QUEUE_MODES.map((mode) => (
+              <Button
+                key={mode.value}
+                type="button"
+                variant={queueMode === mode.value ? "default" : "secondary"}
+                disabled={pending}
+                onClick={() => setQueueMode(mode.value)}
+              >
+                {mode.label}
+              </Button>
+            ))}
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {QUEUE_MODES.find((m) => m.value === queueMode)?.hint} Simpan untuk menerapkan pilihan ini.
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="button" variant="outline" disabled={pending} onClick={() => void onResetQueue()}>
+              Reset sekarang
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              {queueResetAt
+                ? `Terakhir direset ${new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" }).format(new Date(queueResetAt))}`
+                : "Belum pernah direset manual."}
+            </span>
+          </div>
+          {queueMessage ? (
+            <p className="text-sm text-muted-foreground" role="status">
+              {queueMessage}
+            </p>
+          ) : null}
         </FormSection>
         <FormSection
           title="Gambar"

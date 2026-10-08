@@ -264,6 +264,14 @@ function SaleReceiptCopy({
         {sale.voidedAt ? (
           <p className="mt-1 text-xs font-semibold uppercase">{t.voided}</p>
         ) : null}
+        {sale.queueNumber ? (
+          <p className="mt-2 text-xs uppercase tracking-[0.14em] text-muted-foreground">
+            {t.receiptQueue}
+            <span className="block text-3xl font-bold tracking-normal text-foreground">
+              #{sale.queueNumber}
+            </span>
+          </p>
+        ) : null}
         <p className="mt-1 text-xs">
           {walkIn ? t.txWalkIn : customerName}
         </p>

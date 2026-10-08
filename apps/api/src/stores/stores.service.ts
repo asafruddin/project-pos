@@ -43,6 +43,8 @@ function toStore(row: typeof stores.$inferSelect): StoreRecord {
     created_at: row.createdAt.toISOString(),
     logo_public_id: row.logoPublicId ?? null,
     logo_secure_url: row.logoSecureUrl ?? null,
+    queue_reset_mode: row.queueResetMode ?? "daily",
+    queue_reset_at: row.queueResetAt ? row.queueResetAt.toISOString() : null,
   };
 }
 
@@ -138,16 +140,32 @@ export class StoresService {
     input: UpdateStoreRequest,
   ): Promise<StoreRecord> {
     await this.requireStoreRow(storeId);
-    const name = input.name.trim();
-    if (!name) {
+    const patch: Partial<typeof stores.$inferInsert> = {};
+    if (input.name !== undefined) {
+      const name = input.name.trim();
+      if (!name) {
+        throw new BadRequestException({
+          code: "STORE_INVALID",
+          message: "Nama toko wajib diisi.",
+        });
+      }
+      patch.name = name;
+    }
+    if (input.queue_reset_mode !== undefined) {
+      patch.queueResetMode = input.queue_reset_mode;
+    }
+    if (input.queue_reset_now) {
+      patch.queueResetAt = new Date();
+    }
+    if (Object.keys(patch).length === 0) {
       throw new BadRequestException({
         code: "STORE_INVALID",
-        message: "Nama toko wajib diisi.",
+        message: "Tidak ada perubahan yang dikirim.",
       });
     }
     const [row] = await getDb()
       .update(stores)
-      .set({ name })
+      .set(patch)
       .where(eq(stores.storeId, storeId))
       .returning();
     if (!row) {

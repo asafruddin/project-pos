@@ -24,7 +24,7 @@ export const copyID = {
   printerNone: "Belum ada printer Bluetooth tersimpan di perangkat ini.",
   printerReady: "Printer tersimpan: {name}",
   printerTest: "Cetak uji",
-  printerHint: "Buka halaman ini di Google Chrome (desktop atau Android), bukan pratinjau di editor. Chrome menampilkan daftar perangkat — tidak ada popup “Izinkan Bluetooth” terpisah. Printer harus BLE ESC/POS (58mm). iOS memakai dialog cetak sistem.",
+  printerHint: "Cari, hubungkan, dan kirim cetak uji ke printer Bluetooth ESC/POS 58mm.",
   printerPrinting: "Mencetak…",
   printerTestOk: "Cetak uji terkirim.",
   printerTestFail: "Cetak uji gagal. Periksa printer lalu coba lagi.",

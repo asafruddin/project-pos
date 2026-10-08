@@ -39,6 +39,9 @@ const productRow = {
   maxQty: null,
   trackStock: true,
   parentId: null,
+  variantLabel: null,
+  variantGroups: [] as string[],
+  variantValues: [] as string[],
   categoryId: null,
   brandId: null,
   unitId: null,
@@ -240,6 +243,65 @@ describe("CatalogService", () => {
         parent_id: "22222222-2222-4222-8222-222222222222",
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it("create persists variant label and group", async () => {
+    const values = jest.fn().mockReturnValue({
+      returning: async () => [
+        { ...productRow, variantLabel: "L", variantGroups: ["Size"], variantValues: ["L"] },
+      ],
+    });
+    getDbMock.mockReturnValue({
+      transaction: async (fn: (tx: unknown) => Promise<unknown>) =>
+        fn({ insert: () => ({ values }) }),
+    } as never);
+    const created = await service.create({
+      name: "Latte",
+      price_minor: 25000,
+      stock_qty: 0,
+      variant_label: " L ",
+      variant_groups: ["Size"],
+      variant_values: [" L "],
+    });
+    expect(values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variantLabel: "L",
+        variantGroups: ["Size"],
+        variantValues: ["L"],
+      }),
+    );
+    expect(created.variant_label).toBe("L");
+    expect(created.variant_groups).toEqual(["Size"]);
+    expect(created.variant_values).toEqual(["L"]);
+  });
+
+  it("duplicate variant label under one parent → CATALOG_VARIANT_LABEL_CONFLICT", async () => {
+    getDbMock.mockReturnValue({
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            limit: async () => [{ productId: productRow.productId }],
+          }),
+        }),
+      }),
+      transaction: async () => {
+        throw {
+          code: "23505",
+          constraint: "products_parent_variant_label_unique",
+        };
+      },
+    } as never);
+    await expect(
+      service.create({
+        name: "Latte",
+        price_minor: 25000,
+        stock_qty: 0,
+        parent_id: productRow.productId,
+        variant_label: "L",
+      }),
+    ).rejects.toMatchObject({
+      response: { code: "CATALOG_VARIANT_LABEL_CONFLICT" },
+    });
   });
 
   it("update self parent_id → CATALOG_INVALID_PARENT", async () => {

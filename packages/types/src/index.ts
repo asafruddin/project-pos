@@ -48,6 +48,15 @@ export type LoginRequest = {
   password: string;
 };
 
+export type QueueResetMode = "daily" | "shift" | "manual";
+
+/** Store-wide receipt queue settings, cached by each device. */
+export type QueueSettings = {
+  queue_reset_mode: QueueResetMode;
+  /** ISO time of the last manual reset, or null. */
+  queue_reset_at: string | null;
+};
+
 export type LoginResponse = {
   access_token: string;
   token_type: "Bearer";
@@ -58,7 +67,7 @@ export type LoginResponse = {
   store_name: string;
   store_logo_url: string | null;
   register_id: string | null;
-};
+} & QueueSettings;
 
 export type AuthMeResponse = {
   user_id: string;
@@ -69,7 +78,7 @@ export type AuthMeResponse = {
   store_logo_url: string | null;
   register_id: string | null;
   active: boolean;
-};
+} & QueueSettings;
 
 export type UserAccount = {
   user_id: string;
@@ -252,6 +261,12 @@ export type Product = {
   max_qty?: number | null;
   track_stock: boolean;
   parent_id?: string | null;
+  /** Child variant option value, e.g. "L" or "Hot". */
+  variant_label?: string | null;
+  /** Child: value per parent axis, e.g. ["Large", "Hot"]. */
+  variant_values?: string[];
+  /** Parent: variant type names in axis order, e.g. ["Size", "Temperature"]. */
+  variant_groups?: string[];
   category_id?: string | null;
   category_name?: string | null;
   brand_id?: string | null;
@@ -281,6 +296,9 @@ export type CreateProductRequest = {
   max_qty?: number | null;
   track_stock?: boolean;
   parent_id?: string | null;
+  variant_label?: string | null;
+  variant_values?: string[];
+  variant_groups?: string[];
   category_name?: string | null;
   brand_name?: string | null;
   unit_name?: string | null;
@@ -300,6 +318,9 @@ export type UpdateProductRequest = {
   max_qty?: number | null;
   track_stock?: boolean;
   parent_id?: string | null;
+  variant_label?: string | null;
+  variant_values?: string[];
+  variant_groups?: string[];
   category_name?: string | null;
   brand_name?: string | null;
   unit_name?: string | null;
@@ -456,6 +477,28 @@ export type UpdateCategoryRequest = {
   name: string;
 };
 
+export type VariantGroupRecord = {
+  variant_group_id: string;
+  store_id: string;
+  name: string;
+  options: string[];
+  created_at: string;
+};
+
+export type VariantGroupListResponse = {
+  variant_groups: VariantGroupRecord[];
+};
+
+export type CreateVariantGroupRequest = {
+  name: string;
+  options: string[];
+};
+
+export type UpdateVariantGroupRequest = {
+  name: string;
+  options: string[];
+};
+
 export type UnitRecord = {
   unit_id: string;
   store_id: string;
@@ -529,6 +572,8 @@ export type StoreRecord = {
   created_at: string;
   logo_public_id: string | null;
   logo_secure_url: string | null;
+  queue_reset_mode: QueueResetMode;
+  queue_reset_at: string | null;
 };
 
 /** Authenticated byte-proxy path for a store logo (not a Cloudinary URL). */
@@ -570,7 +615,10 @@ export type CreatePlatformStoreResponse = {
 };
 
 export type UpdateStoreRequest = {
-  name: string;
+  name?: string;
+  queue_reset_mode?: QueueResetMode;
+  /** Restart every device's queue from now. */
+  queue_reset_now?: boolean;
 };
 
 export type CreateRegisterRequest = {
@@ -818,6 +866,9 @@ export type SalesListItem = {
   amount_minor: number;
   voided_at?: string | null;
   payment: SalePayment;
+  guest_name?: string | null;
+  /** Receipt queue number from the device (positive integer). */
+  queue_number?: number | null;
 };
 
 export type SalesListResponse = {
@@ -857,6 +908,8 @@ export type SyncSaleRequest = {
   customer_id?: string | null;
   /** Receipt-only guest name. Not a customer profile. */
   guest_name?: string | null;
+  /** Receipt queue number from the device (positive integer). */
+  queue_number?: number | null;
   /** Required after 2C (AD-16 / FR-75). */
   shift_id?: string | null;
   /** Optional Loyalty redeem snapshot. Earn is computed on the server after Sync. */

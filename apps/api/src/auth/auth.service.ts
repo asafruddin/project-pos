@@ -6,7 +6,7 @@ import {
 import { JwtService } from "@nestjs/jwt";
 import { compare } from "bcryptjs";
 import { eq } from "drizzle-orm";
-import type { AuthMeResponse, LoginResponse } from "@pos-apps/types";
+import type { AuthMeResponse, LoginResponse, QueueSettings } from "@pos-apps/types";
 import { JWT_AUD_STORE, STORE_1_ID, storeLogoFilePath } from "@pos-apps/types";
 import { getDb } from "../db/client";
 import { stores, users } from "../db/schema";
@@ -27,7 +27,7 @@ const DUMMY_PASSWORD_HASH =
 type StoreIdentity = {
   store_name: string;
   store_logo_url: string | null;
-};
+} & QueueSettings;
 
 @Injectable()
 export class AuthService {
@@ -83,6 +83,8 @@ export class AuthService {
       store_name: store.store_name,
       store_logo_url: store.store_logo_url,
       register_id: registerId,
+      queue_reset_mode: store.queue_reset_mode,
+      queue_reset_at: store.queue_reset_at,
     };
   }
 
@@ -111,6 +113,8 @@ export class AuthService {
       store_name: store.store_name,
       store_logo_url: store.store_logo_url,
       register_id: registerId,
+      queue_reset_mode: store.queue_reset_mode,
+      queue_reset_at: store.queue_reset_at,
       active: user.active,
     };
   }
@@ -120,6 +124,8 @@ export class AuthService {
       .select({
         name: stores.name,
         logoPublicId: stores.logoPublicId,
+        queueResetMode: stores.queueResetMode,
+        queueResetAt: stores.queueResetAt,
       })
       .from(stores)
       .where(eq(stores.storeId, storeId))
@@ -130,6 +136,8 @@ export class AuthService {
       store_logo_url: store?.logoPublicId
         ? `${storeLogoFilePath(storeId)}?v=${encodeURIComponent(store.logoPublicId)}`
         : null,
+      queue_reset_mode: store?.queueResetMode ?? "daily",
+      queue_reset_at: store?.queueResetAt ? store.queueResetAt.toISOString() : null,
     };
   }
 }

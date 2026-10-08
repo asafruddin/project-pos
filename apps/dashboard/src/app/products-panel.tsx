@@ -100,6 +100,17 @@ function StockBadge({ product }: { product: Product }) {
   );
 }
 
+function VariantChip({ count }: { count: number }) {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-muted-foreground">
+      <GitBranchIcon size={12} />
+      {count} varian
+    </span>
+  );
+}
+
+type VariantInfo = { count: number; min: number; max: number; searchText: string };
+
 function stockQtyLabel(product: Product): string {
   if (!product.track_stock) return "Tidak terbatas";
   return `${product.stock_qty} ${product.unit_name || "unit"}`;
@@ -137,6 +148,56 @@ export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
     void load();
   }, [load]);
 
+  // Variants are child products. The list shows one row per parent with a variant summary.
+  const { listProducts, variantInfo } = useMemo(() => {
+    const ids = new Set(products.map((p) => p.product_id));
+    const children = new Map<string, Product[]>();
+    for (const p of products) {
+      if (p.parent_id && ids.has(p.parent_id)) {
+        const list = children.get(p.parent_id) ?? [];
+        list.push(p);
+        children.set(p.parent_id, list);
+      }
+    }
+    const info = new Map<string, VariantInfo>();
+    const rows: Product[] = [];
+    for (const p of products) {
+      if (p.parent_id && ids.has(p.parent_id)) continue;
+      const kids = children.get(p.product_id);
+      if (!kids?.length) {
+        rows.push(p);
+        continue;
+      }
+      const active = kids.filter((k) => k.status === "active");
+      const basis = active.length ? active : kids;
+      const prices = basis.map((k) => k.price_minor);
+      info.set(p.product_id, {
+        count: kids.length,
+        min: Math.min(...prices),
+        max: Math.max(...prices),
+        searchText: kids
+          .flatMap((k) => [k.name, k.variant_label, k.sku, k.barcode])
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase(),
+      });
+      rows.push({
+        ...p,
+        price_minor: Math.min(...prices),
+        track_stock: basis.every((k) => k.track_stock),
+        stock_qty: basis.reduce((n, k) => n + (k.track_stock ? k.stock_qty : 0), 0),
+        min_qty: null,
+      });
+    }
+    return { listProducts: rows, variantInfo: info };
+  }, [products]);
+
+  function priceLabel(p: Product): string {
+    const info = variantInfo.get(p.product_id);
+    if (!info || info.min === info.max) return formatIdr(p.price_minor);
+    return `${formatIdr(info.min)} – ${formatIdr(info.max)}`;
+  }
+
   const categories = useMemo(
     () =>
       [
@@ -149,7 +210,7 @@ export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
 
   const visibleProducts = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    return products
+    return listProducts
       .filter((p) => {
         const haystack = [
           p.name,
@@ -172,7 +233,9 @@ export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
                 ? p.min_qty != null && p.stock_qty <= p.min_qty
                 : p.stock_qty > 0));
         return (
-          (!normalized || haystack.includes(normalized)) &&
+          (!normalized ||
+            haystack.includes(normalized) ||
+            (variantInfo.get(p.product_id)?.searchText.includes(normalized) ?? false)) &&
           (status === "all" || p.status === status) &&
           (category === "all" || p.category_name === category) &&
           matchesStock
@@ -189,7 +252,7 @@ export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
           return (b.created_at ?? "").localeCompare(a.created_at ?? "") || tie;
         return tie;
       });
-  }, [category, products, query, sort, status, stock]);
+  }, [category, listProducts, variantInfo, query, sort, status, stock]);
 
   const totalPages = Math.max(1, Math.ceil(visibleProducts.length / PAGE_SIZE));
   const pagedProducts = useMemo(() => {
@@ -209,7 +272,8 @@ export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
   function displayName(p: Product): string {
     if (!p.parent_id) return p.name;
     const parent = products.find((row) => row.product_id === p.parent_id);
-    return parent ? `${parent.name} · ${p.name}` : p.name;
+    if (!parent) return p.name;
+    return `${parent.name} · ${p.variant_label?.trim() || p.name}`;
   }
 
   function resetFilters() {
@@ -235,7 +299,7 @@ export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
           <p className="mt-1 text-sm text-muted-foreground">
             {loading
               ? "Memuat katalog…"
-              : `${visibleProducts.length} dari ${products.length} produk`}
+              : `${visibleProducts.length} dari ${listProducts.length} produk`}
           </p>
         </div>
         {canMutate ? (
@@ -437,13 +501,14 @@ export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
                         <p className="line-clamp-2 font-semibold leading-snug text-foreground">
                           {displayName(p)}
                         </p>
+                        {variantInfo.get(p.product_id) ? <VariantChip count={variantInfo.get(p.product_id)!.count} /> : null}
                         <StatusBadge status={p.status} />
                       </div>
                       <p className="mt-1.5 truncate text-xs text-muted-foreground">
                         {p.category_name || "Tanpa kategori"} · {p.sku || "Tanpa SKU"}
                       </p>
                       <p className="mt-3 text-base font-semibold text-foreground">
-                        {formatIdr(p.price_minor)}
+                        {priceLabel(p)}
                       </p>
                     </div>
                   </div>
@@ -467,7 +532,7 @@ export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
                         Ubah
                       </Link>
                       <Link
-                        href={`/products/new?parentId=${p.product_id}`}
+                        href={`/products/${p.parent_id ?? p.product_id}/edit#variant-matrix`}
                         scroll={false}
                         className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md border border-border px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                       >
@@ -494,6 +559,7 @@ export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
                           <p className="line-clamp-2 font-semibold leading-snug text-foreground">
                             {displayName(p)}
                           </p>
+                          {variantInfo.get(p.product_id) ? <VariantChip count={variantInfo.get(p.product_id)!.count} /> : null}
                           <StatusBadge status={p.status} />
                         </div>
                         <p className="mt-1 truncate text-xs text-muted-foreground">
@@ -505,7 +571,7 @@ export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
                     <div className="mt-4 flex items-end justify-between gap-3">
                       <div>
                         <p className="text-base font-semibold text-foreground">
-                          {formatIdr(p.price_minor)}
+                          {priceLabel(p)}
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground">
                           {p.track_stock
@@ -526,7 +592,7 @@ export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
                           Ubah
                         </Link>
                         <Link
-                          href={`/products/new?parentId=${p.product_id}`}
+                          href={`/products/${p.parent_id ?? p.product_id}/edit#variant-matrix`}
                           scroll={false}
                           className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md border border-border px-3 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                         >
@@ -562,7 +628,10 @@ export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
                             <div className="flex items-center gap-3">
                               <ProductImage product={p} />
                               <div>
-                                <p className="truncate font-semibold text-foreground">{displayName(p)}</p>
+                                <div className="flex min-w-0 items-center gap-2">
+                                  <p className="truncate font-semibold text-foreground">{displayName(p)}</p>
+                                  {variantInfo.get(p.product_id) ? <VariantChip count={variantInfo.get(p.product_id)!.count} /> : null}
+                                </div>
                                 <p className="mt-0.5 text-xs text-muted-foreground">
                                   {p.brand_name || "Tanpa merek"}
                                 </p>
@@ -582,7 +651,7 @@ export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
                             <StatusBadge status={p.status} />
                           </td>
                           <td className="px-4 py-3.5 font-semibold text-foreground">
-                            {formatIdr(p.price_minor)}
+                            {priceLabel(p)}
                           </td>
                           <td className="px-4 py-3.5">
                             <div className="flex flex-col items-start gap-1.5">
@@ -604,7 +673,7 @@ export function ProductsPanel({ canMutate }: { canMutate: boolean }) {
                                   Ubah
                                 </Link>
                                 <Link
-                                  href={`/products/new?parentId=${p.product_id}`}
+                                  href={`/products/${p.parent_id ?? p.product_id}/edit#variant-matrix`}
                                   scroll={false}
                                   className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                                 >

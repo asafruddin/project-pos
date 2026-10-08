@@ -8,6 +8,8 @@ import { CategoriesController } from "./categories.controller";
 import { CategoriesService } from "./categories.service";
 import { UnitsController } from "./units.controller";
 import { UnitsService } from "./units.service";
+import { VariantsController } from "./variants.controller";
+import { VariantsService } from "./variants.service";
 
 @Module({
   imports: [AuthModule, MediaModule],
@@ -16,8 +18,9 @@ import { UnitsService } from "./units.service";
     CatalogController,
     CategoriesController,
     UnitsController,
+    VariantsController,
   ],
-  providers: [CatalogService, CategoriesService, UnitsService],
-  exports: [CatalogService, CategoriesService, UnitsService],
+  providers: [CatalogService, CategoriesService, UnitsService, VariantsService],
+  exports: [CatalogService, CategoriesService, UnitsService, VariantsService],
 })
 export class CatalogModule {}

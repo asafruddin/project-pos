@@ -54,6 +54,11 @@ function encodeCustomerCopy(
   builder.text(formatSaleTime(sale.completedAt ?? sale.createdAt, input.lang));
   builder.text(shortSaleId(sale.saleId));
   if (sale.voidedAt) builder.text(t.voided);
+  if (sale.queueNumber) {
+    builder.bold(true);
+    builder.text(`${t.receiptQueue} #${sale.queueNumber}`);
+    builder.bold(false);
+  }
   builder.text(input.customerName?.trim() || t.txWalkIn);
   builder.align("left").separator();
 

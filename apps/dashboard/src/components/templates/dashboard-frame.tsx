@@ -7,7 +7,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { Button } from "@pos-apps/ui/atoms";
 import type { AuthMeResponse, StoreRecord } from "@pos-apps/types";
 import { storeLogoFilePath } from "@pos-apps/types";
 import { DashboardShell } from "@/components/templates/dashboard-shell";
@@ -36,10 +37,11 @@ export function useDashboardSession(): AuthMeResponse {
  */
 export function DashboardFrame({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
   const isLogin = pathname === "/login";
   const [ready, setReady] = useState(isLogin);
   const [me, setMe] = useState<AuthMeResponse | null>(null);
+  const [unreachable, setUnreachable] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [affiliatedStore, setAffiliatedStore] = useState<StoreRecord | null>(
     null,
   );
@@ -69,6 +71,7 @@ export function DashboardFrame({ children }: { children: ReactNode }) {
           return;
         }
         setMe((await res.json()) as AuthMeResponse);
+        setUnreachable(false);
         setReady(true);
       } catch (err) {
         if (cancelled) return;
@@ -79,15 +82,17 @@ export function DashboardFrame({ children }: { children: ReactNode }) {
         ) {
           return;
         }
+        // Network/API down: keep the session. Redirecting to /login here would
+        // bounce straight back (login redirects when a valid token exists) and loop.
+        setUnreachable(true);
         setReady(true);
-        router.replace("/login");
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [isLogin, router, pathname]);
+  }, [isLogin, pathname, attempt]);
 
   useEffect(() => {
     if (isLogin || !me?.store_id) {
@@ -119,6 +124,27 @@ export function DashboardFrame({ children }: { children: ReactNode }) {
 
   if (isLogin) {
     return children;
+  }
+
+  if (unreachable && !me) {
+    return (
+      <div className="flex min-h-svh flex-col items-center justify-center gap-3 p-6 text-center">
+        <p className="font-medium">Server tidak dapat dihubungi.</p>
+        <p className="text-sm text-muted-foreground">
+          Pastikan API berjalan, lalu coba lagi.
+        </p>
+        <Button
+          type="button"
+          onClick={() => {
+            setUnreachable(false);
+            setReady(false);
+            setAttempt((n) => n + 1);
+          }}
+        >
+          Coba lagi
+        </Button>
+      </div>
+    );
   }
 
   if (!ready || !me) {

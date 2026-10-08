@@ -9,6 +9,7 @@ import { config } from "@/config";
 import { ApiAuthGateway } from "@/features/auth/data/api-auth-gateway";
 import { SecureSessionStore } from "@/features/auth/data/secure-session-store";
 import { resolveGate, type Gate } from "@/features/auth/domain/gate";
+import { KvQueueSettingsStore } from "@/features/queue/data/kv-queue-settings-store";
 import { LoginUseCase, RefreshIdentityUseCase } from "@/features/auth/domain/use-cases";
 import type { Session } from "@/features/auth/domain/session";
 import { createCartStore, type CartStore } from "@/features/cart/presentation/cart-store";
@@ -38,6 +39,7 @@ import { DrizzlePrintJobRepository } from "@/features/receipt/data/drizzle-print
 import { PrintQueue } from "@/features/receipt/domain/print-queue";
 import { PrintReceiptUseCase } from "@/features/receipt/domain/print-receipt";
 import type { Printer } from "@/features/receipt/domain/printer";
+import { queueNumberForDay } from "@/features/receipt/domain/receipt-encoder";
 import { createPreferencesStore, type PreferencesStore } from "@/features/settings/domain/preferences";
 import { ApiShiftRemote } from "@/features/shift/data/api-shift-remote";
 import { DrizzleShiftRepository } from "@/features/shift/data/drizzle-shift-repository";
@@ -49,7 +51,7 @@ import { DrizzleKvStore } from "@/infrastructure/db/kv-store";
 import type { AppDb } from "@/infrastructure/db/types";
 import { FetchHttpClient } from "@/infrastructure/http/fetch-http-client";
 import { isJwtExpired } from "@/infrastructure/http/jwt";
-import { StubPrinter } from "@/infrastructure/printer/stub-printer";
+import { createDefaultPrinter } from "@/infrastructure/printer/create-printer";
 import { ExpoFileStore } from "@/infrastructure/storage/expo-file-store";
 import type { AppStateSource } from "@/infrastructure/sync/app-state-source";
 import { OutboxRepository } from "@/infrastructure/sync/outbox";
@@ -107,6 +109,7 @@ export function createContainer(deps: ContainerDeps) {
   const kv = new DrizzleKvStore(db);
   const outbox = new OutboxRepository(db);
   const sessions = new SecureSessionStore(kv);
+  const queueSettings = new KvQueueSettingsStore(kv);
   const catalog = new DrizzleCatalogRepository(db, kv);
   const images = new DrizzleImageRepository(db);
   const shifts = new DrizzleShiftRepository(db, outbox, clock, ids);
@@ -201,7 +204,7 @@ export function createContainer(deps: ContainerDeps) {
   const apiCustomers = new ApiCustomerRemote(http);
   const apiPromotions = new ApiPromotionRemote(http);
 
-  const identity = new RefreshIdentityUseCase(new ApiAuthGateway(http), sessions);
+  const identity = new RefreshIdentityUseCase(new ApiAuthGateway(http), sessions, queueSettings);
   const identityTask: PullTask = {
     name: "identity",
     minIntervalMs: 60_000,
@@ -245,20 +248,20 @@ export function createContainer(deps: ContainerDeps) {
   };
 
   // --- printing
-  const printer: Printer = deps.printer ?? new StubPrinter();
+  const printer: Printer = deps.printer ?? createDefaultPrinter(kv, deps.appState);
   const printQueue = new PrintQueue(printJobs, printer, clock, ids);
 
   // --- PIN
   const pins = new PinService(new SecurePinMaterialStore(kv), new NoblePinHasher((n) => Crypto.getRandomBytes(n)), new KvLockoutStore(kv), clock);
 
   // --- use cases
-  const login = new LoginUseCase(new ApiAuthGateway(http), sessions);
+  const login = new LoginUseCase(new ApiAuthGateway(http), sessions, queueSettings);
   const openShift = new OpenShiftUseCase(shifts, clock, ids, () => sessions.current(), onShiftQueued);
   const recordCash = new RecordCashMovementUseCase(shifts, clock, ids, onShiftQueued);
   const shiftSummary = new ShiftSummaryUseCase(shifts, sales, new ApiShiftRemote(http), online);
   const closeShift = new CloseShiftUseCase(shifts, shiftSummary, clock, onShiftQueued);
   const dayClose = new DayCloseSummaryUseCase(sales, shifts);
-  const completeSale = new CompleteSaleUseCase(sales, shifts, promotions, apiPromotions, pins, clock, ids, deviceId, online, onSaleQueued);
+  const completeSale = new CompleteSaleUseCase(sales, shifts, promotions, apiPromotions, pins, clock, ids, deviceId, online, onSaleQueued, queueSettings);
   const voidSale = new VoidSaleUseCase(
     sales,
     pins,
@@ -272,9 +275,11 @@ export function createContainer(deps: ContainerDeps) {
   const unpack = new UnpackUseCase(apiCatalog, catalog, online);
   const printReceipt = new PrintReceiptUseCase(
     printQueue,
+    printer,
     () => sessions.current()?.storeName ?? "POS",
     () => ({
       customerCopy: t("receiptCustomerCopy"),
+      kitchenCopy: t("kitchenCopy"),
       walkIn: t("txWalkIn"),
       voided: t("voided"),
       total: t("total"),
@@ -285,10 +290,13 @@ export function createContainer(deps: ContainerDeps) {
       voucher: t("voucher"),
       managerDiscount: t("managerDiscount"),
       thanks: t("receiptThanks"),
+      queue: t("receiptQueue"),
+      guest: t("receiptGuest"),
     }),
     () => new Date(clock.nowMs()).toLocaleString(localeFor(getLanguage())),
     () => localeFor(getLanguage()),
     () => getLanguage(),
+    (sale) => sale.queueNumber ?? queueNumberForDay(sale.saleId, sales.listForLocalDay(new Date(sale.completedAt))),
   );
 
   const cart: CartStore = createCartStore();
@@ -340,6 +348,7 @@ export function createContainer(deps: ContainerDeps) {
     clock,
     db,
     repositories: { catalog, images, shifts, sales, outbox, customers: customersRepo, parked, promotions },
+    queueSettings,
     /** Manual "pull catalog" button: refresh now and drop cart lines that are no longer sellable. */
     async pullCatalogNow(): Promise<void> {
       await catalogTask.run();
@@ -396,6 +405,7 @@ export function createContainer(deps: ContainerDeps) {
       scheduler.start();
       tokenTimer ??= setInterval(checkTokenExpiry, 30_000);
       if (needsReauth) syncStatus.setState({ phase: "auth_required" });
+      if (sessions.current()) printer.keepAlive(true);
       void refreshLogo();
     },
 
@@ -407,6 +417,7 @@ export function createContainer(deps: ContainerDeps) {
       tokenTimer = null;
       scheduler.stop();
       printQueue.stop();
+      printer.keepAlive(false);
     },
 
     /** Account login (also the reauth path: same user returns straight to the till). */
@@ -416,6 +427,7 @@ export function createContainer(deps: ContainerDeps) {
       const sameUser = previous.reauth && previous.session?.userId === session.userId && previous.pinUnlocked;
       auth.setState({ reauth: false, reauthOpen: false, pinUnlocked: sameUser ? true : false, shiftIntent: null });
       recomputeGate();
+      if (sameUser) printer.keepAlive(true);
       void refreshLogo();
       void scheduler.syncNow("login");
       return session;
@@ -436,6 +448,7 @@ export function createContainer(deps: ContainerDeps) {
       const leftOver = shifts.getOpen() !== null;
       auth.setState({ pinUnlocked: true, shiftIntent: leftOver ? "close-then-open" : null });
       recomputeGate();
+      printer.keepAlive(true);
       // Sync is gated on the till being open, so nothing has run since the app started: catch up now.
       void scheduler.syncNow("login");
     },
@@ -456,6 +469,7 @@ export function createContainer(deps: ContainerDeps) {
 
     /** Day close / sign out: forget account + PIN unlock; keep sales, outbox and PIN material. */
     async endAccountSession(): Promise<void> {
+      printer.keepAlive(false);
       await sessions.clear();
       cart.getState().clear();
       endSessionState();

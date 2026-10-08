@@ -13,6 +13,7 @@ export const sales = sqliteTable(
     tendersJson: text("tenders_json"),
     customerId: text("customer_id"),
     guestName: text("guest_name"),
+    queueNumber: integer("queue_number"),
     shiftId: text("shift_id"),
     /** JSON: coupon/voucher/manager discount snapshot (see `SalePromotions`). */
     promotionsJson: text("promotions_json"),

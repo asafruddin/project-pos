@@ -51,6 +51,94 @@ export async function listCatalogProducts(): Promise<CatalogProductRecord[]> {
   return enriched.sort((a, b) => a.name.localeCompare(b.name, "id"));
 }
 
+/** Parent rows that have variants (containers — not sellable themselves), any status. */
+export async function listCatalogVariantParents(): Promise<CatalogProductRecord[]> {
+  const db = await openLocalDb();
+  const rows = await db.getAll("catalogProducts");
+  const parentIds = new Set(
+    rows.map((r) => r.parentId).filter((id): id is string => Boolean(id)),
+  );
+  return rows.filter((r) => parentIds.has(r.productId));
+}
+
+export type CatalogMenuItem =
+  | { kind: "product"; product: CatalogProductRecord }
+  | {
+      kind: "group";
+      parent: CatalogProductRecord;
+      variants: CatalogProductRecord[];
+      /** Lowest variant price ("from Rp X"). */
+      minPriceMinor: number;
+      maxPriceMinor: number;
+      /** Sum of tracked variant stock; `null` when any variant is untracked (unlimited). */
+      totalStockQty: number | null;
+    };
+
+/** Variant display label: explicit label, else the name suffix after the parent name. */
+export function variantDisplayLabel(
+  variant: CatalogProductRecord,
+  parent?: CatalogProductRecord,
+): string {
+  const label = variant.variantLabel?.trim();
+  if (label) return label;
+  if (parent && variant.name.startsWith(parent.name)) {
+    const rest = variant.name.slice(parent.name.length).replace(/^[\s/\-–]+/, "");
+    if (rest) return rest;
+  }
+  return variant.name;
+}
+
+/**
+ * Collapse sellable variants under their parent into one menu item each;
+ * standalone products pass through. Variants whose parent is missing/inactive stay flat.
+ */
+export function groupCatalogVariants(
+  sellable: CatalogProductRecord[],
+  parents: CatalogProductRecord[],
+): CatalogMenuItem[] {
+  const parentById = new Map(parents.map((p) => [p.productId, p]));
+  const groupAt = new Map<string, number>();
+  const items: CatalogMenuItem[] = [];
+  const members = new Map<string, CatalogProductRecord[]>();
+  for (const product of sellable) {
+    const parent = product.parentId ? parentById.get(product.parentId) : undefined;
+    if (!parent) {
+      items.push({ kind: "product", product });
+      continue;
+    }
+    // An inactive parent hides all of its variants from the menu.
+    if ((parent.status ?? "active") !== "active") continue;
+    const list = members.get(parent.productId);
+    if (list) {
+      list.push(product);
+      continue;
+    }
+    members.set(parent.productId, [product]);
+    // Group takes the slot of its first variant so upstream sort order is kept.
+    groupAt.set(parent.productId, items.length);
+    items.push({ kind: "product", product });
+  }
+  for (const [parentId, variants] of members) {
+    const parent = parentById.get(parentId)!;
+    const sorted = [...variants].sort((a, b) =>
+      variantDisplayLabel(a, parent).localeCompare(variantDisplayLabel(b, parent), "id", {
+        numeric: true,
+      }),
+    );
+    const prices = sorted.map((v) => v.priceMinor);
+    const untracked = sorted.some((v) => !tracksCatalogStock(v));
+    items[groupAt.get(parentId)!] = {
+      kind: "group",
+      parent,
+      variants: sorted,
+      minPriceMinor: Math.min(...prices),
+      maxPriceMinor: Math.max(...prices),
+      totalStockQty: untracked ? null : sorted.reduce((n, v) => n + v.stockQty, 0),
+    };
+  }
+  return items;
+}
+
 export async function getCatalogPulledAt(): Promise<string | null> {
   const db = await openLocalDb();
   return (await db.get("meta", META_CATALOG_PULLED_AT)) ?? null;
@@ -83,6 +171,8 @@ export async function replaceCatalog(products: Product[]): Promise<number> {
       stockQty: p.stock_qty,
       status: p.status ?? "active",
       parentId: p.parent_id ?? null,
+      variantLabel: p.variant_label ?? null,
+      variantGroups: p.variant_groups ?? [],
       sku: p.sku ?? null,
       categoryName: p.category_name ?? null,
       unitName: p.unit_name ?? null,

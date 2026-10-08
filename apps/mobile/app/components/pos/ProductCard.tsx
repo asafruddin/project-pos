@@ -14,11 +14,15 @@ export type ProductCardProps = {
   imageUri?: string | null;
   /** Out-of-stock pack product that can be opened into pieces (online). */
   unpackable: boolean;
+  /** Set when the card stands for a product with variants (opens the variant sheet). */
+  variantCount?: number;
+  /** Variant prices differ: show "From Rp X". */
+  priceFrom?: boolean;
   onPress: (product: CatalogProduct) => void;
 };
 
 /** Menu tile in grid or list form (PWA catalog button), memoised for long lists. */
-export const ProductCard = memo(function ProductCard({ product, view, selectedQty, imageUri, unpackable, onPress }: ProductCardProps) {
+export const ProductCard = memo(function ProductCard({ product, view, selectedQty, imageUri, unpackable, variantCount, priceFrom, onPress }: ProductCardProps) {
   const { colors } = useTheme();
   const { t, lang } = useT();
   const priceOk = isValidSellablePrice(product.priceMinor);
@@ -26,7 +30,8 @@ export const ProductCard = memo(function ProductCard({ product, view, selectedQt
   const inStock = priceOk && (unlimited || product.stockQty > 0);
   const clickable = inStock || unpackable;
   const stockLabel = unlimited ? t("stockUnlimited") : `${t("stock")} ${product.stockQty}`;
-  const priceLabel = clickable ? formatIdr(product.priceMinor, lang) : product.stockQty <= 0 ? t("stockOut") : t("catalogBlockedPrice");
+  const priceText = formatIdr(product.priceMinor, lang);
+  const priceLabel = clickable ? (priceFrom ? `${t("variantFrom")} ${priceText}` : priceText) : product.stockQty <= 0 ? t("stockOut") : t("catalogBlockedPrice");
   const selected = selectedQty > 0;
   const border = selected ? colors.primary : colors.border;
   const bg = selected ? `${colors.accent}` : colors.card;
@@ -39,6 +44,12 @@ export const ProductCard = memo(function ProductCard({ product, view, selectedQt
   const unpackTag = unpackable ? (
     <View style={[styles.tag, { backgroundColor: `${colors.primary}1a` }]}>
       <Text size={10} weight="medium" color={colors.primary}>{t("unpackTitle")}</Text>
+    </View>
+  ) : null;
+
+  const variantTag = variantCount ? (
+    <View style={[styles.tag, { backgroundColor: colors.secondary }]}>
+      <Text size={11} weight="medium" color={colors.secondaryForeground}>{t("variantCount", { n: variantCount })}</Text>
     </View>
   ) : null;
 
@@ -59,6 +70,7 @@ export const ProductCard = memo(function ProductCard({ product, view, selectedQt
             {product.unitName ? (
               <View style={[styles.tag, { backgroundColor: colors.secondary }]}><Text size={12} weight="medium" color={colors.secondaryForeground}>{product.unitName}</Text></View>
             ) : null}
+            {variantTag}
             <Text weight="medium" color={colors.primary}>{priceLabel}</Text>
             <Text muted>{stockLabel}</Text>
             {unpackTag}
@@ -87,6 +99,7 @@ export const ProductCard = memo(function ProductCard({ product, view, selectedQt
         <Text size={13} weight="semibold" numberOfLines={2} style={{ minHeight: 36 }}>{product.name}</Text>
         <View style={styles.meta}>
           <Text size={13} weight="semibold" color={colors.primary}>{priceLabel}</Text>
+          {variantTag}
           {unpackTag}
         </View>
       </View>

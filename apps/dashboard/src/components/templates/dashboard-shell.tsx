@@ -19,6 +19,7 @@ import {
   ArrowsLeftRightIcon,
   TagIcon,
   ScalesIcon,
+  SquaresFourIcon,
 } from "@phosphor-icons/react";
 import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
@@ -46,6 +47,14 @@ const PAGE_COPY: Record<string, { title: string; subtitle: string }> = {
   "/categories/new": {
     title: "Tambah kategori",
     subtitle: "Nama kategori dipakai di form produk.",
+  },
+  "/variants": {
+    title: "Varian",
+    subtitle: "Jenis varian (Ukuran, Suhu, dll.) beserta pilihannya. Dipilih di form produk.",
+  },
+  "/variants/new": {
+    title: "Tambah varian",
+    subtitle: "Beri nama jenis varian dan isi pilihannya.",
   },
   "/units": {
     title: "Satuan",
@@ -214,6 +223,13 @@ const PAGE_COPY_MATCHERS: Array<{
     copy: {
       title: "Ubah kategori",
       subtitle: "Nama kategori dipakai di form produk. Simpan di bagian bawah.",
+    },
+  },
+  {
+    test: (p) => /^\/variants\/[^/]+\/edit$/.test(p),
+    copy: {
+      title: "Ubah varian",
+      subtitle: "Ubah nama atau pilihan varian. Simpan di bagian bawah.",
     },
   },
   {
@@ -394,6 +410,13 @@ export function DashboardShell({
       href: "/categories",
       label: "Kategori",
       icon: <TagIcon size={20} weight="regular" />,
+      show: can("products", "view"),
+    },
+    {
+      group: "Produk",
+      href: "/variants",
+      label: "Varian",
+      icon: <SquaresFourIcon size={20} weight="regular" />,
       show: can("products", "view"),
     },
     {

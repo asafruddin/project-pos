@@ -2,6 +2,7 @@ import type { Voucher } from "@pos-apps/types";
 import { AppError } from "@/core/errors/app-error";
 import { DrizzleCatalogRepository } from "@/features/catalog/data/drizzle-catalog-repository";
 import type { CatalogProduct } from "@/features/catalog/domain/product";
+import { KvQueueSettingsStore } from "@/features/queue/data/kv-queue-settings-store";
 import { DrizzleSalesRepository, KvDeviceIdProvider } from "@/features/checkout/data/drizzle-sales-repository";
 import { CompleteSaleUseCase } from "@/features/checkout/domain/complete-sale";
 import { VoidSaleUseCase } from "@/features/checkout/domain/void-sale";
@@ -84,6 +85,7 @@ export function createHarness(opts: HarnessOptions = {}) {
   const clock = fakeClock();
   const ids = sequentialIds();
   const kv = new DrizzleKvStore(db);
+  const queueSettings = new KvQueueSettingsStore(kv);
   const outbox = new OutboxRepository(db);
   const catalog = new DrizzleCatalogRepository(db, kv);
   const shifts = new DrizzleShiftRepository(db, outbox, clock, ids);
@@ -123,6 +125,7 @@ export function createHarness(opts: HarnessOptions = {}) {
     new KvDeviceIdProvider(kv, ids),
     () => state.online,
     onQueued,
+    queueSettings,
   );
   const voidSale = new VoidSaleUseCase(sales, pins, clock, ids, () => state.permissions, () => "user-1", onQueued);
   const dayClose = new DayCloseSummaryUseCase(sales, shifts);
@@ -150,6 +153,7 @@ export function createHarness(opts: HarnessOptions = {}) {
     clock,
     ids,
     kv,
+    queueSettings,
     state,
     outbox,
     catalog,
