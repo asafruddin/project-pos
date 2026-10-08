@@ -4,7 +4,9 @@ import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import {
+  closeShiftAutoIn,
   closeShiftIn,
+  shiftReportFromLocal,
   expectedCashFromLocal,
   recordCashMovementIn,
   toCloseShiftRequest,
@@ -266,6 +268,64 @@ describe("closeShiftIn", () => {
       expected_cash_minor: 100000,
     });
     assert.equal((await shifts.list()).find((row) => row.status === "open"), undefined);
+  });
+});
+
+describe("closeShiftAutoIn", () => {
+  const cashSale: LocalSaleRecord = {
+    saleId: "sale-1",
+    deviceId: "d",
+    createdAt: "2026-08-13T08:00:00.000Z",
+    completedAt: "2026-08-13T08:00:00.000Z",
+    status: "complete",
+    payment: { method: "cash", amountMinor: 30000 },
+    lines: [{ productId: "p", name: "Kopi", priceMinor: 30000, qty: 1 }],
+    shiftId: "shift-1",
+    queueNumber: 1,
+    guestName: "Sari",
+  };
+
+  it("counts cash itself: counted = expected (net of cash out), difference 0", async () => {
+    const shifts = memoryShifts([openShift]);
+    const movements = memoryMovements();
+    await movements.put({
+      movementId: "m1",
+      shiftId: "shift-1",
+      kind: "out",
+      amountMinor: 12000,
+      reason: "Es batu",
+      occurredAt: "2026-08-13T09:00:00.000Z",
+    });
+    const closeOutbox = memoryCloseOutbox();
+    const closed = await closeShiftAutoIn(
+      shifts,
+      closeOutbox,
+      { async list() { return [cashSale]; } },
+      movements,
+      { closedAt: "2026-08-13T16:00:00.000Z" },
+    );
+    assert.equal(closed.expectedCashMinor, 100000 + 30000 - 12000);
+    assert.equal(closed.countedCashMinor, closed.expectedCashMinor);
+    assert.equal(closed.differenceMinor, 0);
+    assert.equal(closeOutbox.rows.size, 1);
+  });
+
+  it("builds the shift report with cash out, queue number and guest name", () => {
+    const report = shiftReportFromLocal({
+      shift: { ...openShift, status: "closed", closedAt: "2026-08-13T16:00:00.000Z", expectedCashMinor: 118000 },
+      sales: [cashSale, { ...cashSale, saleId: "other", shiftId: "shift-2" }],
+      movements: [
+        { movementId: "m1", shiftId: "shift-1", kind: "out", amountMinor: 12000, reason: "Es batu", occurredAt: "2026-08-13T09:00:00.000Z" },
+      ],
+      storeName: "Warung A",
+      cashRefundsMinor: 0,
+      refundsKnown: true,
+    });
+    assert.equal(report.sales.length, 1);
+    assert.equal(report.sales[0].queueNumber, 1);
+    assert.equal(report.sales[0].guestName, "Sari");
+    assert.equal(report.recap.cashOutMinor, 12000);
+    assert.equal(report.recap.finalCashMinor, 118000);
   });
 });
 

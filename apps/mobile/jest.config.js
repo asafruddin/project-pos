@@ -12,6 +12,8 @@ module.exports = {
     "^@/(.*)$": "<rootDir>/app/$1",
     "^pos-printer$": "<rootDir>/test/helpers/pos-printer-mock.js",
     "^react-native$": "<rootDir>/test/helpers/react-native-mock.js",
+    "^expo-print$": "<rootDir>/test/helpers/expo-print-mock.js",
+    "^expo-sharing$": "<rootDir>/test/helpers/expo-sharing-mock.js",
     "^expo$": "<rootDir>/test/helpers/expo-mock.js",
     "^expo-modules-core$": "<rootDir>/test/helpers/expo-mock.js",
     "^expo/virtual/env$": "<rootDir>/test/helpers/expo-env.js",

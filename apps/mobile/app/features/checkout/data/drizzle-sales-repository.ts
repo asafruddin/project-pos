@@ -1,5 +1,5 @@
 import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
-import { catalogProducts, saleLines, sales } from "@/infrastructure/db/schema";
+import { catalogProducts, saleLines, sales, shifts } from "@/infrastructure/db/schema";
 import type { AppDb } from "@/infrastructure/db/types";
 import type { KvStore } from "@/infrastructure/db/kv-store";
 import { insertOutbox, type OutboxRepository } from "@/infrastructure/sync/outbox";
@@ -103,6 +103,32 @@ export class DrizzleSalesRepository implements SalesRepository {
       .where(and(gte(sales.completedAt, startOfLocalDay(day).toISOString()), lt(sales.completedAt, endOfLocalDay(day).toISOString())))
       .orderBy(desc(sales.completedAt))
       .all();
+    return this.hydrate(rows);
+  }
+
+  purgeClosedShiftSales(): number {
+    const unsynced = this.unsyncedSaleIds();
+    return this.db.transaction((tx) => {
+      const closed = tx.select({ id: shifts.shiftId }).from(shifts).where(eq(shifts.status, "closed")).all().map((r) => r.id);
+      if (closed.length === 0) return 0;
+      const doomed = tx
+        .select({ id: sales.saleId })
+        .from(sales)
+        .where(inArray(sales.shiftId, closed))
+        .all()
+        .map((r) => r.id)
+        .filter((id) => !unsynced.has(id));
+      for (let i = 0; i < doomed.length; i += 50) {
+        const slice = doomed.slice(i, i + 50);
+        tx.delete(saleLines).where(inArray(saleLines.saleId, slice)).run();
+        tx.delete(sales).where(inArray(sales.saleId, slice)).run();
+      }
+      return doomed.length;
+    });
+  }
+
+  listForShift(shiftId: string): CompletedSale[] {
+    const rows = this.db.select().from(sales).where(eq(sales.shiftId, shiftId)).orderBy(sales.completedAt).all();
     return this.hydrate(rows);
   }
 

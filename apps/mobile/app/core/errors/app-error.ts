@@ -6,7 +6,8 @@ export type AppErrorCode =
   | "API"
   | "VALIDATION"
   | "NO_OPEN_SHIFT"
-  | "PRINTER";
+  | "PRINTER"
+  | "PDF";
 
 export class AppError extends Error {
   readonly code: AppErrorCode;

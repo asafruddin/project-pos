@@ -112,22 +112,48 @@ describe("day close", () => {
     const qris = await h.completeSale.execute({ cart, method: "qris" });
     cart = emptyCart;
 
-    let summary = h.dayClose.execute(new Date(h.clock.nowMs()));
+    let summary = h.dayClose.execute();
     expect(summary).toMatchObject({ transactionCount: 2, totalMinor: 45_000, qrisTotalMinor: 15_000, qrisTransactionCount: 1 });
     expect(summary.qrisSales[0].saleId).toBe(qris.saleId);
     expect(dayCloseGate(summary, false)).toMatchObject({ ok: false, code: "DAY_CLOSE_SHIFT_OPEN" });
 
     h.closeShift.execute(30_000);
-    summary = h.dayClose.execute(new Date(h.clock.nowMs()));
+    summary = h.dayClose.execute();
     expect(summary.closedShifts).toHaveLength(1);
     expect(summary.pendingSyncCount).toBe(2); // both sales still queued
     expect(dayCloseGate(summary, false)).toMatchObject({ ok: false, code: "DAY_CLOSE_SYNC_PENDING" });
     expect(dayCloseGate(summary, true)).toEqual({ ok: true });
 
     drainOutbox(h.outbox);
-    summary = h.dayClose.execute(new Date(h.clock.nowMs()));
+    summary = h.dayClose.execute();
     expect(summary.pendingSyncCount).toBe(0);
     expect(dayCloseGate(summary, false)).toEqual({ ok: true });
+  });
+
+  it("recaps only the current shift: earlier closed shifts of the same day are left out", async () => {
+    const h = createHarness();
+    h.catalog.replaceAll([product({ stockQty: 100 })], "t");
+    h.openShift.execute(10_000);
+    await cashSale(h, 2); // 30.000 in the first shift
+    h.clock.advance(1_000);
+    h.closeShift.executeAuto();
+    h.clock.advance(1_000);
+    h.openShift.execute(20_000);
+    await cashSale(h, 1); // 15.000 in the second shift
+
+    let summary = h.dayClose.execute();
+    expect(summary).toMatchObject({ transactionCount: 1, totalMinor: 15_000 });
+    expect(summary.closedShifts).toHaveLength(0); // second shift still open
+    expect(summary.openShift).not.toBeNull();
+
+    h.clock.advance(1_000);
+    h.closeShift.executeAuto();
+    summary = h.dayClose.execute();
+    expect(summary.closedShifts).toHaveLength(1);
+    expect(summary.closedShifts[0].expectedCashMinor).toBe(20_000 + 15_000);
+    expect(summary).toMatchObject({ transactionCount: 1, totalMinor: 15_000, shiftExpectedTotalMinor: 35_000 });
+    // The first shift's sale has not synced: it is hidden from the recap but still counted as pending.
+    expect(summary.pendingSyncCount).toBe(2);
   });
 
   it("requires a closed shift for the day when there were sales", () => {

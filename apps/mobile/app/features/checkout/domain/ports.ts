@@ -12,6 +12,13 @@ export interface SalesRepository {
   listForLocalDay(day: Date): CompletedSale[];
   /** Complete sales (voided included) with `completedAt >= sinceIso`, any day. */
   listCompletedSince(sinceIso: string): CompletedSale[];
+  /**
+   * Delete sales of closed shifts that the server already has (nothing waiting in the outbox).
+   * Returns how many were removed. Called when a new shift opens.
+   */
+  purgeClosedShiftSales(): number;
+  /** Every sale (voided included) recorded under `shiftId`, oldest first. */
+  listForShift(shiftId: string): CompletedSale[];
   listCashViews(): CashSaleView[];
   /**
    * Atomically: mark the sale voided, put sold quantities back (tracked products only)

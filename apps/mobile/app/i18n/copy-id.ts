@@ -257,7 +257,7 @@ export const copyID = {
   shiftCashIn: "Kas masuk",
   shiftCashOut: "Kas keluar",
   shiftCashAmount: "Jumlah (Rp)",
-  shiftCashReason: "Alasan",
+  shiftCashReason: "Alasan (opsional)",
   shiftCashFail: "Tidak dapat mencatat kas masuk/keluar.",
   shiftExpected: "Kas diharapkan",
   shiftOpening: "Kas awal",

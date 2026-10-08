@@ -1,4 +1,11 @@
-import { cashTenderTotal, closeShift, expectedCash, recordCashMovement } from "@pos-apps/domain";
+import {
+  buildShiftReport,
+  cashTenderTotal,
+  closeShift,
+  expectedCash,
+  recordCashMovement,
+  type ShiftReport,
+} from "@pos-apps/domain";
 import type {
   CloseShiftRequest,
   RecordCashMovementRequest,
@@ -166,6 +173,72 @@ export async function closeShiftIn(
   return closed;
 }
 
+/**
+ * Close with the system's own cash figure: counted = expected, so the difference is always 0.
+ * Nothing is typed at close; the cashier only records cash out.
+ */
+export async function closeShiftAutoIn(
+  shifts: ShiftStore,
+  closeOutbox: ShiftCloseOutboxStore,
+  sales: SaleReader,
+  movements: CashMovementStore,
+  opts?: { closedAt?: string; cashRefundsMinor?: number },
+): Promise<LocalShiftRecord> {
+  const shift = (await shifts.list()).find((row) => row.status === "open");
+  if (!shift) throw new Error("SHIFT_NOT_OPEN");
+  const expected = expectedCashFromLocal({
+    shift,
+    sales: await sales.list(),
+    movements: await movements.list(),
+    cashRefundsMinor: opts?.cashRefundsMinor,
+  });
+  return closeShiftIn(shifts, closeOutbox, sales, movements, expected.expected_cash_minor, opts);
+}
+
+/** Numbers-only recap of one shift (used for the PDF), from this device's sales and cash movements. */
+export function shiftReportFromLocal(input: {
+  shift: LocalShiftRecord;
+  sales: LocalSaleRecord[];
+  movements: LocalCashMovementRecord[];
+  storeName: string;
+  cashRefundsMinor: number;
+  refundsKnown: boolean;
+}): ShiftReport {
+  return buildShiftReport({
+    storeName: input.storeName,
+    shift: {
+      openedAt: input.shift.openedAt,
+      closedAt: input.shift.closedAt ?? null,
+      openingCashMinor: input.shift.openingCashMinor,
+      expectedCashMinor: input.shift.expectedCashMinor ?? null,
+    },
+    movements: input.movements.filter((row) => row.shiftId === input.shift.shiftId),
+    sales: input.sales
+      .filter(
+        (sale) =>
+          sale.status === "complete" && !!sale.completedAt && sale.shiftId === input.shift.shiftId,
+      )
+      .map((sale) => ({
+        saleId: sale.saleId,
+        completedAt: sale.completedAt!,
+        queueNumber: sale.queueNumber ?? null,
+        guestName: sale.guestName ?? null,
+        voided: Boolean(sale.voidedAt),
+        amountMinor: sale.payment?.amountMinor ?? 0,
+        payment: {
+          method: sale.payment?.method,
+          amount_minor: sale.payment?.amountMinor,
+          tenders: sale.payment?.tenders?.map((row) => ({
+            method: row.method,
+            amount_minor: row.amountMinor,
+          })),
+        },
+      })),
+    cashRefundsMinor: input.cashRefundsMinor,
+    refundsKnown: input.refundsKnown,
+  });
+}
+
 export function toSyncCashMovementRequest(
   row: LocalCashMovementRecord,
 ): RecordCashMovementRequest {
@@ -283,6 +356,36 @@ export async function closeLocalShift(
     countedCashMinor,
     { cashRefundsMinor: opts?.cashRefundsMinor },
   );
+}
+
+export async function closeLocalShiftAuto(opts?: {
+  cashRefundsMinor?: number;
+}): Promise<LocalShiftRecord> {
+  return closeShiftAutoIn(
+    await deviceShifts(),
+    await deviceCloseOutbox(),
+    await deviceSales(),
+    await deviceMovements(),
+    { cashRefundsMinor: opts?.cashRefundsMinor },
+  );
+}
+
+export async function buildLocalShiftReport(
+  shift: LocalShiftRecord,
+  opts: { storeName: string; cashRefundsMinor: number; refundsKnown: boolean },
+): Promise<ShiftReport> {
+  return shiftReportFromLocal({
+    shift,
+    sales: await (await deviceSales()).list(),
+    movements: await (await deviceMovements()).list(),
+    ...opts,
+  });
+}
+
+export async function listShiftCashMovements(shiftId: string): Promise<LocalCashMovementRecord[]> {
+  return (await (await deviceMovements()).list())
+    .filter((row) => row.shiftId === shiftId)
+    .sort((a, b) => Date.parse(a.occurredAt) - Date.parse(b.occurredAt));
 }
 
 export async function computeLocalExpectedCash(

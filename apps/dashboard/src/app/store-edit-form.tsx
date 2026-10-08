@@ -212,7 +212,7 @@ export function StoreEditForm({
         </FormSection>
         <FormSection
           title="Antrian"
-          description="Nomor antrian tampil di struk dan daftar transaksi. Dihitung per perangkat kasir."
+          description="Nomor antrian tampil di struk dan daftar transaksi. Dihitung per perangkat kasir dan selalu mulai dari 1 saat shift baru dibuka."
         >
           <div className="grid gap-2 sm:grid-cols-3">
             {QUEUE_MODES.map((mode) => (

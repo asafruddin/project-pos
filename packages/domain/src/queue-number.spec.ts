@@ -35,6 +35,17 @@ describe("nextQueueNumber", () => {
     assert.equal(nextQueueNumber({ ...input, shiftOpenedAt: "2026-10-08T06:00:00.000Z" }), 1);
   });
 
+  it("always restarts when a new shift opens, in every mode", () => {
+    const sales = [
+      { completedAt: "2026-10-08T01:00:00.000Z", queueNumber: 1 },
+      { completedAt: "2026-10-08T05:00:00.000Z", queueNumber: 2 },
+    ];
+    for (const mode of ["daily", "shift", "manual"] as const) {
+      assert.equal(nextQueueNumber({ ...base, mode, sales, shiftOpenedAt: "2026-10-08T00:30:00.000Z" }), 3, mode);
+      assert.equal(nextQueueNumber({ ...base, mode, sales, shiftOpenedAt: "2026-10-08T06:00:00.000Z" }), 1, mode);
+    }
+  });
+
   it("manual mode never resets by itself but honours resetAt in every mode", () => {
     const sales = [{ completedAt: "2026-09-01T01:00:00.000Z", queueNumber: 9 }];
     assert.equal(nextQueueNumber({ ...base, mode: "manual", sales }), 10);

@@ -15,6 +15,8 @@ export class OpenShiftUseCase {
     private readonly ids: IdGenerator,
     private readonly session: () => Session | null,
     private readonly onQueued: () => void,
+    /** Runs after a brand-new shift is stored (not when one is already open). */
+    private readonly afterOpened: () => void = () => {},
   ) {}
 
   execute(openingCashMinor: number): Shift {
@@ -39,6 +41,7 @@ export class OpenShiftUseCase {
     };
     this.shifts.open(shift);
     this.onQueued();
+    this.afterOpened();
     return shift;
   }
 }
@@ -123,6 +126,16 @@ export class CloseShiftUseCase {
     private readonly clock: Clock,
     private readonly onQueued: () => void,
   ) {}
+
+  /**
+   * Close with the system-computed cash: counted = expected, so the difference is always 0.
+   * The cashier only records cash out; nothing is typed at close.
+   */
+  executeAuto(cashRefundsMinor = 0): Shift {
+    const shift = this.shifts.getOpen();
+    if (!shift) throw new AppError("NO_OPEN_SHIFT");
+    return this.execute(this.summary.compute(shift, cashRefundsMinor).expected_cash_minor, cashRefundsMinor);
+  }
 
   execute(countedCashMinor: number, cashRefundsMinor = 0): Shift {
     const shift = this.shifts.getOpen();

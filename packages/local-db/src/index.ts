@@ -65,6 +65,7 @@ export {
 export {
   completeSale,
   createIncompleteSale,
+  purgeClosedShiftSales,
   getQueueSettings,
   saveQueueSettings,
   type QueueSettingsRecord,
@@ -127,6 +128,9 @@ export {
 } from "./shifts.js";
 export {
   closeLocalShift,
+  closeLocalShiftAuto,
+  listShiftCashMovements,
+  buildLocalShiftReport,
   computeLocalExpectedCash,
   listPendingCashMovements,
   listPendingShiftCloses,
@@ -136,3 +140,5 @@ export {
   toCloseShiftRequest,
   toSyncCashMovementRequest,
 } from "./shift-cash.js";
+
+export type { ShiftReport } from "@pos-apps/domain";

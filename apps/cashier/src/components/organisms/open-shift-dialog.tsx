@@ -11,7 +11,7 @@ import {
 } from "@pos-apps/ui/molecules";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { openLocalShift } from "@pos-apps/local-db";
+import { openLocalShift, purgeClosedShiftSales } from "@pos-apps/local-db";
 import { flushSalesAndVoids } from "@/lib/flush-sync";
 import { getSession } from "@/lib/auth-token";
 import { requestLogout } from "@/lib/logout";
@@ -59,6 +59,8 @@ export function OpenShiftDialog({
         registerId: session?.registerId ?? undefined,
       });
       await flushSalesAndVoids();
+      // New shift = clean slate: drop closed shifts' sales that are already on the server.
+      await purgeClosedShiftSales().catch(() => 0);
       notifyShiftChanged();
       onOpened?.();
     } catch (err) {

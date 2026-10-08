@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { endOfLocalDay, startOfLocalDay } from "./sales.js";
 import {
   closedShiftsForLocalDay,
+  currentShiftScope,
   dayCloseGate,
   dayCloseSummaryFrom,
 } from "./day-close.js";
@@ -171,3 +172,30 @@ describe("day-close isolation (AD-8)", () => {
   });
 });
 
+describe("currentShiftScope", () => {
+  const shift = (id: string, over: Partial<LocalShiftRecord>): LocalShiftRecord => ({
+    shiftId: id,
+    storeId: "s",
+    registerId: "r",
+    openedAt: "2026-10-08T01:00:00.000Z",
+    openingCashMinor: 0,
+    status: "closed",
+    closedAt: "2026-10-08T02:00:00.000Z",
+    ...over,
+  });
+
+  it("prefers the open shift over closed ones from the same day", () => {
+    const rows = [shift("old", {}), shift("now", { status: "open", closedAt: undefined, openedAt: "2026-10-08T05:00:00.000Z" })];
+    assert.equal(currentShiftScope(rows)?.shiftId, "now");
+  });
+
+  it("falls back to the most recently closed shift, and to null when there is none", () => {
+    const rows = [
+      shift("first", { closedAt: "2026-10-08T02:00:00.000Z" }),
+      shift("latest", { closedAt: "2026-10-08T09:00:00.000Z" }),
+      shift("middle", { closedAt: "2026-10-08T05:00:00.000Z" }),
+    ];
+    assert.equal(currentShiftScope(rows)?.shiftId, "latest");
+    assert.equal(currentShiftScope([]), null);
+  });
+});

@@ -39,6 +39,18 @@ export function closedShiftsForLocalDay(rows: Shift[], day: Date): Shift[] {
   });
 }
 
+/**
+ * The shift the recap covers: the open one, otherwise the most recently closed one (so the screen is not
+ * empty right after closing). Earlier shifts, even from the same day, are not part of the recap.
+ */
+export function currentShiftScope(rows: Shift[]): Shift | null {
+  const open = rows.find((row) => row.status === "open");
+  if (open) return open;
+  const closed = rows.filter((row) => row.status === "closed");
+  closed.sort((a, b) => Date.parse(b.closedAt ?? b.openedAt) - Date.parse(a.closedAt ?? a.openedAt));
+  return closed[0] ?? null;
+}
+
 /** Port of `dayCloseSummaryFrom` (packages/local-db/src/day-close.ts). */
 export function buildDayCloseSummary(input: {
   sales: CompletedSale[];
@@ -71,7 +83,8 @@ export function buildDayCloseSummary(input: {
       difference_minor: row.differenceMinor,
     })),
   );
-  const pendingSyncSaleIds = input.sales.filter((s) => input.unsyncedSaleIds.has(s.saleId)).map((s) => s.saleId);
+  // Device-wide on purpose: a sale from an earlier shift that has not synced yet must still block / be acknowledged.
+  const pendingSyncSaleIds = [...input.unsyncedSaleIds];
   return {
     sales: input.sales,
     totalMinor,

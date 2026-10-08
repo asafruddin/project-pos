@@ -2736,15 +2736,15 @@ export type QueueNumberInput = {
 
 /**
  * Next receipt queue number for a device. The counter restarts when the queue window starts:
- * day start (`daily`), shift open (`shift`) or never (`manual`) — and always after `resetAt`.
+ * a new shift opening (always), the day start (`daily`) — and always after `resetAt`.
  * Sales that predate queue numbers (no `queueNumber`) still count so numbers never repeat.
  */
 export function nextQueueNumber(input: QueueNumberInput): number {
   const starts: number[] = [];
   if (input.mode === "daily") starts.push(Date.parse(input.dayStart));
-  if (input.mode === "shift") {
-    starts.push(Date.parse(input.shiftOpenedAt ?? input.dayStart));
-  }
+  // A new shift always restarts the queue, whatever the store's reset mode says.
+  if (input.shiftOpenedAt) starts.push(Date.parse(input.shiftOpenedAt));
+  else if (input.mode === "shift") starts.push(Date.parse(input.dayStart));
   if (input.resetAt) starts.push(Date.parse(input.resetAt));
   const windowStart = starts.filter(Number.isFinite).reduce((a, b) => Math.max(a, b), -Infinity);
 
@@ -2756,4 +2756,153 @@ export function nextQueueNumber(input: QueueNumberInput): number {
     if (sale.queueNumber && sale.queueNumber > highest) highest = sale.queueNumber;
   }
   return Math.max(highest, count) + 1;
+}
+
+export type ShiftReportInput = {
+  storeName: string;
+  shift: {
+    openedAt: string;
+    closedAt: string | null;
+    openingCashMinor: number;
+    /** Stored expected cash of a closed shift; recomputed when null. */
+    expectedCashMinor: number | null;
+  };
+  movements: ReadonlyArray<{
+    kind: "in" | "out";
+    amountMinor: number;
+    reason: string;
+    occurredAt: string;
+  }>;
+  sales: ReadonlyArray<{
+    saleId: string;
+    completedAt: string;
+    queueNumber?: number | null;
+    guestName?: string | null;
+    voided: boolean;
+    amountMinor: number;
+    payment: PaymentSnapshot;
+  }>;
+  cashRefundsMinor: number;
+  /** False when refunds could not be fetched (offline): the recap omits them. */
+  refundsKnown: boolean;
+};
+
+export type ShiftReport = {
+  storeName: string;
+  openedAt: string;
+  closedAt: string | null;
+  recap: {
+    openingCashMinor: number;
+    cashSalesMinor: number;
+    cashInMinor: number;
+    cashOutMinor: number;
+    cashRefundsMinor: number;
+    cashVoidsMinor: number;
+    /** Cash expected in the drawer at close: already net of cash out, refunds and voids. */
+    finalCashMinor: number;
+    /** Opening + sales of every method (not voided) + cash in − cash out − refunds. Not drawer cash. */
+    grandTotalMinor: number;
+  };
+  refundsKnown: boolean;
+  cashIns: Array<{ amountMinor: number; reason: string; occurredAt: string }>;
+  cashOuts: Array<{ amountMinor: number; reason: string; occurredAt: string }>;
+  totals: {
+    salesCount: number;
+    voidedCount: number;
+    cashMinor: number;
+    qrisMinor: number;
+    storeCreditMinor: number;
+    totalMinor: number;
+  };
+  sales: Array<{
+    saleId: string;
+    completedAt: string;
+    queueNumber: number | null;
+    guestName: string | null;
+    voided: boolean;
+    amountMinor: number;
+    cashMinor: number;
+    qrisMinor: number;
+    storeCreditMinor: number;
+  }>;
+};
+
+/**
+ * Numbers-only recap of one shift, shared by the mobile and cashier PDFs.
+ * Cash figures follow FR-78 (same as `expectedCash`), so the PDF, the on-screen recap and
+ * the stored shift always agree.
+ */
+export function buildShiftReport(input: ShiftReportInput): ShiftReport {
+  const sales = [...input.sales].sort(
+    (a, b) => Date.parse(a.completedAt) - Date.parse(b.completedAt),
+  );
+  const rows = sales.map((sale) => ({
+    saleId: sale.saleId,
+    completedAt: sale.completedAt,
+    queueNumber: sale.queueNumber ?? null,
+    guestName: sale.guestName?.trim() || null,
+    voided: sale.voided,
+    amountMinor: sale.amountMinor,
+    cashMinor: cashTenderTotal(sale.payment),
+    qrisMinor: qrisTenderTotal(sale.payment),
+    storeCreditMinor: storeCreditTenderTotal(sale.payment),
+  }));
+
+  const cashSales = rows.reduce((n, r) => n + r.cashMinor, 0);
+  const cashVoids = rows.filter((r) => r.voided).reduce((n, r) => n + r.cashMinor, 0);
+  const sum = (kind: "in" | "out") =>
+    input.movements.filter((m) => m.kind === kind).reduce((n, m) => n + m.amountMinor, 0);
+  const cashIn = sum("in");
+  const cashOut = sum("out");
+
+  const computed = expectedCash({
+    opening_cash_minor: input.shift.openingCashMinor,
+    cash_sales_minor: cashSales,
+    cash_in_minor: cashIn,
+    cash_out_minor: cashOut,
+    cash_refunds_minor: input.cashRefundsMinor,
+    cash_voids_minor: cashVoids,
+  });
+  const finalCash =
+    input.shift.expectedCashMinor ??
+    (computed.ok
+      ? computed.expected_cash_minor
+      : input.shift.openingCashMinor + cashSales + cashIn - cashOut - input.cashRefundsMinor - cashVoids);
+
+  const live = rows.filter((r) => !r.voided);
+  const allSales = live.reduce((n, r) => n + r.amountMinor, 0);
+  const entries = (kind: "in" | "out") =>
+    input.movements
+      .filter((m) => m.kind === kind)
+      .map((m) => ({ amountMinor: m.amountMinor, reason: m.reason, occurredAt: m.occurredAt }))
+      .sort((a, b) => Date.parse(a.occurredAt) - Date.parse(b.occurredAt));
+
+  return {
+    storeName: input.storeName,
+    openedAt: input.shift.openedAt,
+    closedAt: input.shift.closedAt,
+    recap: {
+      openingCashMinor: input.shift.openingCashMinor,
+      cashSalesMinor: cashSales,
+      cashInMinor: cashIn,
+      cashOutMinor: cashOut,
+      cashRefundsMinor: input.cashRefundsMinor,
+      cashVoidsMinor: cashVoids,
+      finalCashMinor: finalCash,
+      grandTotalMinor:
+        input.shift.openingCashMinor + allSales + cashIn - cashOut - input.cashRefundsMinor,
+    },
+    refundsKnown: input.refundsKnown,
+    cashIns: entries("in"),
+    cashOuts: entries("out"),
+    totals: {
+      salesCount: live.length,
+      voidedCount: rows.length - live.length,
+      cashMinor: live.reduce((n, r) => n + r.cashMinor, 0),
+      qrisMinor: live.reduce((n, r) => n + r.qrisMinor, 0),
+      storeCreditMinor: live.reduce((n, r) => n + r.storeCreditMinor, 0),
+      totalMinor: allSales,
+    },
+    sales: rows,
+  };
 }

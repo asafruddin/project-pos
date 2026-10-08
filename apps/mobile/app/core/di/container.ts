@@ -9,6 +9,9 @@ import { config } from "@/config";
 import { ApiAuthGateway } from "@/features/auth/data/api-auth-gateway";
 import { SecureSessionStore } from "@/features/auth/data/secure-session-store";
 import { resolveGate, type Gate } from "@/features/auth/domain/gate";
+import type { ShiftPdf } from "@/features/shift/domain/shift-pdf";
+import { ExpoShiftPdf } from "@/infrastructure/pdf/expo-shift-pdf";
+import { ShiftReportUseCase } from "@/features/shift/domain/shift-report-use-case";
 import { KvQueueSettingsStore } from "@/features/queue/data/kv-queue-settings-store";
 import { LoginUseCase, RefreshIdentityUseCase } from "@/features/auth/domain/use-cases";
 import type { Session } from "@/features/auth/domain/session";
@@ -92,6 +95,7 @@ export type ContainerDeps = {
   ids?: IdGenerator;
   printer?: Printer;
   files?: FileStore;
+  shiftPdf?: ShiftPdf;
 };
 
 export type Container = ReturnType<typeof createContainer>;
@@ -256,9 +260,28 @@ export function createContainer(deps: ContainerDeps) {
 
   // --- use cases
   const login = new LoginUseCase(new ApiAuthGateway(http), sessions, queueSettings);
-  const openShift = new OpenShiftUseCase(shifts, clock, ids, () => sessions.current(), onShiftQueued);
+  const openShift = new OpenShiftUseCase(shifts, clock, ids, () => sessions.current(), onShiftQueued, () => {
+    // New shift = clean slate: drop closed shifts' sales the server already has.
+    if (sales.purgeClosedShiftSales() > 0) bump("sales");
+  });
   const recordCash = new RecordCashMovementUseCase(shifts, clock, ids, onShiftQueued);
   const shiftSummary = new ShiftSummaryUseCase(shifts, sales, new ApiShiftRemote(http), online);
+  const shiftReport = new ShiftReportUseCase(shifts, sales, () => sessions.current()?.storeName ?? "");
+  const shiftPdf = deps.shiftPdf ?? new ExpoShiftPdf(
+    () => ({
+      title: t("pdfTitle"), opened: t("pdfOpened"), closed: t("pdfClosed"), recap: t("pdfRecap"),
+      opening: t("shiftOpening"), cashSales: t("shiftCashSales"), cashIn: t("shiftCashIn"), cashOut: t("shiftCashOut"),
+      refunds: t("shiftRefunds"), voids: t("shiftVoids"), finalCash: t("shiftFinalCash"), grandTotal: t("shiftGrandTotal"), grandTotalHint: t("shiftGrandTotalHint"), summary: t("shiftSummary"),
+      sectionCash: t("shiftSectionCash"), sectionSales: t("shiftSectionSales"), methodCash: t("shiftMethodCash"),
+      methodQris: t("qris"), methodStoreCredit: t("storeCredit"),
+      refundsUnknown: t("pdfRefundsUnknown"), autoNote: t("pdfAutoNote"), cashOutTitle: t("pdfCashOutTitle"), none: t("pdfNone"),
+      salesTitle: t("pdfSalesTitle"), totalCash: t("pdfTotalCash"), totalQris: t("pdfTotalQris"),
+      totalStoreCredit: t("pdfTotalStoreCredit"), totalSales: t("pdfTotalSales"), salesCount: t("pdfSalesCount"),
+      voidedCount: t("pdfVoidedCount"), queue: t("pdfQueue"), time: t("pdfTime"), name: t("pdfName"),
+      method: t("pdfMethod"), amount: t("pdfAmount"), voidedTag: t("pdfVoidedTag"), walkIn: t("txWalkIn"),
+    }),
+    (lang) => localeFor(lang),
+  );
   const closeShift = new CloseShiftUseCase(shifts, shiftSummary, clock, onShiftQueued);
   const dayClose = new DayCloseSummaryUseCase(sales, shifts);
   const completeSale = new CompleteSaleUseCase(sales, shifts, promotions, apiPromotions, pins, clock, ids, deviceId, online, onSaleQueued, queueSettings);
@@ -371,12 +394,14 @@ export function createContainer(deps: ContainerDeps) {
     cartUi,
     pins,
     files,
+    shiftPdf,
     useCases: {
       login,
       openShift,
       recordCash,
       shiftSummary,
       closeShift,
+      shiftReport,
       dayClose,
       completeSale,
       voidSale,

@@ -2,6 +2,7 @@ import type { Voucher } from "@pos-apps/types";
 import { AppError } from "@/core/errors/app-error";
 import { DrizzleCatalogRepository } from "@/features/catalog/data/drizzle-catalog-repository";
 import type { CatalogProduct } from "@/features/catalog/domain/product";
+import { ShiftReportUseCase } from "@/features/shift/domain/shift-report-use-case";
 import { KvQueueSettingsStore } from "@/features/queue/data/kv-queue-settings-store";
 import { DrizzleSalesRepository, KvDeviceIdProvider } from "@/features/checkout/data/drizzle-sales-repository";
 import { CompleteSaleUseCase } from "@/features/checkout/domain/complete-sale";
@@ -110,7 +111,7 @@ export function createHarness(opts: HarnessOptions = {}) {
     },
   };
 
-  const openShift = new OpenShiftUseCase(shifts, clock, ids, () => null, onQueued);
+  const openShift = new OpenShiftUseCase(shifts, clock, ids, () => null, onQueued, () => void sales.purgeClosedShiftSales());
   const recordCash = new RecordCashMovementUseCase(shifts, clock, ids, onQueued);
   const summary = new ShiftSummaryUseCase(shifts, sales, remoteStub, () => state.online);
   const closeShift = new CloseShiftUseCase(shifts, summary, clock, onQueued);
@@ -127,6 +128,7 @@ export function createHarness(opts: HarnessOptions = {}) {
     onQueued,
     queueSettings,
   );
+  const shiftReport = new ShiftReportUseCase(shifts, sales, () => "Warung A");
   const voidSale = new VoidSaleUseCase(sales, pins, clock, ids, () => state.permissions, () => "user-1", onQueued);
   const dayClose = new DayCloseSummaryUseCase(sales, shifts);
   const createCustomer = new CreateCustomerUseCase(
@@ -166,6 +168,7 @@ export function createHarness(opts: HarnessOptions = {}) {
     recordCash,
     summary,
     closeShift,
+    shiftReport,
     completeSale,
     voidSale,
     dayClose,

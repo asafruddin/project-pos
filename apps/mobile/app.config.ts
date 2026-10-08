@@ -32,6 +32,7 @@ const config: ExpoConfig = {
     "expo-sqlite",
     "expo-secure-store",
     "expo-asset",
+    "expo-sharing",
     "expo-font",
     "expo-image",
     "./plugins/with-bluetooth-printer",

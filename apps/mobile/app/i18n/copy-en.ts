@@ -257,7 +257,7 @@ export const copyEN = {
   shiftCashIn: "Cash in",
   shiftCashOut: "Cash out",
   shiftCashAmount: "Amount (Rp)",
-  shiftCashReason: "Reason",
+  shiftCashReason: "Reason (optional)",
   shiftCashFail: "Could not record cash in/out.",
   shiftExpected: "Expected cash",
   shiftOpening: "Opening",

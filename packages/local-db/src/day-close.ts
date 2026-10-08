@@ -5,7 +5,7 @@ import {
   type LocalShiftRecord,
 } from "./db.js";
 import { endOfLocalDay, startOfLocalDay } from "./day-bounds.js";
-import { listCompleteSalesForLocalDay, listPendingSyncSales, listPendingSyncVoids } from "./sales.js";
+import { listPendingSyncSales, listPendingSyncVoids } from "./sales.js";
 import { getOpenShiftFrom } from "./shifts.js";
 
 export type DayCloseShiftCash = {
@@ -49,6 +49,22 @@ export function closedShiftsForLocalDay(
     const t = Date.parse(row.closedAt);
     return Number.isFinite(t) && t >= start && t < end;
   });
+}
+
+/**
+ * The shift the recap covers: the open one, otherwise the most recently closed one (so the screen is not
+ * empty right after closing). Earlier shifts, even from the same day, are not part of the recap.
+ */
+export function currentShiftScope(rows: LocalShiftRecord[]): LocalShiftRecord | null {
+  const open = rows.find((row) => row.status === "open");
+  if (open) return open;
+  const closed = rows
+    .filter((row) => row.status === "closed")
+    .sort(
+      (a, b) =>
+        Date.parse(b.closedAt ?? b.openedAt) - Date.parse(a.closedAt ?? a.openedAt),
+    );
+  return closed[0] ?? null;
 }
 
 function toShiftCash(row: LocalShiftRecord): DayCloseShiftCash {
@@ -138,25 +154,31 @@ export function dayCloseGate(
   });
 }
 
-export async function getDayCloseSummary(
-  day: Date = new Date(),
-): Promise<DayCloseSummary> {
+/** Recap of the current shift only (open, or the one just closed), not of earlier shifts. */
+export async function getDayCloseSummary(): Promise<DayCloseSummary> {
   const db = await openLocalDb();
-  const [sales, pendingSales, pendingVoids, shiftRows] = await Promise.all([
-    listCompleteSalesForLocalDay(day),
+  const [allSales, pendingSales, pendingVoids, shiftRows] = await Promise.all([
+    db.getAll("sales"),
     listPendingSyncSales(),
     listPendingSyncVoids(),
     db.getAll("shifts"),
   ]);
+  const scope = currentShiftScope(shiftRows);
+  const sales = scope
+    ? allSales
+        .filter(
+          (sale) =>
+            sale.status === "complete" && !!sale.completedAt && sale.shiftId === scope.shiftId,
+        )
+        .sort((a, b) => Date.parse(b.completedAt!) - Date.parse(a.completedAt!))
+    : [];
+  // Device-wide on purpose: a sale from an earlier shift that has not synced yet must still be acknowledged.
   const pendingIds = new Set(pendingSales.map((s) => s.saleId));
   for (const item of pendingVoids) pendingIds.add(item.saleId);
-  const pendingSyncSaleIds = sales
-    .filter((s) => pendingIds.has(s.saleId))
-    .map((s) => s.saleId);
   return dayCloseSummaryFrom({
     sales,
-    pendingSyncSaleIds,
+    pendingSyncSaleIds: [...pendingIds],
     openShift: getOpenShiftFrom(shiftRows),
-    closedShifts: closedShiftsForLocalDay(shiftRows, day),
+    closedShifts: scope && scope.status === "closed" ? [scope] : [],
   });
 }

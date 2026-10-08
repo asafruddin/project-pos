@@ -71,6 +71,33 @@ export async function getQueueSettings(): Promise<QueueSettingsRecord> {
   return readQueueSettings({ get: (key) => db.get("meta", key) });
 }
 
+/**
+ * Delete finished sales of closed shifts from this device. Only sales the server already has are removed:
+ * anything still waiting in the sale or void outbox stays until it syncs. Call when a new shift opens.
+ */
+export async function purgeClosedShiftSales(): Promise<number> {
+  const db = await openLocalDb();
+  const tx = db.transaction(["sales", "syncOutbox", "voidOutbox", "shifts"], "readwrite");
+  const closedShiftIds = new Set(
+    (await tx.objectStore("shifts").getAll())
+      .filter((shift) => shift.status === "closed")
+      .map((shift) => shift.shiftId),
+  );
+  const unsynced = new Set<string>([
+    ...(await tx.objectStore("syncOutbox").getAll()).map((row) => row.saleId),
+    ...(await tx.objectStore("voidOutbox").getAll()).map((row) => row.saleId),
+  ]);
+  let removed = 0;
+  for (const sale of await tx.objectStore("sales").getAll()) {
+    if (sale.status !== "complete" || !sale.shiftId) continue;
+    if (!closedShiftIds.has(sale.shiftId) || unsynced.has(sale.saleId)) continue;
+    await tx.objectStore("sales").delete(sale.saleId);
+    removed += 1;
+  }
+  await tx.done;
+  return removed;
+}
+
 export async function createIncompleteSale(
   input: CreateIncompleteSaleInput,
 ): Promise<LocalSaleRecord> {
