@@ -27,6 +27,7 @@ export class ApiAuthGateway implements AuthGateway {
       registerId: res.register_id ?? null,
       queueResetMode: res.queue_reset_mode,
       queueResetAt: res.queue_reset_at ?? null,
+      managerPin: res.manager_pin ?? null,
     };
   }
 

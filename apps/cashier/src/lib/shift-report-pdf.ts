@@ -185,10 +185,22 @@ export function createShiftReportPdf(report: ShiftReport, lang: LangPref): jsPDF
 
 export type ShiftPdfFile = { blob: Blob; fileName: string };
 
+/** `<store-name>-<generated-date>.pdf`, e.g. `Warung-Maju-2026-10-09.pdf`. */
+export function shiftReportFileName(storeName: string, generatedAt: Date = new Date()): string {
+  const store =
+    storeName
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^A-Za-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "shift";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const date = `${generatedAt.getFullYear()}-${pad(generatedAt.getMonth() + 1)}-${pad(generatedAt.getDate())}`;
+  return `${store}-${date}.pdf`;
+}
+
 export function shiftReportPdfFile(report: ShiftReport, lang: LangPref): ShiftPdfFile {
   const doc = createShiftReportPdf(report, lang);
-  const day = (report.closedAt ?? report.openedAt).slice(0, 10);
-  return { blob: doc.output("blob"), fileName: `shift-${day}.pdf` };
+  return { blob: doc.output("blob"), fileName: shiftReportFileName(report.storeName) };
 }
 
 /** Web Share with the PDF file when supported, otherwise download it. Resolves true when shared/downloaded. */

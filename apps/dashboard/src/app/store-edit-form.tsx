@@ -40,6 +40,9 @@ export function StoreEditForm({
   const [queueMode, setQueueMode] = useState<QueueResetMode>("daily");
   const [queueResetAt, setQueueResetAt] = useState<string | null>(null);
   const [queueMessage, setQueueMessage] = useState<string | null>(null);
+  const [managerPin, setManagerPin] = useState("");
+  const [managerPinCustom, setManagerPinCustom] = useState(false);
+  const [pinMessage, setPinMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -70,6 +73,7 @@ export function StoreEditForm({
       setHasLogo(Boolean(store.logo_public_id || store.logo_secure_url));
       setQueueMode(store.queue_reset_mode ?? "daily");
       setQueueResetAt(store.queue_reset_at ?? null);
+      setManagerPinCustom(Boolean(store.manager_pin_custom));
       setMissing(false);
       setError(null);
     } catch {
@@ -148,16 +152,48 @@ export function StoreEditForm({
     }
   }
 
+  async function onResetManagerPin() {
+    if (!canEdit || pending) return;
+    if (!window.confirm("Kembalikan PIN manajer ke default (000000)?")) return;
+    setPending(true);
+    setError(null);
+    setPinMessage(null);
+    try {
+      const res = await authorizedFetch(`/stores/${storeId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ manager_pin_reset: true }),
+      });
+      if (!res.ok) {
+        setError(errorMessage(res, await res.json().catch(() => ({}))));
+        return;
+      }
+      setManagerPin("");
+      setManagerPinCustom(false);
+      setPinMessage("PIN manajer kembali ke default (000000). Perangkat menerima ini saat tersambung berikutnya.");
+    } finally {
+      setPending(false);
+    }
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (!canEdit || pending) return;
+    if (managerPin !== "" && !/^\d{6}$/.test(managerPin)) {
+      setError("PIN manajer harus 6 digit angka.");
+      return;
+    }
     setPending(true);
     setError(null);
     try {
       const res = await authorizedFetch(`/stores/${storeId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, queue_reset_mode: queueMode }),
+        body: JSON.stringify({
+          name,
+          queue_reset_mode: queueMode,
+          ...(managerPin !== "" ? { manager_pin: managerPin } : {}),
+        }),
       });
       if (!res.ok) {
         setError(errorMessage(res, await res.json().catch(() => ({}))));
@@ -243,6 +279,45 @@ export function StoreEditForm({
           {queueMessage ? (
             <p className="text-sm text-muted-foreground" role="status">
               {queueMessage}
+            </p>
+          ) : null}
+        </FormSection>
+        <FormSection
+          title="PIN manajer"
+          description="Dimasukkan di kasir untuk membatalkan (void) transaksi. Default 000000. Simpan untuk menerapkan PIN baru."
+        >
+          <FormField id="manager-pin" label="PIN manajer baru">
+            <Input
+              id="manager-pin"
+              type="password"
+              inputMode="numeric"
+              autoComplete="new-password"
+              maxLength={6}
+              placeholder="6 digit angka"
+              value={managerPin}
+              onChange={(e) => setManagerPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              disabled={pending}
+              className={formInputClass}
+            />
+          </FormField>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending || !managerPinCustom}
+              onClick={() => void onResetManagerPin()}
+            >
+              Kembalikan ke default
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              {managerPinCustom
+                ? "PIN kustom aktif. Kosongkan kolom di atas untuk tidak mengubahnya."
+                : "Memakai PIN default (000000). Sebaiknya ganti."}
+            </span>
+          </div>
+          {pinMessage ? (
+            <p className="text-sm text-muted-foreground" role="status">
+              {pinMessage}
             </p>
           ) : null}
         </FormSection>

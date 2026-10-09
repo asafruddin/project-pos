@@ -67,6 +67,17 @@ describe("PinService", () => {
     expect((await pins.verify("u1", "222222")).ok).toBe(false);
   });
 
+  it("manager PIN: default 000000 until the owner's material is synced; null goes back to the default", async () => {
+    const { pins } = make();
+    expect((await pins.verifyManager("000000")).ok).toBe(true);
+    expect((await pins.verifyManager("482913")).ok).toBe(false);
+    await pins.syncManager({ salt: "c2FsdA==", hash: await fakeHasher.hash("482913", "c2FsdA==", 5), iterations: 5 });
+    expect((await pins.verifyManager("482913")).ok).toBe(true);
+    expect((await pins.verifyManager("000000")).ok).toBe(false);
+    await pins.syncManager(null);
+    expect((await pins.verifyManager("000000")).ok).toBe(true);
+  });
+
   it("locks for 30 s after 5 wrong PINs, doubling on each further failure, and resets on success", async () => {
     const { pins, clock } = make();
     await pins.enroll("u1", "111111");

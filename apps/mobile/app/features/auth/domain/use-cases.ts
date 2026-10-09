@@ -1,6 +1,7 @@
 import { hasPermission } from "@pos-apps/types";
 import { AppError } from "@/core/errors/app-error";
 import type { QueueSettingsStore } from "@/features/queue/domain/queue-settings";
+import type { PinService } from "@/features/pin/domain/pin-service";
 import type { AuthGateway, Credentials, SessionStore } from "./ports";
 import type { Session } from "./session";
 
@@ -9,6 +10,7 @@ export class LoginUseCase {
     private readonly gateway: AuthGateway,
     private readonly sessions: SessionStore,
     private readonly queue?: QueueSettingsStore,
+    private readonly pins?: Pick<PinService, "syncManager">,
   ) {}
 
   async execute(credentials: Credentials): Promise<Session> {
@@ -21,9 +23,11 @@ export class LoginUseCase {
     if (!hasPermission(session.permissions, "sales", "create")) {
       throw new AppError("VALIDATION", "NOT_CASHIER");
     }
-    await this.sessions.save(session);
+    const { managerPin, ...stored } = session;
+    await this.sessions.save(stored);
     this.queue?.save({ queue_reset_mode: session.queueResetMode, queue_reset_at: session.queueResetAt });
-    return session;
+    await this.pins?.syncManager(managerPin).catch(() => undefined);
+    return stored;
   }
 }
 
@@ -33,6 +37,7 @@ export class RefreshIdentityUseCase {
     private readonly gateway: AuthGateway,
     private readonly sessions: SessionStore,
     private readonly queue?: QueueSettingsStore,
+    private readonly pins?: Pick<PinService, "syncManager">,
   ) {}
 
   async execute(): Promise<void> {
@@ -44,5 +49,6 @@ export class RefreshIdentityUseCase {
       registerId: me.register_id,
     });
     this.queue?.save({ queue_reset_mode: me.queue_reset_mode, queue_reset_at: me.queue_reset_at });
+    await this.pins?.syncManager(me.manager_pin).catch(() => undefined);
   }
 }

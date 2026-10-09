@@ -55,7 +55,7 @@ function fakeApi(opts: { clock: { nowMs(): number } }) {
       const res: LoginResponse = {
         access_token: jwt(state.tokenExpSec), token_type: "Bearer", user_id: state.userId, role: "cashier",
         permissions: ["sales:create"], store_id: "store-1", store_name: "Warung A", store_logo_url: null, register_id: "reg-1",
-        queue_reset_mode: "daily", queue_reset_at: null,
+        queue_reset_mode: "daily", queue_reset_at: null, manager_pin: null,
       };
       return body?.password === "secret" ? json(200, res) : json(401, { code: "AUTH_INVALID_CREDENTIALS", message: "Username atau password salah." });
     }

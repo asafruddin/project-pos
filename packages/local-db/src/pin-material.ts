@@ -1,3 +1,4 @@
+import { DEFAULT_MANAGER_PIN, type ManagerPinMaterial } from "@pos-apps/types";
 import { openLocalDb, type PinMaterialRecord } from "./db.js";
 import {
   createSalt,
@@ -66,16 +67,39 @@ export async function verifyPin(
   return timingSafeEqual(candidate, material.pinHash);
 }
 
-export async function hasManagerPin(): Promise<boolean> {
-  return hasPinMaterial(MANAGER_PIN_USER_ID);
+/**
+ * Cache the store's manager PIN (from login / `/auth/me`) for offline voids.
+ * `null` means the owner has no custom PIN: the default applies, so any old material is dropped.
+ */
+export async function syncManagerPin(
+  material: ManagerPinMaterial | null | undefined,
+): Promise<void> {
+  if (material === undefined) return;
+  const db = await openLocalDb();
+  if (!material) {
+    await db.delete("pinMaterial", MANAGER_PIN_USER_ID);
+    return;
+  }
+  await db.put("pinMaterial", {
+    userId: MANAGER_PIN_USER_ID,
+    pinHash: material.hash,
+    salt: material.salt,
+    enrolledAt: new Date().toISOString(),
+  });
 }
 
-export async function enrollManagerPin(pin: string): Promise<PinMaterialRecord> {
-  return enrollPin(MANAGER_PIN_USER_ID, pin);
+/** Pure check: the synced material, or the default PIN when the owner never set one. */
+export async function matchesManagerPin(
+  material: Pick<PinMaterialRecord, "pinHash" | "salt"> | null,
+  pin: string,
+): Promise<boolean> {
+  if (!isSixDigitPin(pin)) return false;
+  if (!material) return pin === DEFAULT_MANAGER_PIN;
+  return timingSafeEqual(await hashPin(pin, material.salt), material.pinHash);
 }
 
 export async function verifyManagerPin(pin: string): Promise<boolean> {
-  return verifyPin(MANAGER_PIN_USER_ID, pin);
+  return matchesManagerPin(await getPinMaterial(MANAGER_PIN_USER_ID), pin);
 }
 
 export async function clearPinMaterial(userId?: string): Promise<void> {

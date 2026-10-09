@@ -10,6 +10,9 @@
     "dev:dashboard": "turbo run dev --filter=@pos-apps/dashboard",
     "dev:platform": "turbo run dev --filter=@pos-apps/platform",
     "dev:api": "turbo run dev --filter=@pos-apps/api",
+    "db:migrate": "pnpm --filter @pos-apps/api db:migrate",
+    "db:generate": "pnpm --filter @pos-apps/api db:generate",
+    "db:seed": "pnpm --filter @pos-apps/api db:seed",
     "lint": "turbo run lint",
     "test": "turbo run test"
   },

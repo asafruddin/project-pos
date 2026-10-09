@@ -8,6 +8,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   Min,
   MinLength,
   ValidateIf,
@@ -39,6 +40,15 @@ export class UpdateStoreDto {
   @IsOptional()
   @IsBoolean()
   queue_reset_now?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{6}$/, { message: "PIN manajer harus 6 digit angka." })
+  manager_pin?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  manager_pin_reset?: boolean;
 }
 
 export class CreateRegisterDto {

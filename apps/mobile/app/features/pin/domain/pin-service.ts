@@ -1,5 +1,6 @@
 import { AppError } from "@/core/errors/app-error";
 import type { Clock } from "@/core/ports/clock";
+import { DEFAULT_MANAGER_PIN, type ManagerPinMaterial } from "@pos-apps/types";
 
 export type PinMaterial = {
   /** base64 salt */
@@ -89,12 +90,29 @@ export class PinService {
     await this.enrollScope(MANAGER_SCOPE, pin);
   }
 
+  /**
+   * Cache the store's manager PIN (set by the owner in the dashboard; from login / `/auth/me`).
+   * `null` = no custom PIN: drop any old one so the default applies.
+   */
+  async syncManager(material: ManagerPinMaterial | null | undefined): Promise<void> {
+    if (material === undefined) return;
+    if (!material) {
+      await this.store.remove(MANAGER_SCOPE);
+      return;
+    }
+    const current = await this.store.get(MANAGER_SCOPE);
+    if (current && current.hash === material.hash && current.salt === material.salt) return; // unchanged: keep the lockout
+    await this.store.set(MANAGER_SCOPE, { salt: material.salt, hash: material.hash, iterations: material.iterations, enrolledAt: this.clock.nowIso() });
+    this.lockouts.set(MANAGER_SCOPE, { failures: 0, lockedUntil: 0 });
+  }
+
   verify(userId: string | null, pin: string): Promise<VerifyResult> {
     return this.verifyScope(userId, pin);
   }
 
+  /** The owner's PIN, or the default (000000) until they set one. */
   verifyManager(pin: string): Promise<VerifyResult> {
-    return this.verifyScope(MANAGER_SCOPE, pin);
+    return this.verifyScope(MANAGER_SCOPE, pin, DEFAULT_MANAGER_PIN);
   }
 
   /** Seconds the scope is still locked for (0 when free). */
@@ -112,17 +130,19 @@ export class PinService {
     this.lockouts.set(scope, { failures: 0, lockedUntil: 0 });
   }
 
-  private async verifyScope(userId: string | null, pin: string): Promise<VerifyResult> {
+  private async verifyScope(userId: string | null, pin: string, defaultPin?: string): Promise<VerifyResult> {
     const scope = userId ?? "__user__";
     const lockedFor = this.lockedForMs(scope);
     if (lockedFor > 0) return { ok: false, reason: "locked", retryAfterMs: lockedFor };
 
     const material = userId ? await this.store.get(userId) : await this.store.anyUser();
-    if (!material) return { ok: false, reason: "no_material" };
+    if (!material && defaultPin === undefined) return { ok: false, reason: "no_material" };
 
-    const matches =
-      isSixDigitPin(pin) &&
-      timingSafeEqual(await this.hasher.hash(pin, material.salt, material.iterations), material.hash);
+    const matches = !isSixDigitPin(pin)
+      ? false
+      : material
+        ? timingSafeEqual(await this.hasher.hash(pin, material.salt, material.iterations), material.hash)
+        : pin === defaultPin;
     if (matches) {
       this.lockouts.set(scope, { failures: 0, lockedUntil: 0 });
       return { ok: true };

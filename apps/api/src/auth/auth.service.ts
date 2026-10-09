@@ -6,13 +6,14 @@ import {
 import { JwtService } from "@nestjs/jwt";
 import { compare } from "bcryptjs";
 import { eq } from "drizzle-orm";
-import type { AuthMeResponse, LoginResponse, QueueSettings } from "@pos-apps/types";
+import type { AuthMeResponse, LoginResponse, ManagerPinMaterial, QueueSettings } from "@pos-apps/types";
 import { JWT_AUD_STORE, STORE_1_ID, storeLogoFilePath } from "@pos-apps/types";
 import { getDb } from "../db/client";
 import { stores, users } from "../db/schema";
 import { loadRolePermissions } from "./load-permissions";
 import { isRole } from "./roles";
 import { firstRegisterId } from "../stores/register-for-store";
+import { managerPinMaterial } from "../stores/manager-pin";
 
 export type JwtPayload = {
   sub: string;
@@ -27,6 +28,7 @@ const DUMMY_PASSWORD_HASH =
 type StoreIdentity = {
   store_name: string;
   store_logo_url: string | null;
+  manager_pin: ManagerPinMaterial | null;
 } & QueueSettings;
 
 @Injectable()
@@ -85,6 +87,7 @@ export class AuthService {
       register_id: registerId,
       queue_reset_mode: store.queue_reset_mode,
       queue_reset_at: store.queue_reset_at,
+      manager_pin: store.manager_pin,
     };
   }
 
@@ -115,6 +118,7 @@ export class AuthService {
       register_id: registerId,
       queue_reset_mode: store.queue_reset_mode,
       queue_reset_at: store.queue_reset_at,
+      manager_pin: store.manager_pin,
       active: user.active,
     };
   }
@@ -126,6 +130,9 @@ export class AuthService {
         logoPublicId: stores.logoPublicId,
         queueResetMode: stores.queueResetMode,
         queueResetAt: stores.queueResetAt,
+        managerPinHash: stores.managerPinHash,
+        managerPinSalt: stores.managerPinSalt,
+        managerPinIterations: stores.managerPinIterations,
       })
       .from(stores)
       .where(eq(stores.storeId, storeId))
@@ -138,6 +145,7 @@ export class AuthService {
         : null,
       queue_reset_mode: store?.queueResetMode ?? "daily",
       queue_reset_at: store?.queueResetAt ? store.queueResetAt.toISOString() : null,
+      manager_pin: store ? managerPinMaterial(store) : null,
     };
   }
 }

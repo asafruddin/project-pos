@@ -136,6 +136,7 @@ export default function ShiftScreen() {
       setBusy(false);
       return;
     }
+    container.markShiftClosed();
     // The shift is closed for good; a PDF problem must not undo it, only show a retry-able message.
     let uri: string | null = null;
     let shareError: string | null = null;
@@ -164,12 +165,8 @@ export default function ShiftScreen() {
 
   async function finish() {
     setResult(null);
-    if (intent === "logout") {
-      await container.endAccountSession();
-      return;
-    }
-    container.clearShiftIntent();
-    navigation.replace(intent === "close-then-open" ? "Menu" : "DayClose");
+    // "Selesai" ends the session: the shift is closed, so sign the cashier out.
+    await container.endAccountSession();
   }
 
   const subtitle = intent === "logout" ? t("shiftLogoutHint") : intent === "close-then-open" ? t("shiftResumeHint") : t("shiftActive");

@@ -27,6 +27,7 @@ import {
   type CloudinaryPort,
 } from "../media/cloudinary.adapter";
 import { fetchRemoteBytes } from "../media/fetch-remote-bytes";
+import { hashManagerPin, isSixDigitPin, managerPinMaterial } from "./manager-pin";
 
 const ALLOWED_MIME = new Set([
   "image/jpeg",
@@ -45,6 +46,7 @@ function toStore(row: typeof stores.$inferSelect): StoreRecord {
     logo_secure_url: row.logoSecureUrl ?? null,
     queue_reset_mode: row.queueResetMode ?? "daily",
     queue_reset_at: row.queueResetAt ? row.queueResetAt.toISOString() : null,
+    manager_pin_custom: managerPinMaterial(row) !== null,
   };
 }
 
@@ -156,6 +158,22 @@ export class StoresService {
     }
     if (input.queue_reset_now) {
       patch.queueResetAt = new Date();
+    }
+    if (input.manager_pin !== undefined) {
+      if (!isSixDigitPin(input.manager_pin)) {
+        throw new BadRequestException({
+          code: "STORE_INVALID",
+          message: "PIN manajer harus 6 digit angka.",
+        });
+      }
+      const material = await hashManagerPin(input.manager_pin);
+      patch.managerPinHash = material.hash;
+      patch.managerPinSalt = material.salt;
+      patch.managerPinIterations = material.iterations;
+    } else if (input.manager_pin_reset) {
+      patch.managerPinHash = null;
+      patch.managerPinSalt = null;
+      patch.managerPinIterations = null;
     }
     if (Object.keys(patch).length === 0) {
       throw new BadRequestException({

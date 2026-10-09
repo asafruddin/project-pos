@@ -66,6 +66,7 @@ export function AppShell({ title, subtitle, headerActions, children, aside, scro
   const cartLines = useStore(container.cart, (s) => s.lines);
   const [menuOpen, setMenuOpen] = useState(false);
   const hasShift = useEventValue(["shift"], (c) => c.repositories.shifts.getOpen() !== null);
+  const { shiftClosed } = useAuth();
 
   const storeName = session?.storeName ?? "POS Apps";
   const roleLabel = session?.role && session.role in ROLE_LABELS ? ROLE_LABELS[session.role as Role] : t("brand");
@@ -245,7 +246,7 @@ export function AppShell({ title, subtitle, headerActions, children, aside, scro
         items={menuItems}
       />
       {signOut.dialog}
-      {!hasShift && !NO_SHIFT_GATE.includes(route.name as keyof RootStackParamList) ? <OpenShiftDialog onLogout={signOut.request} /> : null}
+      {!hasShift && !shiftClosed && !NO_SHIFT_GATE.includes(route.name as keyof RootStackParamList) ? <OpenShiftDialog onLogout={signOut.request} /> : null}
     </View>
   );
 }

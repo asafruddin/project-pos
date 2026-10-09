@@ -6,9 +6,9 @@ import type { PinService } from "@/features/pin/domain/pin-service";
 import type { SalesRepository } from "./ports";
 import type { CompletedSale } from "./sale";
 
-export type VoidAuth = "unattended" | "enroll" | "unlock";
+export type VoidAuth = "unattended" | "unlock";
 
-export type VoidErrorCode = "VOID_NOT_FOUND" | "VOID_NOT_ALLOWED" | "VOID_INVALID" | "VOID_PIN_SAME" | "VOID_PIN_WRONG" | "VOID_PIN_LOCKED" | "VOID_PIN_REQUIRED";
+export type VoidErrorCode = "VOID_NOT_FOUND" | "VOID_NOT_ALLOWED" | "VOID_INVALID" | "VOID_PIN_WRONG" | "VOID_PIN_LOCKED" | "VOID_PIN_REQUIRED";
 
 function sameLocalDay(iso: string | null, now: Date): boolean {
   if (!iso) return false;
@@ -17,7 +17,7 @@ function sameLocalDay(iso: string | null, now: Date): boolean {
   return Number.isFinite(t) && t >= start && t < start + 86_400_000;
 }
 
-/** Same-day void of a completed sale. Needs `sales:void_unattended` or a manager PIN. */
+/** Same-day void of a completed sale. Needs `sales:void_unattended` or the store's manager PIN (default 000000, changed by the owner in the dashboard). */
 export class VoidSaleUseCase {
   constructor(
     private readonly sales: SalesRepository,
@@ -25,14 +25,13 @@ export class VoidSaleUseCase {
     private readonly clock: Clock,
     private readonly ids: IdGenerator,
     private readonly permissions: () => string[],
-    private readonly userId: () => string | null,
     private readonly onQueued: () => void,
   ) {}
 
   /** How the cashier must authorise a void on this device. */
   async authMode(): Promise<VoidAuth> {
     if (this.permissions().includes("sales:void_unattended")) return "unattended";
-    return (await this.pins.hasManagerPin()) ? "unlock" : "enroll";
+    return "unlock";
   }
 
   async execute(saleId: string, managerPin?: string): Promise<CompletedSale> {
@@ -59,13 +58,6 @@ export class VoidSaleUseCase {
     const mode = await this.authMode();
     if (mode === "unattended") return;
     if (!pin || !/^\d{6}$/.test(pin)) throw new AppError("VALIDATION", "VOID_PIN_REQUIRED");
-    if (mode === "enroll") {
-      // The manager PIN must differ from the cashier's own PIN, or it protects nothing.
-      const uid = this.userId();
-      if (uid && (await this.pins.verify(uid, pin)).ok) throw new AppError("VALIDATION", "VOID_PIN_SAME");
-      await this.pins.enrollManager(pin);
-      return;
-    }
     const result = await this.pins.verifyManager(pin);
     if (!result.ok) throw new AppError("VALIDATION", result.reason === "locked" ? "VOID_PIN_LOCKED" : "VOID_PIN_WRONG");
   }

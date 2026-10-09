@@ -1,5 +1,5 @@
 import { addProduct, emptyCart } from "@/features/cart/domain/cart";
-import { renderShiftReportHtml, type ShiftPdfLabels } from "@/features/shift/domain/shift-pdf";
+import { renderShiftReportHtml, shiftPdfFileName, type ShiftPdfLabels } from "@/features/shift/domain/shift-pdf";
 import { createHarness, drainOutbox, product } from "./helpers/harness";
 
 const sell = (h: ReturnType<typeof createHarness>, qty: number, guestName?: string) => {
@@ -87,5 +87,14 @@ describe("new shift clean slate", () => {
     const fresh = await sell(h, 1);
     expect(fresh.queueNumber).toBe(1);
     expect(h.sales.getSale(fresh.saleId)).not.toBeNull();
+  });
+});
+
+describe("shift PDF file name", () => {
+  it("is <store-name>-<generated-date>.pdf with a file-safe store name", () => {
+    const at = new Date(2026, 9, 9, 18, 30);
+    expect(shiftPdfFileName("Warung Maju", at)).toBe("Warung-Maju-2026-10-09.pdf");
+    expect(shiftPdfFileName("Kopi & Roti / Café #1", at)).toBe("Kopi-Roti-Cafe-1-2026-10-09.pdf");
+    expect(shiftPdfFileName("   ", at)).toBe("shift-2026-10-09.pdf");
   });
 });

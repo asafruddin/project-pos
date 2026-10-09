@@ -19,6 +19,7 @@ import { PrefControls } from "@/components/molecules/settings-menu";
 import { getSession, getStoreIdentity } from "@/lib/auth-token";
 import { useStoreLogoSrc } from "@/lib/use-store-logo";
 import { requestLogout } from "@/lib/logout";
+import { isShiftClosedThisSession } from "@/lib/pin-session";
 import { toggleCashierCart } from "@/lib/cart-events";
 import { copy, getLang, type LangPref } from "@/lib/preferences";
 import { SHIFT_CHANGED_EVENT } from "@/lib/shift-events";
@@ -75,7 +76,8 @@ export function AppShell({
     const skip =
       pathname.startsWith("/shift") ||
       pathname.startsWith("/day-close") ||
-      pathname.startsWith("/settings");
+      pathname.startsWith("/settings") ||
+      isShiftClosedThisSession();
     if (skip) {
       setNeedsOpenShift(false);
       return;
@@ -83,7 +85,8 @@ export function AppShell({
     let cancelled = false;
     async function check() {
       const open = await getOpenShift();
-      if (!cancelled) setNeedsOpenShift(!open);
+      // A shift closed in this PIN session stays closed until logout: the dialog only follows a PIN unlock.
+      if (!cancelled) setNeedsOpenShift(!open && !isShiftClosedThisSession());
     }
     void check();
     function onChanged() {

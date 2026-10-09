@@ -12,7 +12,7 @@ import {
 import { getApiUrl } from "@/lib/api-client";
 import { prefetchStoreLogo } from "@/lib/use-store-logo";
 import type { AuthMeResponse } from "@pos-apps/types";
-import { adoptTenantStoreId, saveQueueSettings } from "@pos-apps/local-db";
+import { adoptTenantStoreId, saveQueueSettings, syncManagerPin } from "@pos-apps/local-db";
 
 const CHECK_MS = 30_000;
 
@@ -51,6 +51,7 @@ export function SessionGuard({ children }: { children: React.ReactNode }) {
             void adoptTenantStoreId(me.store_id);
           }
           void saveQueueSettings(me);
+          void syncManagerPin(me.manager_pin ?? null);
           void prefetchStoreLogo(me.store_logo_url);
         }
       } catch {

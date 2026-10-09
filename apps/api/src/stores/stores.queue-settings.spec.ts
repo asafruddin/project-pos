@@ -16,6 +16,9 @@ const baseRow = {
   logoSecureUrl: null,
   queueResetMode: "daily" as const,
   queueResetAt: null as Date | null,
+  managerPinHash: null as string | null,
+  managerPinSalt: null as string | null,
+  managerPinIterations: null as number | null,
   createdAt: new Date("2026-10-01T00:00:00Z"),
 };
 
@@ -52,5 +55,28 @@ describe("StoresService queue settings", () => {
   it("rejects an empty update", async () => {
     mockDb(baseRow);
     await expect(service.updateStore(STORE, {})).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it("stores a new manager PIN as PBKDF2 material, never the PIN itself", async () => {
+    const set = mockDb({ ...baseRow, managerPinHash: "h", managerPinSalt: "s", managerPinIterations: 100_000 });
+    const result = await service.updateStore(STORE, { manager_pin: "123456" });
+    const patch = set.mock.calls[0][0] as Record<string, unknown>;
+    expect(patch.managerPinIterations).toBe(100_000);
+    expect(JSON.stringify(patch)).not.toContain("123456");
+    expect(typeof patch.managerPinHash).toBe("string");
+    expect(typeof patch.managerPinSalt).toBe("string");
+    expect(result.manager_pin_custom).toBe(true);
+  });
+
+  it("rejects a manager PIN that is not 6 digits", async () => {
+    mockDb(baseRow);
+    await expect(service.updateStore(STORE, { manager_pin: "12345" })).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it("goes back to the default manager PIN", async () => {
+    const set = mockDb(baseRow);
+    const result = await service.updateStore(STORE, { manager_pin_reset: true });
+    expect(set).toHaveBeenCalledWith({ managerPinHash: null, managerPinSalt: null, managerPinIterations: null });
+    expect(result.manager_pin_custom).toBe(false);
   });
 });

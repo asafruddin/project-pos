@@ -129,7 +129,7 @@ export function createHarness(opts: HarnessOptions = {}) {
     queueSettings,
   );
   const shiftReport = new ShiftReportUseCase(shifts, sales, () => "Warung A");
-  const voidSale = new VoidSaleUseCase(sales, pins, clock, ids, () => state.permissions, () => "user-1", onQueued);
+  const voidSale = new VoidSaleUseCase(sales, pins, clock, ids, () => state.permissions, onQueued);
   const dayClose = new DayCloseSummaryUseCase(sales, shifts);
   const createCustomer = new CreateCustomerUseCase(
     customers,

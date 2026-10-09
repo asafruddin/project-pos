@@ -27,7 +27,7 @@ import { flushSalesAndVoids } from "@/lib/flush-sync";
 import { authorizedFetch } from "@/lib/api-client";
 import { clearSession, getStoreIdentity } from "@/lib/auth-token";
 import { formatIdr, parseGroupedInt } from "@/lib/money";
-import { clearPinUnlock, isPinUnlocked } from "@/lib/pin-session";
+import { clearPinUnlock, isPinUnlocked, markShiftClosed } from "@/lib/pin-session";
 import { applyTheme, copy, getLang, type LangPref } from "@/lib/preferences";
 import { notifyShiftChanged } from "@/lib/shift-events";
 
@@ -208,6 +208,7 @@ function ShiftPageInner() {
       // Counted cash = the system's expected cash: nothing is typed at close.
       const closed = await closeLocalShiftAuto({ cashRefundsMinor: refundsMinor });
       await flushSalesAndVoids();
+      markShiftClosed();
       notifyShiftChanged();
       // The shift is closed for good; a PDF problem only shows a message, it never undoes the close.
       let file: { blob: Blob; fileName: string } | null = null;
@@ -246,18 +247,11 @@ function ShiftPageInner() {
     }
   }
 
+  // "Selesai" ends the session: the shift is closed, so sign the cashier out.
   async function onDone() {
-    if (intent === "logout") {
-      clearSession();
-      clearPinUnlock();
-      router.replace("/login");
-      return;
-    }
-    if (intent === "close-then-open") {
-      router.replace("/menu");
-      return;
-    }
-    router.replace("/day-close");
+    clearSession();
+    clearPinUnlock();
+    router.replace("/login");
   }
 
   if (result) {

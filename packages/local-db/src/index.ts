@@ -36,13 +36,13 @@ export {
 } from "./pin-hash.js";
 export {
   clearPinMaterial,
-  enrollManagerPin,
   enrollPin,
   getAnyPinMaterial,
   getPinMaterial,
-  hasManagerPin,
   hasPinMaterial,
   MANAGER_PIN_USER_ID,
+  matchesManagerPin,
+  syncManagerPin,
   verifyManagerPin,
   verifyPin,
 } from "./pin-material.js";

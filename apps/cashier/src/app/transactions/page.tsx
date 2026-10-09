@@ -15,12 +15,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ApiErrorBody, SaleLookupResponse } from "@pos-apps/types";
 import {
-  enrollManagerPin,
-  hasManagerPin,
   listCachedCustomers,
   listCompleteSalesForLocalDay,
   verifyManagerPin,
-  verifyPin,
   voidCompleteSale,
   type LocalSaleRecord,
 } from "@pos-apps/local-db";
@@ -42,7 +39,7 @@ export default function TransactionsPage() {
   const [sales, setSales] = useState<LocalSaleRecord[] | null>(null);
   const [customerNames, setCustomerNames] = useState<Record<string, string>>({});
   const [target, setTarget] = useState<LocalSaleRecord | null>(null);
-  const [pinMode, setPinMode] = useState<"enroll" | "unlock" | null>(null);
+  const [pinMode, setPinMode] = useState<"unlock" | null>(null);
   const [pin, setPin] = useState("");
   const [returnSale, setReturnSale] = useState<SaleLookupResponse | null>(null);
   const [previewSale, setPreviewSale] = useState<LocalSaleRecord | null>(null);
@@ -100,7 +97,7 @@ export default function TransactionsPage() {
       }
       return;
     }
-    setPinMode((await hasManagerPin()) ? "unlock" : "enroll");
+    setPinMode("unlock");
   }
 
   async function startReturn(sale: LocalSaleRecord) {
@@ -145,15 +142,7 @@ export default function TransactionsPage() {
     setBusy(true);
     setError(null);
     try {
-      const session = getSession();
-      if (pinMode === "enroll") {
-        if (session?.userId && (await verifyPin(session.userId, digits))) {
-          setError(t.voidPinSame);
-          setPin("");
-          return;
-        }
-        await enrollManagerPin(digits);
-      } else if (!(await verifyManagerPin(digits))) {
+      if (!(await verifyManagerPin(digits))) {
         setError(t.pinWrong);
         setPin("");
         return;
@@ -370,7 +359,7 @@ export default function TransactionsPage() {
           <div className="w-full max-w-sm rounded-xl border border-border bg-card p-5 shadow-[var(--shadow-card)]">
             <p className="font-medium">{t.voidNeedPin}</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              {pinMode === "enroll" ? t.voidPinEnroll : t.voidPinUnlock}
+              {t.voidPinUnlock}
             </p>
             {error ? (
               <p className="mt-3 text-sm text-destructive" role="alert">

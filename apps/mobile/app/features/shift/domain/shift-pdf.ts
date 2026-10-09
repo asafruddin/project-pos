@@ -48,6 +48,19 @@ export interface ShiftPdf {
   share(uri: string): Promise<void>;
 }
 
+/** `<store-name>-<generated-date>.pdf`, e.g. `Warung-Maju-2026-10-09.pdf`. */
+export function shiftPdfFileName(storeName: string, generatedAt: Date = new Date()): string {
+  const store =
+    storeName
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^A-Za-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "shift";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const date = `${generatedAt.getFullYear()}-${pad(generatedAt.getMonth() + 1)}-${pad(generatedAt.getDate())}`;
+  return `${store}-${date}.pdf`;
+}
+
 const escapeHtml = (value: string): string =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 

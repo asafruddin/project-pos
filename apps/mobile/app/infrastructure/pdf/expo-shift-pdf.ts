@@ -1,8 +1,9 @@
+import { Directory, File, Paths } from "expo-file-system";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import type { ShiftReport } from "@pos-apps/domain";
 import { AppError } from "@/core/errors/app-error";
-import { renderShiftReportHtml, type ShiftPdf, type ShiftPdfLabels } from "@/features/shift/domain/shift-pdf";
+import { renderShiftReportHtml, shiftPdfFileName, type ShiftPdf, type ShiftPdfLabels } from "@/features/shift/domain/shift-pdf";
 import { formatIdr } from "@/utils/money";
 
 /** `expo-print` renders the HTML to a PDF file; `expo-sharing` opens the system share sheet. */
@@ -23,9 +24,23 @@ export class ExpoShiftPdf implements ShiftPdf {
     try {
       // A4 portrait in points.
       const { uri } = await Print.printToFileAsync({ html, width: 595, height: 842 });
-      return uri;
+      return this.rename(uri, shiftPdfFileName(report.storeName));
     } catch {
       throw new AppError("PDF", "PDF_CREATE_FAILED");
+    }
+  }
+
+  /** `printToFileAsync` picks a random name; the share sheet shows the file name, so give it a readable one. */
+  private async rename(uri: string, name: string): Promise<string> {
+    try {
+      const dir = new Directory(Paths.cache, "shift-reports");
+      dir.create({ idempotent: true, intermediates: true });
+      const target = new File(dir, name);
+      if (target.exists) target.delete();
+      await new File(uri).move(target);
+      return target.uri;
+    } catch {
+      return uri; // a generic file name beats no PDF
     }
   }
 

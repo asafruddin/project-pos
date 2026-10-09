@@ -57,6 +57,16 @@ export type QueueSettings = {
   queue_reset_at: string | null;
 };
 
+/** PBKDF2-HMAC-SHA256 material (base64) of the store's manager PIN; null = the default PIN. */
+export type ManagerPinMaterial = {
+  salt: string;
+  hash: string;
+  iterations: number;
+};
+
+/** Manager PIN used until the owner sets a custom one in the dashboard. */
+export const DEFAULT_MANAGER_PIN = "000000";
+
 export type LoginResponse = {
   access_token: string;
   token_type: "Bearer";
@@ -67,6 +77,7 @@ export type LoginResponse = {
   store_name: string;
   store_logo_url: string | null;
   register_id: string | null;
+  manager_pin: ManagerPinMaterial | null;
 } & QueueSettings;
 
 export type AuthMeResponse = {
@@ -78,6 +89,7 @@ export type AuthMeResponse = {
   store_logo_url: string | null;
   register_id: string | null;
   active: boolean;
+  manager_pin: ManagerPinMaterial | null;
 } & QueueSettings;
 
 export type UserAccount = {
@@ -574,6 +586,8 @@ export type StoreRecord = {
   logo_secure_url: string | null;
   queue_reset_mode: QueueResetMode;
   queue_reset_at: string | null;
+  /** True once the owner set a custom manager PIN; false = the default PIN is in use. */
+  manager_pin_custom: boolean;
 };
 
 /** Authenticated byte-proxy path for a store logo (not a Cloudinary URL). */
@@ -619,6 +633,10 @@ export type UpdateStoreRequest = {
   queue_reset_mode?: QueueResetMode;
   /** Restart every device's queue from now. */
   queue_reset_now?: boolean;
+  /** New 6-digit manager PIN (needed to void a sale on the cashier). */
+  manager_pin?: string;
+  /** Go back to the default manager PIN. */
+  manager_pin_reset?: boolean;
 };
 
 export type CreateRegisterRequest = {

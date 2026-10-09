@@ -5,15 +5,15 @@ import { BottomSheet, Button, Dialog, Text } from "@/components/ui";
 import { useT } from "@/i18n";
 import { useTheme } from "@/theme";
 
-/** PIN sheet for voiding a sale: enrol a manager PIN the first time, then unlock with it. */
+/** PIN sheet for voiding a sale: the store's manager PIN (default 000000, set by the owner in the dashboard). */
 export function ManagerPinSheet({
-  mode,
+  open,
   error,
   busy,
   onSubmit,
   onCancel,
 }: {
-  mode: "enroll" | "unlock" | null;
+  open: boolean;
   error: string | null;
   busy: boolean;
   onSubmit: (pin: string) => void;
@@ -30,7 +30,7 @@ export function ManagerPinSheet({
   };
 
   return (
-    <BottomSheet open={mode !== null} onClose={cancel} locked={busy} title={t("voidNeedPin")} description={mode === "enroll" ? t("voidPinEnroll") : t("voidPinUnlock")}>
+    <BottomSheet open={open} onClose={cancel} locked={busy} title={t("voidNeedPin")} description={t("voidPinUnlock")}>
       {error ? <Text color={colors.destructive} accessibilityRole="alert">{error}</Text> : null}
       <PinPad
         value={pin}

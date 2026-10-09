@@ -82,6 +82,10 @@ export const stores = pgTable("stores", {
     .$type<"daily" | "shift" | "manual">(),
   /** Last manual "reset now"; devices restart their queue from this moment. */
   queueResetAt: timestamp("queue_reset_at", { withTimezone: true }),
+  /** Manager PIN (void approval) as PBKDF2 material. All null = the default PIN. */
+  managerPinHash: text("manager_pin_hash"),
+  managerPinSalt: text("manager_pin_salt"),
+  managerPinIterations: integer("manager_pin_iterations"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

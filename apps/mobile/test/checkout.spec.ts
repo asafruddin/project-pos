@@ -177,14 +177,20 @@ describe("void sale", () => {
     expect(rows[rows.length - 1]).toMatchObject({ kind: "sale.void", entityId: sale.saleId, payload: { sale_id: sale.saleId, void_id: voided.voidId } });
   });
 
-  it("without the permission: first void enrols a manager PIN that must differ from the user PIN", async () => {
+  it("without the permission and without an owner PIN, the default 000000 approves the void", async () => {
     const { h, sale } = await setup();
-    await h.pins.enroll("user-1", "111111");
-    expect(await h.voidSale.authMode()).toBe("enroll");
-    expect(await code(h.voidSale.execute(sale.saleId))).toBe("VOID_PIN_REQUIRED");
-    expect(await code(h.voidSale.execute(sale.saleId, "111111"))).toBe("VOID_PIN_SAME");
-    await h.voidSale.execute(sale.saleId, "222222");
     expect(await h.voidSale.authMode()).toBe("unlock");
+    expect(await code(h.voidSale.execute(sale.saleId))).toBe("VOID_PIN_REQUIRED");
+    expect(await code(h.voidSale.execute(sale.saleId, "111111"))).toBe("VOID_PIN_WRONG");
+    await h.voidSale.execute(sale.saleId, "000000");
+  });
+
+  it("once the owner's PIN is synced the default stops working; syncing null brings it back", async () => {
+    const { h, sale } = await setup();
+    await h.pins.enrollManager("222222"); // stands in for material synced from the dashboard
+    expect(await code(h.voidSale.execute(sale.saleId, "000000"))).toBe("VOID_PIN_WRONG");
+    await h.pins.syncManager(null);
+    await h.voidSale.execute(sale.saleId, "000000");
   });
 
   it("unlock mode checks the manager PIN and locks after repeated failures", async () => {

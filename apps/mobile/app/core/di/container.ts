@@ -81,6 +81,8 @@ export type AuthState = {
   reauthOpen: boolean;
   /** Set after a PIN unlock / logout request when the shift screen must run first. */
   shiftIntent: ShiftIntent;
+  /** The shift was closed in this PIN session: no open-shift dialog until the next PIN unlock. */
+  shiftClosed: boolean;
   /** `file://` URI of the cached store logo. */
   logoUri: string | null;
 };
@@ -134,6 +136,7 @@ export function createContainer(deps: ContainerDeps) {
     reauth: false,
     reauthOpen: false,
     shiftIntent: null,
+    shiftClosed: false,
     logoUri: kv.get("store.logoUri"),
   }));
 
@@ -208,7 +211,10 @@ export function createContainer(deps: ContainerDeps) {
   const apiCustomers = new ApiCustomerRemote(http);
   const apiPromotions = new ApiPromotionRemote(http);
 
-  const identity = new RefreshIdentityUseCase(new ApiAuthGateway(http), sessions, queueSettings);
+  // --- PIN
+  const pins = new PinService(new SecurePinMaterialStore(kv), new NoblePinHasher((n) => Crypto.getRandomBytes(n)), new KvLockoutStore(kv), clock);
+
+  const identity = new RefreshIdentityUseCase(new ApiAuthGateway(http), sessions, queueSettings, pins);
   const identityTask: PullTask = {
     name: "identity",
     minIntervalMs: 60_000,
@@ -255,11 +261,8 @@ export function createContainer(deps: ContainerDeps) {
   const printer: Printer = deps.printer ?? createDefaultPrinter(kv, deps.appState);
   const printQueue = new PrintQueue(printJobs, printer, clock, ids);
 
-  // --- PIN
-  const pins = new PinService(new SecurePinMaterialStore(kv), new NoblePinHasher((n) => Crypto.getRandomBytes(n)), new KvLockoutStore(kv), clock);
-
   // --- use cases
-  const login = new LoginUseCase(new ApiAuthGateway(http), sessions, queueSettings);
+  const login = new LoginUseCase(new ApiAuthGateway(http), sessions, queueSettings, pins);
   const openShift = new OpenShiftUseCase(shifts, clock, ids, () => sessions.current(), onShiftQueued, () => {
     // New shift = clean slate: drop closed shifts' sales the server already has.
     if (sales.purgeClosedShiftSales() > 0) bump("sales");
@@ -291,7 +294,6 @@ export function createContainer(deps: ContainerDeps) {
     clock,
     ids,
     () => sessions.current()?.permissions ?? [],
-    () => sessions.current()?.userId ?? null,
     onSaleQueued,
   );
   const createCustomer = new CreateCustomerUseCase(customersRepo, apiCustomers, clock, ids, online, onQueued);
@@ -363,7 +365,7 @@ export function createContainer(deps: ContainerDeps) {
   }
 
   function endSessionState(): void {
-    auth.setState({ pinUnlocked: false, reauth: false, reauthOpen: false, shiftIntent: null });
+    auth.setState({ pinUnlocked: false, reauth: false, reauthOpen: false, shiftIntent: null, shiftClosed: false });
     recomputeGate();
   }
 
@@ -471,7 +473,7 @@ export function createContainer(deps: ContainerDeps) {
     /** After a successful PIN: a shift left open on this device must be closed first. */
     completePinUnlock(): void {
       const leftOver = shifts.getOpen() !== null;
-      auth.setState({ pinUnlocked: true, shiftIntent: leftOver ? "close-then-open" : null });
+      auth.setState({ pinUnlocked: true, shiftIntent: leftOver ? "close-then-open" : null, shiftClosed: false });
       recomputeGate();
       printer.keepAlive(true);
       // Sync is gated on the till being open, so nothing has run since the app started: catch up now.
@@ -480,6 +482,11 @@ export function createContainer(deps: ContainerDeps) {
 
     clearShiftIntent(): void {
       auth.setState({ shiftIntent: null });
+    },
+
+    /** The shift was just closed: keep the open-shift dialog away until the next PIN unlock. */
+    markShiftClosed(): void {
+      auth.setState({ shiftClosed: true });
     },
 
     /** Explicit sign out. With an open shift the shift screen runs first (`intent=logout`). */

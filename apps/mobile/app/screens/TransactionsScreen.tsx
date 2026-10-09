@@ -23,7 +23,6 @@ function payLabel(sale: CompletedSale, t: Translate): string {
 
 function voidErrorMessage(error: unknown, t: Translate): string {
   const code = isAppError(error) ? error.message : "";
-  if (code === "VOID_PIN_SAME") return t("voidPinSame");
   if (code === "VOID_PIN_WRONG" || code === "VOID_PIN_REQUIRED") return t("pinWrong");
   if (code === "VOID_PIN_LOCKED") return t("pinLocked", { seconds: 30 });
   return t("voidFail");
@@ -169,7 +168,7 @@ export default function TransactionsScreen() {
       )}
 
       <ManagerPinSheet
-        mode={voidMode === "enroll" || voidMode === "unlock" ? voidMode : null}
+        open={voidMode === "unlock"}
         error={error}
         busy={busy}
         onSubmit={(pin) => void runVoid(pin)}
