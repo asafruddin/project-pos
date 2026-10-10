@@ -130,6 +130,16 @@ describe("day close", () => {
     expect(dayCloseGate(summary, false)).toEqual({ ok: true });
   });
 
+  it("auto-close works when cash out exceeds the drawer (negative expected cash) and queues the close", () => {
+    const h = createHarness();
+    h.openShift.execute(100_000);
+    h.recordCash.execute({ kind: "out", amountMinor: 150_000, reason: "supplier" });
+    const closed = h.closeShift.executeAuto();
+    expect(closed).toMatchObject({ status: "closed", expectedCashMinor: -50_000, countedCashMinor: -50_000, differenceMinor: 0 });
+    expect(h.shifts.getOpen()).toBeNull();
+    expect(drainOutbox(h.outbox).map((r) => r.kind)).toEqual(["shift.open", "cash.movement", "shift.close"]);
+  });
+
   it("recaps only the current shift: earlier closed shifts of the same day are left out", async () => {
     const h = createHarness();
     h.catalog.replaceAll([product({ stockQty: 100 })], "t");

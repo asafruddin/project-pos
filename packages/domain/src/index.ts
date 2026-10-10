@@ -1294,15 +1294,16 @@ export function closeShift(input: CloseShiftInput): CloseShiftResult {
       message: "Hanya shift terbuka yang dapat ditutup.",
     };
   }
+  // Counted may be negative: the app closes with counted = expected, and expected is negative
+  // when cash out exceeds opening + cash sales. That must not block closing.
   if (
     !Number.isInteger(input.counted_cash_minor) ||
-    input.counted_cash_minor < 0 ||
     !Number.isInteger(input.expected_cash_minor)
   ) {
     return {
       ok: false,
       code: "SHIFT_INVALID_CASH",
-      message: "Hitungan laci harus bilangan bulat ≥ 0.",
+      message: "Hitungan laci harus bilangan bulat.",
     };
   }
   const difference_minor =

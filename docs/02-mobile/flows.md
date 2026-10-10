@@ -45,7 +45,9 @@ only, so a cold start always asks for the PIN again.
 
 ## PIN storage and hashing
 
-PBKDF2-HMAC-SHA256 via `@noble/hashes` (Hermes has no WebCrypto), 50 000 iterations, 16-byte random salt, stored
-with the iteration count so it can be raised later. Verified against the RFC reference vector in `test/pin-gate.spec.ts`.
-**TODO on a real device:** time `enroll`/`verify`; if it is far above ~300 ms lower `NoblePinHasher.defaultIterations`.
+PBKDF2-HMAC-SHA256, 50 000 iterations, 16-byte random salt, stored with the iteration count so it can be raised later
+(the manager PIN from the API uses 100 000). Runs in the native `PosCrypto` Expo module (`modules/pos-crypto`, JVM HMAC,
+off the JS thread: milliseconds). Pure JS on Hermes (`@noble/hashes`) took minutes, so it is only the fallback when the
+module is not in the build (tests, old APK); both give identical output. Verified against the RFC reference vector in
+`test/pin-gate.spec.ts`. Adding the module needs a new dev build (`expo run:android`).
 A 6-digit PIN is brute-forceable offline whatever the iteration count, which is why the lockout exists.

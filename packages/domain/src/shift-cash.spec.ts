@@ -97,6 +97,31 @@ describe("closeShift", () => {
     if (result.ok) assert.equal(result.warned, false);
   });
 
+  it("closes with a negative counted/expected cash (cash out exceeded the drawer)", () => {
+    const result = closeShift({
+      status: "open",
+      counted_cash_minor: -28000,
+      expected_cash_minor: -28000,
+    });
+    assert.deepEqual(result, {
+      ok: true,
+      counted_cash_minor: -28000,
+      expected_cash_minor: -28000,
+      difference_minor: 0,
+      warned: false,
+    });
+  });
+
+  it("rejects non-integer counted cash", () => {
+    const err = closeShift({
+      status: "open",
+      counted_cash_minor: 1.5,
+      expected_cash_minor: 0,
+    });
+    assert.equal(err.ok, false);
+    if (!err.ok) assert.equal(err.code, "SHIFT_INVALID_CASH");
+  });
+
   it("rejects closing a shift that is not open", () => {
     const err = closeShift({
       status: "closed",

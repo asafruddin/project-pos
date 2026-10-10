@@ -32,7 +32,7 @@ import { customerCreateHandler } from "@/features/customers/data/customer-outbox
 import { DrizzleCustomerRepository } from "@/features/customers/data/drizzle-customer-repository";
 import { CreateCustomerUseCase, PullCustomersTask } from "@/features/customers/domain/use-cases";
 import { KvLockoutStore, SecurePinMaterialStore } from "@/features/pin/data/secure-pin-store";
-import { NoblePinHasher } from "@/features/pin/data/noble-pin-hasher";
+import { loadNativePbkdf2, NoblePinHasher } from "@/features/pin/data/noble-pin-hasher";
 import { PinService } from "@/features/pin/domain/pin-service";
 import { ApiReturnsRemote } from "@/features/returns/data/api-returns-remote";
 import { ApiPromotionRemote } from "@/features/promotions/data/api-promotion-remote";
@@ -212,7 +212,7 @@ export function createContainer(deps: ContainerDeps) {
   const apiPromotions = new ApiPromotionRemote(http);
 
   // --- PIN
-  const pins = new PinService(new SecurePinMaterialStore(kv), new NoblePinHasher((n) => Crypto.getRandomBytes(n)), new KvLockoutStore(kv), clock);
+  const pins = new PinService(new SecurePinMaterialStore(kv), new NoblePinHasher((n) => Crypto.getRandomBytes(n), undefined, loadNativePbkdf2()), new KvLockoutStore(kv), clock);
 
   const identity = new RefreshIdentityUseCase(new ApiAuthGateway(http), sessions, queueSettings, pins);
   const identityTask: PullTask = {

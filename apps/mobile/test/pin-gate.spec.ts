@@ -134,6 +134,20 @@ describe("NoblePinHasher (real PBKDF2-SHA256)", () => {
     expect(Buffer.from(out, "base64").toString("hex")).toBe("120fb6cffcf8b32c43e7225256c4f837a86548c92ccc35480805987cb70be17b");
   });
 
+  it("uses the native PBKDF2 when present and falls back to JS when it is missing or throws", async () => {
+    const { NoblePinHasher } = jest.requireActual("@/features/pin/data/noble-pin-hasher") as typeof import("@/features/pin/data/noble-pin-hasher");
+    const rand = (len: number) => new Uint8Array(len);
+    const saltB64 = Buffer.from("salt").toString("base64");
+    const expected = await new NoblePinHasher(rand, 1000).hash("123456", saltB64, 1000);
+
+    const native = jest.fn().mockResolvedValue("bmF0aXZl");
+    expect(await new NoblePinHasher(rand, 1000, native).hash("123456", saltB64, 1000)).toBe("bmF0aXZl");
+    expect(native).toHaveBeenCalledWith("123456", saltB64, 1000, 32);
+
+    const broken = jest.fn().mockRejectedValue(new Error("native down"));
+    expect(await new NoblePinHasher(rand, 1000, broken).hash("123456", saltB64, 1000)).toBe(expected);
+  });
+
   it("works end to end with PinService at the production iteration count, within a sane time", async () => {
     const h = make(50_000);
     const pins = new PinService(new MemoryPinStore(), h, new MemoryLockoutStore(), fakeClock());

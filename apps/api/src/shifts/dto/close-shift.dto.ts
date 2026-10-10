@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { IsInt, IsNotEmpty, IsString, Min } from "class-validator";
+import { IsInt, IsNotEmpty, IsString } from "class-validator";
 
 export class CloseShiftDto {
   @IsString()
@@ -8,7 +8,6 @@ export class CloseShiftDto {
 
   @Type(() => Number)
   @IsInt()
-  @Min(0)
   counted_cash_minor!: number;
 
   @Type(() => Number)

@@ -5,6 +5,7 @@
 /** @type {import('jest').Config} */
 module.exports = {
   testEnvironment: "node",
+  globals: { __DEV__: false },
   transform: { "^.+\\.[jt]sx?$": "babel-jest" },
   // @noble/hashes ships ESM only: transform it (and nothing else) from node_modules.
   transformIgnorePatterns: ["/node_modules/(?!.*@noble)"],
