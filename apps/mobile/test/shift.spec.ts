@@ -1,4 +1,5 @@
 import { AppError } from "@/core/errors/app-error";
+import { createShiftOpenHandler } from "@/features/shift/data/shift-outbox-handlers";
 import { addProduct, emptyCart } from "@/features/cart/domain/cart";
 import { buildDayCloseSummary, dayCloseGate } from "@/features/shift/domain/day-close";
 import { createHarness, drainOutbox, product } from "./helpers/harness";
@@ -99,6 +100,42 @@ describe("shift", () => {
     const rows = drainOutbox(h.outbox).filter((r) => r.kind !== "shift.open");
     expect(rows.find((r) => r.kind === "sale.sync")?.payload).toMatchObject({ shift_id: "server-shift" });
     expect(rows.find((r) => r.kind === "cash.movement")?.payload).toMatchObject({ shiftId: "server-shift" });
+  });
+});
+
+describe("shift.open sync when the server still has an open shift", () => {
+  const alreadyOpen = () => new AppError("API", "SHIFT_ALREADY_OPEN", { status: 400, apiCode: "SHIFT_ALREADY_OPEN" });
+  const serverShift = (id: string) => ({ shift: { shift_id: id, store_id: "s", register_id: "r", opened_at: "2025-01-01T00:00:00.000Z", opening_cash_minor: 0 } });
+  const fakeHttp = (currentId: string) => ({
+    request: jest.fn(async ({ method }: { method: string }) => {
+      if (method === "POST") throw alreadyOpen();
+      return serverShift(currentId);
+    }),
+  });
+  const run = (h: ReturnType<typeof createHarness>, http: ReturnType<typeof fakeHttp>) => {
+    const row = h.outbox.nextPending()!;
+    return createShiftOpenHandler(h.shifts)(row, { http } as never);
+  };
+
+  it("keeps the newly opened shift when the server's open shift is one already closed locally (its close never arrived)", async () => {
+    const h = createHarness();
+    const old = h.openShift.execute(100_000);
+    h.closeShift.executeAuto();
+    h.clock.advance(1_000);
+    const fresh = h.openShift.execute(50_000);
+    h.outbox.markDone(h.outbox.nextPending()!.id); // old shift.open delivered
+    h.outbox.markDead(h.outbox.nextPending()!.id, "400"); // old shift.close rejected by the server
+    expect(h.shifts.getOpen()?.shiftId).toBe(fresh.shiftId);
+
+    await expect(run(h, fakeHttp(old.shiftId))).rejects.toThrow("SHIFT_ALREADY_OPEN");
+    expect(h.shifts.getOpen()?.shiftId).toBe(fresh.shiftId); // not deleted: the open-shift dialog must not return
+  });
+
+  it("still adopts a server shift this device has never seen", async () => {
+    const h = createHarness();
+    h.openShift.execute(0);
+    await run(h, fakeHttp("other-device-shift"));
+    expect(h.shifts.getOpen()?.shiftId).toBe("other-device-shift");
   });
 });
 
