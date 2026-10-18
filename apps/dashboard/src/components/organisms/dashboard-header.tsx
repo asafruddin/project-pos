@@ -35,6 +35,14 @@ export function DashboardHeader({
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const [lastPathname, setLastPathname] = useState(pathname);
+
+  // Reset the search on navigation by adjusting state during render (not in an effect).
+  if (pathname !== lastPathname) {
+    setLastPathname(pathname);
+    setQuery("");
+    setOpen(false);
+  }
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -59,11 +67,6 @@ export function DashboardHeader({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-
-  useEffect(() => {
-    setQuery("");
-    setOpen(false);
-  }, [pathname]);
 
   function go(href: string) {
     setQuery("");
@@ -111,7 +114,7 @@ export function DashboardHeader({
           ⌘K
         </kbd>
         {open && matches.length > 0 ? (
-          <ul className="absolute z-30 mt-1 w-full overflow-hidden rounded-xl border border-border bg-popover py-1 shadow-[var(--shadow-card)]">
+          <ul className="absolute z-30 mt-1 w-full overflow-hidden rounded-xl border border-border bg-popover py-1 shadow-card">
             {matches.map((item) => (
               <li key={item.href}>
                 <Button

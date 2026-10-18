@@ -585,7 +585,7 @@ export function DashboardShell({
           actions={<AssistantLauncher />}
         />
         <section className="flex min-h-0 flex-1 flex-col overflow-hidden p-4 sm:p-6">
-          <div className="mx-auto flex h-full min-h-0 w-full max-w-[90rem] flex-col overflow-y-auto overscroll-contain">
+          <div className="mx-auto flex h-full min-h-0 w-full max-w-360 flex-col overflow-y-auto overscroll-contain">
             {children}
           </div>
         </section>
