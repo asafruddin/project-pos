@@ -1,7 +1,7 @@
 "use client";
 
 import { Button, Input } from "@pos-apps/ui/atoms";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { ThemeToggle } from "@/components/molecules/theme-toggle";
@@ -20,6 +20,7 @@ export function DashboardHeader({
   storeName,
   storeLogoSrc,
   searchItems,
+  actions,
 }: {
   title: string;
   subtitle?: string;
@@ -27,6 +28,7 @@ export function DashboardHeader({
   storeName?: string | null;
   storeLogoSrc?: string | null;
   searchItems: HeaderSearchItem[];
+  actions?: ReactNode;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -131,6 +133,7 @@ export function DashboardHeader({
       </div>
 
       <div className="flex items-center justify-end gap-2">
+        {actions}
         <ThemeToggle />
         <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/50 py-1 pr-3 pl-1">
           <StoreLogo src={storeLogoSrc} alt={brandName} size="sm" />

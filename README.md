@@ -143,6 +143,20 @@ Env vars (see `.env.example`):
 - Demo: `cashier` / `Cashier123!` then choose any 6-digit PIN on first enroll (remember it for offline)
 - `CORS_ORIGIN` must include Cashier and Platform, e.g. `http://localhost:3002,http://localhost:3000,http://localhost:3003`
 
+## Dashboard AI assistant (Asisten)
+
+Optional chat panel in the Dashboard header. It answers questions from live store data and can **propose** changes; nothing is written until the user presses **Konfirmasi**.
+
+| Item | Value |
+|------|--------|
+| Enable | Set `GOOGLE_GENERATIVE_AI_API_KEY` in `apps/api/.env` (Gemini, default model `gemini-flash-latest`), or `AI_PROVIDER=openrouter` + `OPENROUTER_API_KEY` + `AI_MODEL` (a tools-capable model). No key → the button is hidden. |
+| API | `GET /assistant/status`, `POST /assistant/chat` (AI SDK UI message stream). Per-user limit `AI_RATE_LIMIT_PER_MIN` (default 10). |
+| Read tools | Sales summary, product ranking, cashier performance, inventory insights, stock levels, product/customer search. Each is registered only when the user holds the matching grant; data stays scoped to the user's store. |
+| Proposals | Price, product status, stock adjustment, new promotion. Confirming calls the existing endpoint (`PATCH /catalog/products/:id`, `PUT /catalog/products/:id/stock`, `POST /promotions`) with the user's token, so normal guards and validation apply. |
+| Code | `apps/api/src/assistant/` (tools in `tools/`, provider SDKs only in `llm-provider.ts`), `apps/dashboard/src/components/organisms/assistant-launcher.tsx`. |
+
+AI SDK 7 is ESM-only; the API compiles with `module: NodeNext` so Node 22+ can `require()` it. Jest cannot load it, so tool files avoid runtime `ai` imports and are tested directly. Free-tier model providers may use prompts (including sales aggregates) for training; use a paid tier for production data.
+
 ## Local development
 
 ```bash

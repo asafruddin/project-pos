@@ -8,5 +8,6 @@ import { OpnameService } from "./opname.service";
   imports: [AuthModule],
   controllers: [InventoryController],
   providers: [InventoryService, OpnameService],
+  exports: [InventoryService],
 })
 export class InventoryModule {}

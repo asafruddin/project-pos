@@ -26,6 +26,7 @@ import type { ReactNode } from "react";
 import { Button } from "@pos-apps/ui/atoms";
 import { StoreLogo } from "@pos-apps/ui/molecules";
 import { hasPermission, ROLE_LABELS, type Role } from "@pos-apps/types";
+import { AssistantLauncher } from "@/components/organisms/assistant-launcher";
 import { DashboardHeader } from "@/components/organisms/dashboard-header";
 import { SideNav, type NavSection } from "@/components/organisms/pos-nav";
 import { clearSession } from "@/lib/auth-token";
@@ -581,6 +582,7 @@ export function DashboardShell({
           storeName={brandName}
           storeLogoSrc={storeLogoSrc}
           searchItems={searchItems}
+          actions={<AssistantLauncher />}
         />
         <section className="flex min-h-0 flex-1 flex-col overflow-hidden p-4 sm:p-6">
           <div className="mx-auto flex h-full min-h-0 w-full max-w-[90rem] flex-col overflow-y-auto overscroll-contain">

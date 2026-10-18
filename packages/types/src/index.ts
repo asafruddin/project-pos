@@ -1372,3 +1372,61 @@ export type ReportCashiersResponse = {
   cashiers: ReportCashierRow[];
 };
 
+
+/** Dashboard AI assistant (Asisten). Chat runs through `POST /assistant/chat`. */
+export type AssistantStatusResponse = {
+  enabled: boolean;
+  provider: string | null;
+  model: string | null;
+};
+
+export type AssistantActionKind =
+  | "update_price"
+  | "set_product_status"
+  | "adjust_stock"
+  | "create_promotion";
+
+export type AssistantActionChange = {
+  field: string;
+  from: string | null;
+  to: string;
+};
+
+/**
+ * Returned by `propose_*` tools. Nothing is written until the user confirms in the
+ * Dashboard, which then calls the existing REST endpoint for `kind`.
+ */
+export type AssistantActionProposal =
+  | {
+      kind: "update_price";
+      title: string;
+      product_id: string;
+      product_name: string;
+      changes: AssistantActionChange[];
+      payload: { price_minor: number };
+    }
+  | {
+      kind: "set_product_status";
+      title: string;
+      product_id: string;
+      product_name: string;
+      changes: AssistantActionChange[];
+      payload: { status: ProductStatus };
+    }
+  | {
+      kind: "adjust_stock";
+      title: string;
+      product_id: string;
+      product_name: string;
+      changes: AssistantActionChange[];
+      payload: { stock_qty: number; reason: string };
+    }
+  | {
+      kind: "create_promotion";
+      title: string;
+      changes: AssistantActionChange[];
+      payload: UpsertPromotionRequest;
+    };
+
+/** Tool output when a `propose_*` tool cannot build a proposal. */
+export type AssistantToolError = { error: string };

@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
+import { AssistantModule } from "./assistant/assistant.module";
 import { AuthModule } from "./auth/auth.module";
 import { CatalogModule } from "./catalog/catalog.module";
 import { DbShutdownService } from "./db/db-shutdown.service";
@@ -23,6 +24,7 @@ import { StoresModule } from "./stores/stores.module";
       isGlobal: true,
       envFilePath: [".env", "../../.env"],
     }),
+    AssistantModule,
     AuthModule,
     CatalogModule,
     CustomersModule,
