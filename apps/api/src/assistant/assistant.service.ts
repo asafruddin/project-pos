@@ -8,15 +8,10 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { AssistantStatusResponse } from "@pos-apps/types";
-import {
-  convertToModelMessages,
-  isStepCount,
-  safeValidateUIMessages,
-  streamText,
-  toUIMessageStream,
-  type ToolSet,
-  type UIMessage,
-  type UIMessageChunk,
+import type {
+  ToolSet,
+  UIMessage,
+  UIMessageChunk,
 } from "ai";
 import { CustomersService } from "../customers/customers.service";
 import { InventoryService } from "../inventory/inventory.service";
@@ -85,6 +80,15 @@ export class AssistantService {
       );
     }
 
+    // ESM-only SDK: dynamic import keeps the CommonJS build loadable (see llm-provider.ts).
+    const {
+      convertToModelMessages,
+      isStepCount,
+      safeValidateUIMessages,
+      streamText,
+      toUIMessageStream,
+    } = await import("ai");
+
     const raw =
       typeof body === "object" && body !== null && "messages" in body
         ? (body as { messages: unknown }).messages
@@ -99,7 +103,7 @@ export class AssistantService {
 
     const tools = toolsFor(viewer, this.deps) as unknown as ToolSet;
     const result = streamText({
-      model: createLanguageModel(this.config),
+      model: await createLanguageModel(this.config),
       instructions: buildSystemPrompt({
         role: viewer.role,
         toolNames: Object.keys(tools),
