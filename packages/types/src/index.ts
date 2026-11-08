@@ -1300,6 +1300,8 @@ export type ReportSummary = {
   from: string;
   to: string;
   revenue_minor: number;
+  cash_minor: number;
+  qris_minor: number;
   txn_count: number;
   units: number;
   aov_minor: number;

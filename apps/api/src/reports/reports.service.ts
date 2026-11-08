@@ -4,16 +4,19 @@ import {
   Injectable,
 } from "@nestjs/common";
 import {
+  cashTenderTotal,
   grantsFor,
   hasPermission,
   inventoryStockValueMinor,
   isDeadStock,
   rankProductAnalytics,
+  qrisTenderTotal,
   saleDiscountMinor,
   summarizeOpnameVariance,
   summarizeProductAnalytics,
   summarizeSalesAnalytics,
 } from "@pos-apps/domain";
+import type { PaymentSnapshot } from "@pos-apps/domain";
 import type { Role } from "@pos-apps/types";
 import {
   type ReportCashiersResponse,
@@ -103,6 +106,7 @@ function resolveStore(viewer: Viewer): string {
 type LoadedSale = {
   saleId: string;
   amountMinor: number;
+  payment: PaymentSnapshot | null;
   lines: Array<{ product_id: string; qty: number; price_minor: number }>;
   loyalty: { discount_minor?: number } | null;
   promotions: {
@@ -150,6 +154,14 @@ export class ReportsService {
       from: range.from,
       to: range.to,
       revenue_minor: totals.revenue_minor,
+      cash_minor: range.sales.reduce(
+        (sum, sale) => sum + (sale.voidedAt ? 0 : cashTenderTotal(sale.payment)),
+        0,
+      ),
+      qris_minor: range.sales.reduce(
+        (sum, sale) => sum + (sale.voidedAt ? 0 : qrisTenderTotal(sale.payment)),
+        0,
+      ),
       txn_count: totals.txn_count,
       units: totals.units,
       aov_minor: totals.aov_minor,
@@ -436,6 +448,8 @@ export class ReportsService {
         "from",
         "to",
         "revenue_minor",
+        "cash_minor",
+        "qris_minor",
         "txn_count",
         "units",
         "aov_minor",
@@ -452,6 +466,14 @@ export class ReportsService {
         range.from,
         range.to,
         totals.revenue_minor,
+        range.sales.reduce(
+          (sum, sale) => sum + (sale.voidedAt ? 0 : cashTenderTotal(sale.payment)),
+          0,
+        ),
+        range.sales.reduce(
+          (sum, sale) => sum + (sale.voidedAt ? 0 : qrisTenderTotal(sale.payment)),
+          0,
+        ),
         totals.txn_count,
         totals.units,
         totals.aov_minor,
@@ -549,6 +571,7 @@ export class ReportsService {
       .select({
         saleId: sales.saleId,
         amountMinor: sales.amountMinor,
+        payment: sales.payment,
         lines: sales.lines,
         loyalty: sales.loyalty,
         promotions: sales.promotions,
@@ -612,6 +635,7 @@ export class ReportsService {
     let salesLoaded: LoadedSale[] = saleRows.map((row) => ({
       saleId: row.saleId,
       amountMinor: row.amountMinor,
+      payment: row.payment,
       lines: row.lines ?? [],
       loyalty: row.loyalty,
       promotions: row.promotions,

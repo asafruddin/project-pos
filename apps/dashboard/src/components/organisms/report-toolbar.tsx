@@ -1,14 +1,31 @@
 "use client";
 
 import { Button } from "@pos-apps/ui/atoms";
-import { DateRangePicker, FormField } from "@pos-apps/ui/molecules";
-import { FormEvent, useEffect, useState, type ReactNode } from "react";
+import {
+  DateRangePicker,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  FormField,
+} from "@pos-apps/ui/molecules";
+import {
+  CaretDownIcon,
+  DownloadSimpleIcon,
+  FilePdfIcon,
+  FileCsvIcon,
+  FileXlsIcon,
+} from "@phosphor-icons/react";
+import { useEffect, useState } from "react";
 import {
   downloadCsv,
   downloadPdf,
   downloadXls,
   type ExportTable,
 } from "@/lib/export-table";
+import { cn } from "@/lib/utils";
 
 export function todayUtc(): string {
   return new Date().toISOString().slice(0, 10);
@@ -18,20 +35,109 @@ export function reportQs(from: string, to: string): string {
   return `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
 }
 
+function shiftUtc(days: number): string {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function monthStartUtc(): string {
+  const d = new Date();
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString().slice(0, 10);
+}
+
+const PRESETS: Array<{ label: string; range: () => { from: string; to: string } }> = [
+  { label: "Hari ini", range: () => ({ from: todayUtc(), to: todayUtc() }) },
+  { label: "7 hari", range: () => ({ from: shiftUtc(-6), to: todayUtc() }) },
+  { label: "30 hari", range: () => ({ from: shiftUtc(-29), to: todayUtc() }) },
+  { label: "Bulan ini", range: () => ({ from: monthStartUtc(), to: todayUtc() }) },
+];
+
+export type ExportMenuExtra = {
+  label: string;
+  description?: string;
+  onSelect: () => void;
+};
+
+export function ExportMenu({
+  table,
+  extras,
+}: {
+  table: ExportTable | null;
+  extras?: ExportMenuExtra[];
+}) {
+  const disabled = !table && !(extras && extras.length > 0);
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button type="button" variant="outline" disabled={disabled}>
+          <DownloadSimpleIcon aria-hidden />
+          Ekspor
+          <CaretDownIcon aria-hidden className="size-3.5 text-muted-foreground" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-64">
+        {table ? (
+          <>
+            <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+              Unduh tampilan ini
+            </DropdownMenuLabel>
+            <DropdownMenuItem onSelect={() => downloadCsv(table)}>
+              <FileCsvIcon aria-hidden />
+              <span>CSV</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => downloadXls(table)}>
+              <FileXlsIcon aria-hidden />
+              <span>Excel</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => downloadPdf(table)}>
+              <FilePdfIcon aria-hidden />
+              <span>PDF</span>
+            </DropdownMenuItem>
+          </>
+        ) : null}
+        {table && extras && extras.length > 0 ? <DropdownMenuSeparator /> : null}
+        {extras && extras.length > 0 ? (
+          <>
+            <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+              Data mentah
+            </DropdownMenuLabel>
+            {extras.map((item) => (
+              <DropdownMenuItem
+                key={item.label}
+                className="items-start"
+                onSelect={item.onSelect}
+              >
+                <FileCsvIcon aria-hidden className="mt-0.5" />
+                <span className="flex flex-col">
+                  <span>{item.label}</span>
+                  {item.description ? (
+                    <span className="text-xs text-muted-foreground">{item.description}</span>
+                  ) : null}
+                </span>
+              </DropdownMenuItem>
+            ))}
+          </>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function ReportToolbar({
   from,
   to,
   pending,
   onApply,
   table,
-  extra,
+  exportExtras,
 }: {
   from: string;
   to: string;
   pending?: boolean;
   onApply: (range: { from: string; to: string }) => void;
   table: ExportTable | null;
-  extra?: ReactNode;
+  exportExtras?: ExportMenuExtra[];
 }) {
   const [start, setStart] = useState(from);
   const [end, setEnd] = useState(to);
@@ -41,17 +147,8 @@ export function ReportToolbar({
     setEnd(to);
   }, [from, to]);
 
-  function submit(e: FormEvent) {
-    e.preventDefault();
-    if (!start || !end) return;
-    onApply({ from: start, to: end });
-  }
-
   return (
-    <form
-      className="flex flex-col gap-3 lg:flex-row lg:items-end"
-      onSubmit={submit}
-    >
+    <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 shadow-[var(--shadow-card)] sm:p-4 lg:flex-row lg:items-end">
       <div className="min-w-0 flex-1 sm:max-w-sm">
         <FormField id="report-range" label="Rentang tanggal (UTC)">
           <DateRangePicker
@@ -64,38 +161,40 @@ export function ReportToolbar({
               setStart(nextFrom);
               setEnd(nextTo);
             }}
+            onRangeComplete={(range) => {
+              if (range.from !== from || range.to !== to) onApply(range);
+            }}
           />
         </FormField>
       </div>
-      <Button type="submit" disabled={pending || !start || !end}>
-        Terapkan
-      </Button>
-      {table ? (
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            className="bg-secondary text-secondary-foreground hover:opacity-90"
-            onClick={() => downloadCsv(table)}
-          >
-            CSV
-          </Button>
-          <Button
-            type="button"
-            className="bg-secondary text-secondary-foreground hover:opacity-90"
-            onClick={() => downloadXls(table)}
-          >
-            Excel
-          </Button>
-          <Button
-            type="button"
-            className="bg-secondary text-secondary-foreground hover:opacity-90"
-            onClick={() => downloadPdf(table)}
-          >
-            PDF
-          </Button>
-        </div>
-      ) : null}
-      {extra}
-    </form>
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Rentang cepat">
+        {PRESETS.map((preset) => {
+          const r = preset.range();
+          const active = r.from === from && r.to === to;
+          return (
+            <Button
+              key={preset.label}
+              type="button"
+              size="sm"
+              variant={active ? "secondary" : "ghost"}
+              disabled={pending}
+              aria-pressed={active}
+              className={cn(!active && "text-muted-foreground")}
+              onClick={() => onApply(r)}
+            >
+              {preset.label}
+            </Button>
+          );
+        })}
+      </div>
+      <div className="flex items-center gap-2 lg:ml-auto">
+        {pending ? (
+          <span className="text-xs text-muted-foreground" role="status">
+            Memuat…
+          </span>
+        ) : null}
+        <ExportMenu table={table} extras={exportExtras} />
+      </div>
+    </div>
   );
 }

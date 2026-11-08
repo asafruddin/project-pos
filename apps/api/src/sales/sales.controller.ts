@@ -6,6 +6,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from "@nestjs/common";
 import type {
@@ -38,8 +39,13 @@ export class SalesController {
   ) {}
 
   @Get()
-  list(@CurrentUser() user: AuthUser): Promise<SalesListResponse> {
-    return this.sales.listToday(user.storeId);
+  list(
+    @CurrentUser() user: AuthUser,
+    @Query("date") date?: string,
+  ): Promise<SalesListResponse> {
+    return date
+      ? this.sales.listForDate(date, user.storeId)
+      : this.sales.listToday(user.storeId);
   }
 
   @Get("returns")

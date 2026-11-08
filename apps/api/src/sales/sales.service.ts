@@ -33,8 +33,12 @@ import { customers, products, sales, saleReturns, saleVoids } from "../db/schema
 @Injectable()
 export class SalesService {
   async listToday(storeId?: string): Promise<SalesListResponse> {
+    return this.listForDate(undefined, storeId);
+  }
+
+  async listForDate(dateValue?: string, storeId?: string): Promise<SalesListResponse> {
     const db = getDb();
-    const start = startOfUtcDay(new Date());
+    const start = dateValue ? parseUtcDate(dateValue) : startOfUtcDay(new Date());
     const end = new Date(start);
     end.setUTCDate(end.getUTCDate() + 1);
     const scoped = storeId || STORE_1_ID;
@@ -447,6 +451,21 @@ export class SalesService {
       };
     });
   }
+}
+
+function parseUtcDate(value: string): Date {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) throw new BadRequestException("Tanggal harus berformat YYYY-MM-DD.");
+  const [, year, month, day] = match;
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  if (
+    date.getUTCFullYear() !== Number(year) ||
+    date.getUTCMonth() !== Number(month) - 1 ||
+    date.getUTCDate() !== Number(day)
+  ) {
+    throw new BadRequestException("Tanggal tidak valid.");
+  }
+  return date;
 }
 
 function validateSyncRequest(request: SyncSaleRequest): void {

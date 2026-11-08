@@ -2,6 +2,7 @@
 
 import {
   CheckCircleIcon,
+  CalendarBlankIcon,
   CurrencyCircleDollarIcon,
   MoneyIcon,
   QrCodeIcon,
@@ -18,6 +19,7 @@ import type {
 } from "@pos-apps/types";
 import { authorizedFetch } from "@/lib/api-client";
 import { formatIdr } from "@/lib/format-money";
+import { DatePicker } from "@pos-apps/ui/molecules/date-picker";
 
 const EMPTY_TENDER_TOTALS: SalesTenderTotals = {
   cash_minor: 0,
@@ -44,12 +46,15 @@ const TENDER_LABEL: Record<TenderMethod, string> = {
 export default function SalesPage() {
   const [data, setData] = useState<SalesListResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
 
   useEffect(() => {
     let cancelled = false;
+    setData(null);
+    setError(null);
     void (async () => {
       try {
-        const salesRes = await authorizedFetch("/sales");
+        const salesRes = await authorizedFetch(`/sales?date=${date}`);
         if (cancelled) return;
         if (!salesRes.ok) {
           setError("Gagal memuat penjualan.");
@@ -63,7 +68,7 @@ export default function SalesPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [date]);
 
   const [query, setQuery] = useState("");
   const salesCount = data?.sales.filter((s) => !s.voided_at).length ?? 0;
@@ -78,9 +83,36 @@ export default function SalesPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <div className="shrink-0 rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-card)] sm:px-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <CalendarBlankIcon size={20} weight="duotone" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground">
+                Filter tanggal penjualan
+              </p>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                Pilih satu tanggal untuk melihat transaksi dan totalnya.
+              </p>
+            </div>
+          </div>
+          <div className="w-full sm:w-48 sm:shrink-0">
+            <DatePicker
+              id="sales-date"
+              value={date}
+              onChange={(value) => value && setDate(value)}
+              placeholder="Pilih tanggal"
+              align="end"
+              className="h-10 w-full"
+            />
+          </div>
+        </div>
+      </div>
       <div className="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
         <SummaryTile
-          label="Total hari ini (UTC)"
+          label={`Total ${date === new Date().toISOString().slice(0, 10) ? "hari ini" : "tanggal dipilih"} (UTC)`}
           value={formatIdr(data?.daily_total_minor ?? 0)}
           hint={`${salesCount} transaksi`}
           icon={<CurrencyCircleDollarIcon size={20} weight="duotone" />}

@@ -36,7 +36,7 @@ function errorMessage(res: Response, body: unknown): string {
 function storeOptions(stores: StoreRecord[]): StoreRecord[] {
   return stores.length
     ? stores
-    : [{ store_id: STORE_1_ID, name: "Store #1", created_at: "", logo_public_id: null, logo_secure_url: null }];
+    : [{ store_id: STORE_1_ID, name: "Store #1", created_at: "", logo_public_id: null, logo_secure_url: null, queue_reset_mode: "daily", queue_reset_at: null, manager_pin_custom: false }];
 }
 
 export function AccountForm({ userId }: { userId?: string }) {
