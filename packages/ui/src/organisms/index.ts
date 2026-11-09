@@ -7,3 +7,5 @@ export {
   formSelectClass,
   formTextareaClass,
 } from "../molecules/form-field";
+export * from "./area-chart";
+export * from "./donut-chart";

@@ -584,8 +584,9 @@ export function DashboardShell({
           searchItems={searchItems}
           actions={<AssistantLauncher />}
         />
-        <section className="flex min-h-0 flex-1 flex-col overflow-hidden p-4 sm:p-6">
-          <div className="mx-auto flex h-full min-h-0 w-full max-w-360 flex-col overflow-y-auto overscroll-contain">
+        {/* The section scrolls (full width, scrollbar at the window edge); the inner wrapper only centers/limits content. */}
+        <section className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
+          <div className="mx-auto flex min-h-full w-full max-w-360 flex-col">
             {children}
           </div>
         </section>
