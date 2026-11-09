@@ -24,12 +24,14 @@ export function StatCard({
   hint,
   tone = "default",
   icon,
+  className,
 }: {
   label: string;
   value: ReactNode;
   hint?: ReactNode;
   tone?: "default" | "success" | "warning" | "danger";
   icon?: ReactNode;
+  className?: string;
 }) {
   const toneClass =
     tone === "success"
@@ -50,7 +52,7 @@ export function StatCard({
           : "bg-primary/10 text-primary";
 
   return (
-    <SurfaceCard className="p-4 sm:p-5">
+    <SurfaceCard className={cn("p-4 sm:p-5", className)}>
       <div className="flex items-start justify-between gap-3">
         <p className="text-sm text-muted-foreground">{label}</p>
         {icon ? (
@@ -64,7 +66,7 @@ export function StatCard({
           </div>
         ) : null}
       </div>
-      <p className="mt-3 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+      <p className="mt-4 text-[clamp(1.5rem,2.5vw,2rem)] font-semibold tracking-tight text-foreground tabular-nums">
         {value}
       </p>
       {hint ? <div className={cn("mt-2 text-xs", toneClass)}>{hint}</div> : null}

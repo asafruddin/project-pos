@@ -18,7 +18,7 @@ export function HBarChart({
     return <p className="text-sm text-muted-foreground">{empty}</p>;
   }
   return (
-    <ul className="flex flex-col gap-3">
+    <ul className="flex flex-col gap-4" aria-label="Diagram batang horizontal">
       {data.map((row) => {
         const pct = max <= 0 ? 0 : Math.min(100, Math.round((row.value / max) * 100));
         return (
@@ -29,7 +29,7 @@ export function HBarChart({
                 {row.hint ?? row.value}
               </span>
             </div>
-            <div className="h-2.5 overflow-hidden rounded-full bg-secondary">
+            <div className="h-2.5 overflow-hidden rounded-full bg-secondary" aria-hidden="true">
               <div
                 className="h-2.5 rounded-full bg-primary transition-[width]"
                 style={{ width: `${pct}%` }}
@@ -54,16 +54,16 @@ export function VBarChart({
     return <p className="text-sm text-muted-foreground">{empty}</p>;
   }
   return (
-    <div className="flex h-52 items-end gap-3">
+    <div className="flex h-60 items-end gap-2 border-b border-border/70 pt-4 sm:gap-3" role="img" aria-label="Diagram batang vertikal">
       {data.map((row) => {
         const pct = max <= 0 ? 10 : Math.max(10, Math.round((row.value / max) * 100));
         return (
-          <div key={row.label} className="flex min-w-0 flex-1 flex-col items-center gap-2">
-            <p className="text-xs tabular-nums text-muted-foreground">
+          <div key={row.label} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-2">
+            <p className="w-full truncate text-center text-[11px] tabular-nums text-muted-foreground" title={row.hint ?? row.label}>
               {row.hint ?? row.value}
             </p>
             <div
-              className={cn("w-full max-w-12 rounded-t-xl bg-primary")}
+              className={cn("w-full max-w-14 rounded-t-xl bg-primary transition-[height] duration-500")}
               style={{ height: `${pct}%` }}
               title={row.label}
             />

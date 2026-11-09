@@ -131,13 +131,30 @@ export function BerandaPanel() {
     value: row.revenue_minor,
     hint: formatIdr(row.revenue_minor),
   }));
+  const overviewCardCount = (canViewReports ? 4 : 1) + (canViewProducts ? 1 : 0) + (isAdmin ? 1 : 0);
 
   return (
-    <div className="flex flex-col gap-6">
-      <p className="text-sm text-muted-foreground">
-        Hari ini (UTC {todayUtc()}). Angka dari penjualan yang sudah tersinkron, bukan antrian
-        offline kasir.
-      </p>
+    <div className="flex flex-col gap-7 pb-8">
+      <div className="flex flex-col justify-between gap-4 rounded-2xl border border-border bg-card px-5 py-5 shadow-[var(--shadow-card)] sm:flex-row sm:items-center sm:px-6">
+        <div>
+          <p className="text-xs font-semibold tracking-[0.12em] text-primary uppercase">
+            Ikhtisar harian
+          </p>
+          <h2 className="mt-1 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+            Pantau performa toko dengan cepat
+          </h2>
+          <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted-foreground">
+            Data penjualan yang tampil sudah tersinkron dari kasir. Periode: hari ini, UTC {todayUtc()}.
+          </p>
+        </div>
+        <Link
+          href="/reports/ringkasan"
+          scroll={false}
+          className="inline-flex h-10 shrink-0 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          Lihat laporan
+        </Link>
+      </div>
 
       {error ? (
         <div
@@ -149,35 +166,38 @@ export function BerandaPanel() {
       ) : null}
 
       {loading ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: overviewCardCount }, (_, index) => (
+            <Skeleton key={index} className="h-36 rounded-2xl" />
+          ))}
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {canViewReports ? (
             <>
               <StatCard
+                className="min-h-36"
                 label="Pendapatan hari ini"
                 value={formatIdr(summary?.revenue_minor ?? 0)}
                 hint="Hari ini (UTC)"
                 icon={<CurrencyCircleDollarIcon size={20} weight="bold" />}
               />
               <StatCard
+                className="min-h-36"
                 label="Transaksi"
                 value={summary?.txn_count ?? 0}
                 hint="Tersinkron"
                 icon={<ReceiptIcon size={20} weight="bold" />}
               />
               <StatCard
+                className="min-h-36"
                 label="Unit terjual"
                 value={summary?.units ?? 0}
                 hint="Hari ini (UTC)"
                 icon={<PackageIcon size={20} weight="bold" />}
               />
               <StatCard
+                className="min-h-36"
                 label="Bersih"
                 value={formatIdr(summary?.net_minor ?? 0)}
                 hint="Pendapatan dikurangi refund"
@@ -187,6 +207,7 @@ export function BerandaPanel() {
             </>
           ) : (
             <StatCard
+              className="min-h-36"
               label="Beranda"
               value="Siap"
               hint="Akun ini tidak melihat laporan penjualan."
@@ -194,6 +215,7 @@ export function BerandaPanel() {
           )}
           {catalogCount != null ? (
             <StatCard
+              className="min-h-36"
               label="Produk katalog"
               value={catalogCount}
               hint="Aktif di katalog"
@@ -202,6 +224,7 @@ export function BerandaPanel() {
           ) : null}
           {isAdmin && inventory ? (
             <StatCard
+              className="min-h-36"
               label="Nilai stok (modal)"
               value={formatIdr(inventory.stock_value_minor)}
               hint="Harga modal produk"
@@ -212,44 +235,59 @@ export function BerandaPanel() {
       )}
 
       {canViewReports ? (
+        loading ? (
+          <div className="grid gap-4 xl:grid-cols-2">
+            <Skeleton className="h-80 rounded-2xl" />
+            <Skeleton className="h-80 rounded-2xl" />
+            <Skeleton className="h-56 rounded-2xl xl:col-span-2" />
+          </div>
+        ) : (
         <>
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
             <SurfaceCard className="p-5 sm:p-6">
-              <h2 className="text-base font-semibold">Bauran hari ini</h2>
-              <p className="mt-0.5 mb-4 text-xs text-muted-foreground">
-                Perbandingan pendapatan, diskon, refund, dan bersih.
-              </p>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-base font-semibold">Bauran hari ini</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Ringkasan pendapatan dan pengurangannya.
+                  </p>
+                </div>
+              </div>
               <VBarChart data={mix} empty="Belum ada penjualan hari ini." />
             </SurfaceCard>
             <SurfaceCard className="p-5 sm:p-6">
               <h2 className="text-base font-semibold">Produk terlaris</h2>
-              <p className="mt-0.5 mb-4 text-xs text-muted-foreground">
+              <p className="mt-1 mb-5 text-sm text-muted-foreground">
                 Unit terjual hari ini.
               </p>
               <HBarChart data={topBars} empty="Belum ada penjualan produk hari ini." />
             </SurfaceCard>
           </div>
           <SurfaceCard className="p-5 sm:p-6">
-            <h2 className="text-base font-semibold">Kinerja kasir</h2>
-            <p className="mt-0.5 mb-4 text-xs text-muted-foreground">
-              Omzet per kasir/shift hari ini.
-            </p>
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+              <div>
+                <h2 className="text-base font-semibold">Kinerja kasir</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Omzet per kasir atau shift hari ini.
+                </p>
+              </div>
+            </div>
             <HBarChart data={cashierBars} empty="Belum ada data kasir hari ini." />
           </SurfaceCard>
-          <p className="text-sm">
+          <div className="flex flex-col gap-1 rounded-xl border border-dashed border-border px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-5">
+            <span className="text-muted-foreground">
+              Butuh rentang tanggal atau rincian lebih lengkap?
+            </span>
             <Link
               href="/reports/ringkasan"
               scroll={false}
-              className="font-medium text-foreground underline-offset-4 hover:underline"
+              className="font-semibold text-primary underline-offset-4 hover:underline"
             >
-              Buka laporan lengkap
+              Buka laporan lengkap →
             </Link>
-            <span className="text-muted-foreground">
-              {" "}
-              untuk rentang tanggal, ekspor CSV/Excel/PDF, dan rincian stok.
-            </span>
-          </p>
+          </div>
         </>
+        )
       ) : (
         <p className="text-sm text-muted-foreground">
           Gunakan menu di samping untuk stok, pelanggan, atau shift sesuai izin akun.
