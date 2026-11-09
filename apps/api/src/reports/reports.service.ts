@@ -20,6 +20,8 @@ import type { PaymentSnapshot } from "@pos-apps/domain";
 import type { Role } from "@pos-apps/types";
 import {
   type ReportCashiersResponse,
+  type ReportDailyResponse,
+  type ReportDailyRow,
   type ReportInventoryResponse,
   type ReportProductRow,
   type ReportProductsResponse,
@@ -116,6 +118,7 @@ type LoadedSale = {
   } | null;
   shiftId: string | null;
   voidedAt: Date | null;
+  completedAt: Date;
 };
 
 type LoadedRefund = {
@@ -123,6 +126,7 @@ type LoadedRefund = {
   shiftId: string | null;
   saleShiftId: string | null;
   refund_amount_minor: number;
+  refundedAt: Date | null;
 };
 
 function csvCell(value: string | number): string {
@@ -177,6 +181,56 @@ export class ReportsService {
       tax_minor: totals.tax_minor,
       fees_minor: totals.fees_minor,
     };
+  }
+
+  async daily(
+    query: { from?: string; to?: string; store_id?: string },
+    viewer: Viewer,
+  ): Promise<ReportDailyResponse> {
+    const { range, costs, storeId } = await this.loadSalesPeriod(query, viewer);
+    const days = new Map<string, ReportDailyRow>();
+    const cursor = new Date(`${range.from}T00:00:00.000Z`);
+    const last = `${range.to}`;
+    for (let key = range.from; key <= last; ) {
+      days.set(key, {
+        date: key,
+        revenue_minor: 0,
+        refund_minor: 0,
+        net_minor: 0,
+        txn_count: 0,
+        units: 0,
+      });
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+      key = cursor.toISOString().slice(0, 10);
+    }
+    const salesByDay = new Map<string, typeof range.sales>();
+    for (const sale of range.sales) {
+      const key = sale.completedAt.toISOString().slice(0, 10);
+      const list = salesByDay.get(key) ?? [];
+      list.push(sale);
+      salesByDay.set(key, list);
+    }
+    for (const [key, list] of salesByDay) {
+      const row = days.get(key);
+      if (!row) continue;
+      const totals = summarizeSalesAnalytics({
+        sales: list.map((sale) => this.toReportSale(sale, costs)),
+        refunds: [],
+      });
+      row.revenue_minor = totals.revenue_minor;
+      row.txn_count = totals.txn_count;
+      row.units = totals.units;
+    }
+    for (const refund of range.refundRows) {
+      if (!refund.refundedAt) continue;
+      const row = days.get(refund.refundedAt.toISOString().slice(0, 10));
+      if (row) row.refund_minor += refund.refund_amount_minor;
+    }
+    const rows = [...days.values()];
+    for (const row of rows) {
+      row.net_minor = Math.max(0, row.revenue_minor - row.refund_minor);
+    }
+    return { store_id: storeId, from: range.from, to: range.to, days: rows };
   }
 
   async products(
@@ -577,6 +631,7 @@ export class ReportsService {
         promotions: sales.promotions,
         shiftId: sales.shiftId,
         voidedAt: saleVoids.voidedAt,
+        completedAt: sales.completedAt,
       })
       .from(sales)
       .leftJoin(saleVoids, eq(saleVoids.saleId, sales.saleId))
@@ -594,6 +649,7 @@ export class ReportsService {
         refundAmountMinor: saleReturns.refundAmountMinor,
         shiftId: saleReturns.shiftId,
         saleShiftId: sales.shiftId,
+        refundedAt: saleReturns.refundedAt,
       })
       .from(saleReturns)
       .innerJoin(sales, eq(sales.saleId, saleReturns.saleId))
@@ -641,6 +697,7 @@ export class ReportsService {
       promotions: row.promotions,
       shiftId: row.shiftId,
       voidedAt: row.voidedAt,
+      completedAt: row.completedAt,
     }));
 
     let refunds: LoadedRefund[] = refundRows.map((row) => ({
@@ -648,6 +705,7 @@ export class ReportsService {
       shiftId: row.shiftId,
       saleShiftId: row.saleShiftId,
       refund_amount_minor: row.refundAmountMinor ?? 0,
+      refundedAt: row.refundedAt,
     }));
 
     if (!hasPermission(grantsFor(viewer), "reports", "view_financial")) {

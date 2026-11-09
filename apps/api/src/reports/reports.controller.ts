@@ -8,6 +8,7 @@ import {
 } from "@nestjs/common";
 import type {
   ReportCashiersResponse,
+  ReportDailyResponse,
   ReportInventoryResponse,
   ReportProductsResponse,
   ReportSummary,
@@ -34,6 +35,18 @@ export class ReportsController {
     @Query("store_id") store_id?: string,
   ): Promise<ReportSummary> {
     return this.reports.summary({ from, to, store_id }, user);
+  }
+
+  @Get("daily")
+  @RequirePermission("reports", "view")
+  @UseGuards(PermissionsGuard)
+  daily(
+    @CurrentUser() user: AuthUser,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+    @Query("store_id") store_id?: string,
+  ): Promise<ReportDailyResponse> {
+    return this.reports.daily({ from, to, store_id }, user);
   }
 
   @Get("products")

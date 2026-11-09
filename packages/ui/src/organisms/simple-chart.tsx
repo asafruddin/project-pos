@@ -58,7 +58,7 @@ export function VBarChart({
       {data.map((row) => {
         const pct = max <= 0 ? 10 : Math.max(10, Math.round((row.value / max) * 100));
         return (
-          <div key={row.label} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-2">
+          <div key={row.label} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2">
             <p className="w-full truncate text-center text-[11px] tabular-nums text-muted-foreground" title={row.hint ?? row.label}>
               {row.hint ?? row.value}
             </p>

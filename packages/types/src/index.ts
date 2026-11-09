@@ -1314,6 +1314,23 @@ export type ReportSummary = {
   fees_minor?: number;
 };
 
+export type ReportDailyRow = {
+  /** UTC day, YYYY-MM-DD. */
+  date: string;
+  revenue_minor: number;
+  refund_minor: number;
+  net_minor: number;
+  txn_count: number;
+  units: number;
+};
+
+export type ReportDailyResponse = {
+  store_id: string;
+  from: string;
+  to: string;
+  days: ReportDailyRow[];
+};
+
 export type ReportProductRow = {
   product_id: string;
   name: string;

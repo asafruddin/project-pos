@@ -9,7 +9,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  FormField,
 } from "@pos-apps/ui/molecules";
 import {
   CaretDownIcon,
@@ -18,7 +17,7 @@ import {
   FileCsvIcon,
   FileXlsIcon,
 } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   downloadCsv,
   downloadPdf,
@@ -35,7 +34,7 @@ export function reportQs(from: string, to: string): string {
   return `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
 }
 
-function shiftUtc(days: number): string {
+export function shiftUtc(days: number): string {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
@@ -52,6 +51,66 @@ const PRESETS: Array<{ label: string; range: () => { from: string; to: string } 
   { label: "30 hari", range: () => ({ from: shiftUtc(-29), to: todayUtc() }) },
   { label: "Bulan ini", range: () => ({ from: monthStartUtc(), to: todayUtc() }) },
 ];
+
+export function DateRangeFilter({
+  from,
+  to,
+  pending,
+  onApply,
+  className,
+}: {
+  from: string;
+  to: string;
+  pending?: boolean;
+  onApply: (range: { from: string; to: string }) => void;
+  className?: string;
+}) {
+  // While the user is mid-selection (first click), show the draft; otherwise the applied range.
+  const [draft, setDraft] = useState<{ from: string; to: string } | null>(null);
+  const shown = draft ?? { from, to };
+
+  return (
+    <div className={cn("flex flex-col gap-2 sm:flex-row sm:items-center", className)}>
+      <div className="w-full sm:w-64">
+        <DateRangePicker
+          id="report-range"
+          from={shown.from}
+          to={shown.to}
+          disabled={pending}
+          placeholder="Pilih rentang tanggal"
+          onChange={setDraft}
+          onRangeComplete={(range) => {
+            setDraft(null);
+            if (range.from !== from || range.to !== to) onApply(range);
+          }}
+        />
+      </div>
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Rentang cepat">
+        {PRESETS.map((preset) => {
+          const r = preset.range();
+          const active = r.from === from && r.to === to;
+          return (
+            <Button
+              key={preset.label}
+              type="button"
+              size="sm"
+              variant={active ? "secondary" : "ghost"}
+              disabled={pending}
+              aria-pressed={active}
+              className={cn(!active && "text-muted-foreground")}
+              onClick={() => {
+                setDraft(null);
+                onApply(r);
+              }}
+            >
+              {preset.label}
+            </Button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export type ExportMenuExtra = {
   label: string;
@@ -139,54 +198,9 @@ export function ReportToolbar({
   table: ExportTable | null;
   exportExtras?: ExportMenuExtra[];
 }) {
-  const [start, setStart] = useState(from);
-  const [end, setEnd] = useState(to);
-
-  useEffect(() => {
-    setStart(from);
-    setEnd(to);
-  }, [from, to]);
-
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 shadow-[var(--shadow-card)] sm:p-4 lg:flex-row lg:items-end">
-      <div className="min-w-0 flex-1 sm:max-w-sm">
-        <FormField id="report-range" label="Rentang tanggal (UTC)">
-          <DateRangePicker
-            id="report-range"
-            from={start}
-            to={end}
-            disabled={pending}
-            placeholder="Pilih rentang tanggal"
-            onChange={({ from: nextFrom, to: nextTo }) => {
-              setStart(nextFrom);
-              setEnd(nextTo);
-            }}
-            onRangeComplete={(range) => {
-              if (range.from !== from || range.to !== to) onApply(range);
-            }}
-          />
-        </FormField>
-      </div>
-      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Rentang cepat">
-        {PRESETS.map((preset) => {
-          const r = preset.range();
-          const active = r.from === from && r.to === to;
-          return (
-            <Button
-              key={preset.label}
-              type="button"
-              size="sm"
-              variant={active ? "secondary" : "ghost"}
-              disabled={pending}
-              aria-pressed={active}
-              className={cn(!active && "text-muted-foreground")}
-              onClick={() => onApply(r)}
-            >
-              {preset.label}
-            </Button>
-          );
-        })}
-      </div>
+    <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 shadow-[var(--shadow-card)] sm:p-4 lg:flex-row lg:items-center">
+      <DateRangeFilter from={from} to={to} pending={pending} onApply={onApply} />
       <div className="flex items-center gap-2 lg:ml-auto">
         {pending ? (
           <span className="text-xs text-muted-foreground" role="status">
